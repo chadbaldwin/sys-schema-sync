@@ -18,6 +18,81 @@ This ensures a level of familiarity with the schema and making it easier to conv
 
 ----
 
+## Installation and Setup
+
+For now, because this project is still in the early stages of development, there isn't a simple installer. Maybe in the future I'll find a nice way to package it up.
+
+### Deploy the database
+
+To deploy the database, you need to be familiar with SSDT. Open the SSDT Solution `/DB/SysSchemaSync.sln`, and publish the database to your location of choosing.
+
+> TODO: In the future I may have releases which include things like a DACPAC or a database backup that can be restored. Along with things like scripts to make deployment easier. Such as using `sqlpackage.exe` or a PowerShell wrapper to publish the database.
+
+### Configure the database
+
+For now, the database is populated manually in regard to the Instances and Databases we want to target for syncing. However, I have not yet decided how I want the database configuration to be handled for the public version of this service.
+
+To configure the database, you can do one of a few things...
+
+1. You can manually insert the Instances and Databases into the appropriate tables yourself. You can do this in `dbo.[Instance]` `dbo.[Database]`. These tables are read by the service and fed into dbatoools for connecting to the various instances and collecting the data.
+1. I have provided a sample stored procedure which you can modify to hardcode the list within the proc here: `/DB/import/Stored Procedures/usp_UpdateTargets.sql`
+
+> TODO: In the future I may end up going the route of storing this information in a JSON file where users will populate connection strings into the `appsettings.json` file, and the Instance and Database tables would be updated accordingly.
+
+### Deploy the service
+
+Once that is set up, next you need to set up the sync service. Copy the "Service" directory wherever you plan to host the service as you will need to set up a Scheduled task. You can use anything that is able to run a PowerShell script in a regular interval, I'm using Windows Task Scheduler, but you can use whatever works for you.
+
+### Configure the service
+
+Next, update the `/Service/appsettings.json` file. Note: SysSchemaSync Service uses a generic PowerShell utility script that I use in multiple projects, which is why some of the configuration parameters are pre-configured and do not need to be changed.
+
+```json
+{
+  // For now, this is simply the NAME of the folder to create within the "Service" folder to use for logs
+  "LogDirectory": "Logs",
+
+  // Tells the generic PowerShell script runner what Instances and Databases to run against
+  "TargetDatabaseListScriptPath": "target_databases.sql", // Do not change
+
+  // Connection string pointing to where the SysSchemaSync database was deployed
+  // This connection string is used by the generic script runner to get the list of databases to run against
+  "TargetDatabaseListConnectionString": "Server=MYINSTANCE;Database=SysSchemaSync;MultiSubnetFailover=True;Application Name=SysSchemaSyncService",
+
+  // Tells the generic PowerShell script runner what file we want to execute for each instance/database
+  "PowerShellScriptToRunPath": "sync_objects.ps1", // Do not change
+
+  // How many instances do we want to run syncs against in parallel
+  "InstanceConcurrencyLimit": 10,
+  // How many databases PER INSTANCE do we want to run syncs against in parallel?
+  "DatabaseConcurrencyLimit": 3,
+  // If Instance is set to 10 and Database is set to 3, then the highest number of concurrent processes possible is 30
+
+  // Connection string pointing to where the SysSchemaSync database was deployed
+  // This connection string is used by the SysSchemaSync scripts to know where to push the collected data
+  "RepositoryDatabaseConnectionString": "Server=MYINSTANCE;Database=SysSchemaSync;MultiSubnetFailover=True;Application Name=SysSchemaSyncService"
+}
+```
+
+### Schedule the service
+
+Now set up an automated job / Windows Scheduled Task to call `/Service/database_parallel_runner.ps1`. I recommend running it every 5 minutes. You can run it as often as you like, but the process will only pick up items that are scheduled to run in the queue. If there's nothing to do, it will almost immediately close.
+
+> TODO: In the future possibly include a script to set up the scheduled task automatically?
+
+### Done
+
+That's it. So to sum it up...
+
+1. Deploy databawse via SSDT / Visual Studio
+1. Configure database `dbo.[Instance]` and `dbo.[Database]` tables
+1. Copy service files to host
+1. Configure service `appsettings.json` file
+1. Set up scheduled job to run (recommended every 5 minutes)
+1. Database should start populating
+
+----
+
 ## Querying
 
 Terms:
