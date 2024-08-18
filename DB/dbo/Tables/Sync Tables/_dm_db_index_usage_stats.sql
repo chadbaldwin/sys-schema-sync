@@ -1,0 +1,32 @@
+﻿CREATE TABLE dbo._dm_db_index_usage_stats (
+	_DatabaseID			int			NOT	NULL CONSTRAINT FK__dm_db_index_usage_stats__DatabaseID	REFERENCES dbo.[Database]	(DatabaseID),
+	_ObjectID			int			NOT	NULL CONSTRAINT FK__dm_db_index_usage_stats__ObjectID	REFERENCES dbo.[Object]		(ObjectID),
+	_IndexID			int			NOT	NULL CONSTRAINT FK__dm_db_index_usage_stats__IndexID	REFERENCES dbo.[Index]		(IndexID),
+	_InsertDate			datetime2	NOT	NULL CONSTRAINT DF__dm_db_index_usage_stats__InsertDate	DEFAULT (SYSUTCDATETIME()),
+	_ModifyDate			datetime2	NOT	NULL CONSTRAINT DF__dm_db_index_usage_stats__ModifyDate	DEFAULT (SYSUTCDATETIME()),
+	_RowHash			binary(32)	NOT	NULL,
+	--
+	database_id			smallint	NOT	NULL,
+	[object_id]			int			NOT	NULL,
+	index_id			int			NOT	NULL,
+	user_seeks			bigint		NOT	NULL,
+	user_scans			bigint		NOT	NULL,
+	user_lookups		bigint		NOT	NULL,
+	user_updates		bigint		NOT	NULL,
+	last_user_seek		datetime		NULL,
+	last_user_scan		datetime		NULL,
+	last_user_lookup	datetime		NULL,
+	last_user_update	datetime		NULL,
+	system_seeks		bigint		NOT	NULL,
+	system_scans		bigint		NOT	NULL,
+	system_lookups		bigint		NOT	NULL,
+	system_updates		bigint		NOT	NULL,
+	last_system_seek	datetime		NULL,
+	last_system_scan	datetime		NULL,
+	last_system_lookup	datetime		NULL,
+	last_system_update	datetime		NULL,
+
+	INDEX CIX__dm_db_index_usage_stats__IndexID UNIQUE CLUSTERED (_IndexID),
+	INDEX IX__dm_db_index_usage_stats__DatabaseID NONCLUSTERED (_DatabaseID),
+);
+GO

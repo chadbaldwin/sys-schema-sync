@@ -1,0 +1,240 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <Name>SysSchemaSync</Name>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectVersion>4.1</ProjectVersion>
+    <ProjectGuid>{8007edfb-445e-4a5a-b22b-ee28912f2454}</ProjectGuid>
+    <DSP>Microsoft.Data.Tools.Schema.Sql.Sql160DatabaseSchemaProvider</DSP>
+    <OutputType>Database</OutputType>
+    <RootPath>
+    </RootPath>
+    <RootNamespace>DBTracker</RootNamespace>
+    <AssemblyName>DBTracker</AssemblyName>
+    <ModelCollation>1033,CI</ModelCollation>
+    <DefaultFileStructure>BySchemaAndSchemaType</DefaultFileStructure>
+    <DeployToDatabase>True</DeployToDatabase>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <TargetLanguage>CS</TargetLanguage>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <SqlServerVerification>False</SqlServerVerification>
+    <IncludeCompositeObjects>True</IncludeCompositeObjects>
+    <TargetDatabaseSet>True</TargetDatabaseSet>
+    <DefaultCollation>SQL_Latin1_General_CP1_CI_AS</DefaultCollation>
+    <Recovery>FULL</Recovery>
+    <DefaultFilegroup>PRIMARY</DefaultFilegroup>
+    <ReadCommittedSnapshot>True</ReadCommittedSnapshot>
+    <TargetRecoveryTimePeriod>60</TargetRecoveryTimePeriod>
+    <QueryStoreStaleQueryThreshold>30</QueryStoreStaleQueryThreshold>
+    <QueryStoreMaxStorageSize>1000</QueryStoreMaxStorageSize>
+    <QueryStoreDesiredState>ReadWrite</QueryStoreDesiredState>
+    <QueryStoreCaptureMode>Auto</QueryStoreCaptureMode>
+    <PageVerify>CHECKSUM</PageVerify>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <OutputPath>bin\Release\</OutputPath>
+    <BuildScriptName>$(MSBuildProjectName).sql</BuildScriptName>
+    <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineDebug>false</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <OutputPath>bin\Debug\</OutputPath>
+    <BuildScriptName>$(MSBuildProjectName).sql</BuildScriptName>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineDebug>true</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <RunSqlCodeAnalysis>True</RunSqlCodeAnalysis>
+    <SuppressTSqlWarnings>SQL70558</SuppressTSqlWarnings>
+    <SqlCodeAnalysisRules>-Microsoft.Rules.Data.SR0001;-Microsoft.Rules.Data.SR0006;-Microsoft.Rules.Data.SR0007;-Microsoft.Rules.Data.SR0014</SqlCodeAnalysisRules>
+  </PropertyGroup>
+  <PropertyGroup>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">11.0</VisualStudioVersion>
+    <!-- Default to the v11.0 targets path if the targets file for the current VS version is not found -->
+    <SSDTExists Condition="Exists('$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets')">True</SSDTExists>
+    <VisualStudioVersion Condition="'$(SSDTExists)' == ''">11.0</VisualStudioVersion>
+  </PropertyGroup>
+  <Import Condition="'$(SQLDBExtensionsRefPath)' != ''" Project="$(SQLDBExtensionsRefPath)\Microsoft.Data.Tools.Schema.SqlTasks.targets" />
+  <Import Condition="'$(SQLDBExtensionsRefPath)' == ''" Project="$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets" />
+  <ItemGroup>
+    <Folder Include="dbo\" />
+    <Folder Include="dbo\Tables\" />
+    <Folder Include="dbo\Tables\Sync Tables" />
+    <Folder Include="dbo\Views" />
+    <Folder Include="import" />
+    <Folder Include="import\Stored Procedures" />
+    <Folder Include="import\Stored Procedures\Sync Procs" />
+    <Folder Include="import\Tables" />
+    <Folder Include="import\User Defined Types" />
+    <Folder Include="import\User Defined Types\Sync Types" />
+    <Folder Include="import\Views" />
+    <Folder Include="Properties" />
+    <Folder Include="Security" />
+  </ItemGroup>
+  <ItemGroup>
+    <Build Include="dbo\Tables\Column.sql" />
+    <Build Include="dbo\Tables\Database.sql" />
+    <Build Include="dbo\Tables\Index.sql" />
+    <Build Include="dbo\Tables\Instance.sql" />
+    <Build Include="dbo\Tables\Object.sql" />
+    <Build Include="dbo\Tables\ObjectDefinition.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_check_constraints_history.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_check_constraints.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_columns_history.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_columns.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_computed_columns_history.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_computed_columns.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_configurations_history.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_configurations.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_database_automatic_tuning_options.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_database_files.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_database_query_store_options.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_database_scoped_configurations.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_DATABASEPROPERTYEX.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_databases_history.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_databases.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_default_constraints_history.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_default_constraints.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_dm_db_index_usage_stats.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_dm_db_log_space_usage.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_dm_db_partition_stats.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_dm_hadr_cluster.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_dm_hadr_database_replica_states.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_dm_io_virtual_file_stats.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_dm_os_cluster_nodes.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_dm_os_enumerate_fixed_drives.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_dm_os_host_info.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_dm_os_nodes.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_dm_os_process_memory.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_dm_os_sys_info.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_dm_os_sys_memory.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_dm_os_volume_stats.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_dm_os_wait_stats.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_dm_resource_governor_resource_pools.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_dm_server_services.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_filegroups.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_foreign_key_columns.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_foreign_keys_history.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_foreign_keys.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_global_variables.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_identity_columns.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_index_columns_history.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_index_columns.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_indexes_history.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_indexes.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_key_constraints_history.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_key_constraints.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_master_files.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_objects_history.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_objects.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_partitions.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_restorehistory.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_SERVERPROPERTY.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_sql_modules_history.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_sql_modules.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_stats.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_sysarticles_history.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_sysarticles.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_syspublications.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_sysreplservers.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_tables_history.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_tables.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_triggers_history.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_triggers.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_views_history.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_views.sql" />
+    <Build Include="dbo\Views\vw_Column.sql" />
+    <Build Include="dbo\Views\vw_Database.sql" />
+    <Build Include="dbo\Views\vw_Index.sql" />
+    <Build Include="dbo\Views\vw_Instance.sql" />
+    <Build Include="dbo\Views\vw_Object.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__check_constraints.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__columns.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__computed_columns.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__configurations.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__databases.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__default_constraints.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__dm_db_index_usage_stats.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__dm_db_partition_stats.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__dm_os_wait_stats.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__foreign_key_columns.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__foreign_keys.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__identity_columns.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__index_columns.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__indexes.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__key_constraints.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__master_files.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__objects.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__partitions.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__sql_modules.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__stats.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__sysarticles.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__tables.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__triggers.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__views.sql" />
+    <Build Include="import\Stored Procedures\usp_CreateItems.sql" />
+    <Build Include="import\Stored Procedures\usp_PopulateLookupTables.sql" />
+    <Build Include="import\Stored Procedures\usp_SetSyncStatus.sql" />
+    <Build Include="import\Stored Procedures\usp_UpdateTargets.sql">
+      <SuppressTSqlWarnings>70558</SuppressTSqlWarnings>
+    </Build>
+    <Build Include="import\Stored Procedures\usp_ValidateSchema.sql" />
+    <Build Include="import\Tables\DatabaseSyncObjectStatus.sql" />
+    <Build Include="import\Tables\SyncObject.sql" />
+    <Build Include="import\Tables\SyncObjectLevel.sql" />
+    <Build Include="import\User Defined Types\ItemName.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__check_constraints.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__columns.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__computed_columns.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__configurations.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__databases.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__default_constraints.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__dm_db_index_usage_stats.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__dm_db_partition_stats.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__dm_os_wait_stats.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__foreign_key_columns.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__foreign_keys.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__identity_columns.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__index_columns.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__indexes.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__key_constraints.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__master_files.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__objects.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__partitions.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__sql_modules.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__stats.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__sysarticles.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__tables.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__triggers.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__views.sql" />
+    <Build Include="import\Views\vw_DatabaseQueue.sql" />
+    <Build Include="import\Views\vw_DatabaseSyncObject.sql" />
+    <Build Include="import\Views\vw_DatabaseSyncObjectQueue.sql" />
+    <Build Include="Security\ext.sql" />
+    <Build Include="Security\import.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="StaticCodeAnalysis.SuppressMessages.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <PostDeploy Include="Script.PostDeployment.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\160\SqlSchemas\master.dacpac">
+      <HintPath>$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\160\SqlSchemas\master.dacpac</HintPath>
+      <SuppressMissingDependenciesErrors>True</SuppressMissingDependenciesErrors>
+      <DatabaseVariableLiteralValue>master</DatabaseVariableLiteralValue>
+    </ArtifactReference>
+  </ItemGroup>
+</Project>
