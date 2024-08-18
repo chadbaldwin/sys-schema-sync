@@ -47,7 +47,7 @@ Once that is set up, next you need to set up the sync service. Copy the "Service
 
 Next, update the `/Service/appsettings.json` file. Note: SysSchemaSync Service uses a generic PowerShell utility script that I use in multiple projects, which is why some of the configuration parameters are pre-configured and do not need to be changed.
 
-```js
+```jsonc
 {
   // For now, this is simply the NAME of the folder to create within the "Service" folder to use for logs
   "LogDirectory": "Logs",
