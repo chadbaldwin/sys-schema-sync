@@ -1,1 +1,1 @@
-﻿CREATE SCHEMA import;
+CREATE SCHEMA import;

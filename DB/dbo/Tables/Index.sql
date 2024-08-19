@@ -1,4 +1,4 @@
-﻿CREATE TABLE dbo.[Index] (
+CREATE TABLE dbo.[Index] (
     DatabaseID    int              NOT NULL CONSTRAINT FK_Index_DatabaseID REFERENCES dbo.[Database] (DatabaseID),
     ObjectID      int              NOT NULL CONSTRAINT FK_Index_ObjectID   REFERENCES dbo.[Object]   (ObjectID),
     IndexID       int              NOT NULL IDENTITY,
@@ -17,5 +17,5 @@ CREATE NONCLUSTERED INDEX IX_Index_DatabaseID_ObjectID_IndexName
 GO
 
 CREATE NONCLUSTERED INDEX IX_Index_DatabaseID_IsDeleted
-	ON dbo.[Index] (DatabaseID, IsDeleted)
+    ON dbo.[Index] (DatabaseID, IsDeleted)
 GO

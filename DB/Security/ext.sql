@@ -1,1 +1,1 @@
-﻿CREATE SCHEMA ext;
+CREATE SCHEMA ext;

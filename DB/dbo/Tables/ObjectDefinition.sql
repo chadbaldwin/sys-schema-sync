@@ -1,4 +1,4 @@
-﻿CREATE TABLE dbo.ObjectDefinition (
+CREATE TABLE dbo.ObjectDefinition (
     ObjectDefinitionID      int             NOT NULL IDENTITY
                                                      CONSTRAINT CPK_ObjectDefinition_ObjectDefinitionID  PRIMARY KEY CLUSTERED,
     ObjectDefinitionHash    binary(32)      NOT NULL CONSTRAINT UQ_ObjectDefinition_ObjectDefinitionHash UNIQUE,

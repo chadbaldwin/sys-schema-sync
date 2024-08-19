@@ -1,4 +1,4 @@
-﻿CREATE TYPE import.ItemName AS TABLE (
+CREATE TYPE import.ItemName AS TABLE (
     ID            int              NOT NULL,
     SchemaName    nvarchar(128)    NOT NULL,
     ObjectName    nvarchar(128)    NOT NULL,

@@ -1,4 +1,4 @@
-﻿CREATE VIEW dbo.vw_Instance
+CREATE VIEW dbo.vw_Instance
 AS
 SELECT i.InstanceID, i.InstanceName
 FROM dbo.Instance i
