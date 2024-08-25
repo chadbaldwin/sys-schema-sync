@@ -1,3 +1,5 @@
+#Requires -PSEdition Core -Version 7.0 -Modules @{ ModuleName="dbatools"; ModuleVersion="2.1.7" }
+
 $config = gc .\appsettings.jsonc -Raw  | ConvertFrom-Json
 
 # Converting back to JSON rather than using the source so we can remove comments.

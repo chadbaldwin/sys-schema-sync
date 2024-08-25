@@ -1,7 +1,9 @@
+#Requires -PSEdition Core -Version 7.0 -Modules @{ ModuleName="dbatools"; ModuleVersion="2.1.7" }
+
 [CmdletBinding()]
 param (
-    [Parameter(Position=0)][string]$SqlInstance,
-    [Parameter(Position=1)][string]$SqlDatabase
+    [Parameter(Mandatory,Position=0)][string]$SqlInstance,
+    [Parameter(Mandatory,Position=1)][string]$SqlDatabase
 )
 
 $ErrorActionPreference = 'Stop'
