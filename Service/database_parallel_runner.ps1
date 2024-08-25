@@ -9,7 +9,7 @@ $ErrorActionPreference = 'Stop'
 $PSDefaultParameterValues['Invoke-DbaQuery:EnableException'] = $true
 
 # Get script configuration
-$config = Get-Content "${PSScriptRoot}\appsettings.json" | ConvertFrom-Json
+$config = Get-Content -LiteralPath "${PSScriptRoot}\appsettings.jsonc" -Raw | ConvertFrom-Json
 
 # Progress bar style - 'Classic' = always on top, larger; 'Minimal' = inline with output, smaller;
 #$PSStyle.Progress.View = 'Classic'
@@ -17,7 +17,7 @@ $config = Get-Content "${PSScriptRoot}\appsettings.json" | ConvertFrom-Json
 $InstanceConcurrencyLimit = $config.InstanceConcurrencyLimit ?? 5
 $DatabaseConcurrencyLimit = $config.DatabaseConcurrencyLimit ?? 1
 
-$logdir  = mkdir "${PSScriptRoot}\$($config.LogDirectory)" -Force
+$logdir = mkdir "${PSScriptRoot}\$($config.LogDirectory)" -Force
 
 $target_dbs_script = Get-Item "${PSScriptRoot}\$($config.TargetDatabaseListScriptPath)"
 $script_to_run     = Get-Item "${PSScriptRoot}\$($config.PowerShellScriptToRunPath)"

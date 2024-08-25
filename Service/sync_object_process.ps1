@@ -53,7 +53,7 @@ try {
     if (($oldchecksum -ne $newchecksum) -or ($null -eq $oldchecksum) -or ($null -eq $syncItem.ChecksumQueryText)) {
         # Use the export query path override otherwise use the default - select *
         if ($syncItem.ExportQueryPath) {
-            $exportQuery = Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot 'SQL' $syncItem.ExportQueryPath)
+            $exportQuery = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'SQL' $syncItem.ExportQueryPath) -Raw
         } else {
             $exportQuery = 'SELECT _CollectionDate = SYSUTCDATETIME(), * FROM {0}' -f $syncItem.SyncObjectName
         }

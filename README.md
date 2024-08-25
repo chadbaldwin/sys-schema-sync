@@ -5,25 +5,37 @@
 
 ## What is this, and how does it help?
 
-Let's say you need to check whether RSCI is enabled on every production database, how would you do that? What are the query store settings on all databases? Does a particular table index exist and match on all databases?
+Let's say you work in a single-tenant database environment where you have many duplicate databases and you need to track things like schema drift, configuration, etc. For example, does a particular table index exist on every single database and does it have the same definition on all databases?
 
-In order to answer these questions, you need to write some sort of tool or script, maybe loop through linked servers, or try to use some other tool to get that data. What happens when you have dozens of people building these types of processes that reach out to all of your databases every day just to query the same information and store it in some altered format?
+In order to answer these questions, you need to write some sort of PowerShell script, maybe loop through linked servers, or try to use some other tool to get that data. What happens when you have dozens of people building these types of processes that reach out to all of your databases every day just to query the same information and store it in some altered format?
 
-This is a database that centralizes various SQL Server instance and database level metadata into a familiar schema. Processes can be built to utilize this data, reading from a single database, rather than having to reach out to every production database.
+I have a personal pet peeve when people build sync processes and change source column names when they are simply copying data directly to another table...e.g. changing `snapshot_isolation_state` to `IsSnapshotOn`.
+
+This is a database that centralizes various SQL Server instance and database level metadata into a familiar schema. Processes and views can then be built to utilize this data, reading from a single database, rather than having to reach out to every production database.
 
 ----
 
 ## Primary Objective
 
-To sync useful SQL Server system objects and other metadata from multiple databases into a central location while maintaining the original schema with as little changes as possible.
+To sync commonly used SQL Server system objects and other metadata from multiple databases into a central location while maintaining the original schema with as little changes as possible.
 
 This ensures a level of familiarity with the schema and making it easier to convert existing queries over to use this system.
 
 ----
 
+## What this isn't
+
+This is not a monitoring, alerting or performance reporting tool.
+
+This is not a realtime view of your databases.
+
+This does not replace existing tools like SentryOne, DBADash, SQLWATCH, dbachecks, etc.
+
+----
+
 ## Installation and Setup
 
-For now, because this project is still in the early stages of development, there isn't a simple installer. Maybe in the future I'll find a nice way to package it up.
+For now, because this project is still in the early stages of development, there isn't a simple setup. Maybe in the future I'll find a nice way to package it.
 
 ### Deploy the database
 
@@ -40,7 +52,7 @@ To configure the database, you can do one of a few things...
 1. You can manually insert the Instances and Databases into the appropriate tables yourself. You can do this in `dbo.[Instance]` `dbo.[Database]`. These tables are read by the service and fed into dbatools for connecting to the various instances and collecting the data.
 1. I have provided a sample stored procedure which you can modify to hardcode the list within the proc here: `/DB/import/Stored Procedures/usp_UpdateTargets.sql`
 
-> TODO: In the future I may end up going the route of storing this information in a JSON file where users will populate connection strings into the `appsettings.json` file, and the Instance and Database tables would be updated accordingly.
+> TODO: In the future I may end up going the route of storing this information in a JSON file where users will populate connection strings into the `appsettings.jsonc` file, and the Instance and Database tables would be updated accordingly.
 
 ### Deploy the service
 
@@ -48,7 +60,7 @@ Once that is set up, next you need to set up the sync service. Copy the "Service
 
 ### Configure the service
 
-Next, update the `/Service/appsettings.json` file. Note: SysSchemaSync Service uses a generic PowerShell utility script that I use in multiple projects, which is why some of the configuration parameters are pre-configured and do not need to be changed.
+Next, update the `/Service/appsettings.jsonc` file. Note: SysSchemaSync Service uses a generic PowerShell utility script that I use in multiple projects, which is why some of the configuration parameters are pre-configured and do not need to be changed.
 
 ```jsonc
 {
@@ -73,7 +85,27 @@ Next, update the `/Service/appsettings.json` file. Note: SysSchemaSync Service u
 
   // Connection string pointing to where the SysSchemaSync database was deployed
   // This connection string is used by the SysSchemaSync scripts to know where to push the collected data
-  "RepositoryDatabaseConnectionString": "Server=MYINSTANCE;Database=SysSchemaSync;MultiSubnetFailover=True;Application Name=SysSchemaSyncService"
+  "RepositoryDatabaseConnectionString": "Server=MYINSTANCE;Database=SysSchemaSync;MultiSubnetFailover=True;Application Name=SysSchemaSyncService",
+
+  // List of Instances and databases to target
+  "TargetDatabases": [
+    {
+      "Instance": "Instance1",
+      "Database": "DBFoo"
+    },
+    {
+      "Instance": "Instance1",
+      "Database": "DBBar"
+    },
+    {
+      "Instance": "Instance2",
+      "Database": "DBFoo"
+    },
+    {
+      "Instance": "Instance3",
+      "Database": "DBQux"
+    }
+  ]
 }
 ```
 
@@ -90,7 +122,7 @@ That's it. So to sum it up...
 1. Deploy database via SSDT / Visual Studio
 1. Configure database `dbo.[Instance]` and `dbo.[Database]` tables
 1. Copy service files to host
-1. Configure service `appsettings.json` file
+1. Configure service `appsettings.jsonc` file
 1. Set up scheduled job to run (recommended every 5 minutes)
 1. Database should start populating
 

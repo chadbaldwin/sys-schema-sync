@@ -1,4 +1,6 @@
-CREATE PROCEDURE import.usp_UpdateTargets
+CREATE OR ALTER PROCEDURE import.usp_UpdateTargets (
+    @ServiceConfigJSON nvarchar(MAX)
+)
 AS
 BEGIN;
     SET NOCOUNT ON;
@@ -11,13 +13,13 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    -- Temporary data until I figure out how I want to handle this in the future
-    -- More than likely will abandon this proc entirely and go with a JSON configuration file along with a PowerShell script to sync configuration
     INSERT INTO #tmp_db (InstanceName, DatabaseName)
-    VALUES ('Instance1', 'DBFoo')
-        ,  ('Instance1', 'DBBar')
-        ,  ('Instance2', 'DBFoo')
-        ,  ('Instance3', 'DBQux');
+    SELECT d.Instance, d.[Database]
+    FROM OPENJSON(@ServiceConfigJSON, '$.TargetDatabases')
+        WITH (
+            Instance nvarchar(128),
+            [Database] nvarchar(128)
+        ) d
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------

@@ -13,7 +13,7 @@ $PSDefaultParameterValues= @{
 }
 
 # Get script configuration
-$config = Get-Content "${PSScriptRoot}\appsettings.json" | ConvertFrom-Json
+$config = Get-Content -LiteralPath "${PSScriptRoot}\appsettings.jsonc" -Raw | ConvertFrom-Json
 ##################################################
 
 ##################################################

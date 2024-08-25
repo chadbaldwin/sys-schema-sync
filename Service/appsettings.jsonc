@@ -1,0 +1,44 @@
+{
+  // For now, this is simply the NAME of the folder to create within the "Service" folder to use for logs
+  "LogDirectory": "Logs",
+
+  // Tells the generic PowerShell script runner what Instances and Databases to run against
+  "TargetDatabaseListScriptPath": "target_databases.sql", // Do not change
+
+  // Connection string pointing to where the SysSchemaSync database was deployed
+  // This connection string is used by the generic script runner to get the list of databases to run against
+  "TargetDatabaseListConnectionString": "Server=MYINSTANCE;Database=SysSchemaSync;MultiSubnetFailover=True;Application Name=SysSchemaSyncService",
+
+  // Tells the generic PowerShell script runner what file we want to execute for each instance/database
+  "PowerShellScriptToRunPath": "sync_objects.ps1", // Do not change
+
+  // How many instances do we want to run syncs against in parallel
+  "InstanceConcurrencyLimit": 10,
+  // How many databases PER INSTANCE do we want to run syncs against in parallel?
+  "DatabaseConcurrencyLimit": 3,
+  // If Instance is set to 10 and Database is set to 3, then the highest number of concurrent processes possible is 30
+
+  // Connection string pointing to where the SysSchemaSync database was deployed
+  // This connection string is used by the SysSchemaSync scripts to know where to push the collected data
+  "RepositoryDatabaseConnectionString": "Server=MYINSTANCE;Database=SysSchemaSync;MultiSubnetFailover=True;Application Name=SysSchemaSyncService",
+
+  // List of Instances and databases to target
+  "TargetDatabases": [
+    {
+      "Instance": "Instance1",
+      "Database": "DBFoo"
+    },
+    {
+      "Instance": "Instance1",
+      "Database": "DBBar"
+    },
+    {
+      "Instance": "Instance2",
+      "Database": "DBFoo"
+    },
+    {
+      "Instance": "Instance3",
+      "Database": "DBQux"
+    }
+  ]
+}
