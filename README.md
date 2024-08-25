@@ -1,5 +1,8 @@
 # sys-schema-sync
 
+> [!CAUTION]
+> This project is still in early development and testing. Behavior is subect to (and expected to) change, including breaking changes of configurations, installation, file names, database schema, etc.
+
 ## What is this, and how does it help?
 
 Let's say you need to check whether RSCI is enabled on every production database, how would you do that? What are the query store settings on all databases? Does a particular table index exist and match on all databases?
