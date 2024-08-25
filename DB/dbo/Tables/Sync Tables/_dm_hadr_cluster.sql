@@ -1,5 +1,5 @@
 CREATE TABLE dbo._dm_hadr_cluster (
-    _InstanceID         int             NOT NULL CONSTRAINT FK__dm_hadr_cluster__InstanceID REFERENCES dbo.[Instance] (InstanceID),
+    _InstanceID         int             NOT NULL CONSTRAINT FK__dm_hadr_cluster__InstanceID REFERENCES dbo.[Instance] (_InstanceID),
     _CollectionDate     datetime2       NOT NULL,
     --
     cluster_name        nvarchar(256)   NOT NULL,

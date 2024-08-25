@@ -1,6 +1,6 @@
 CREATE VIEW import.vw_DatabaseSyncObjectQueue
 AS
-SELECT so.InstanceID, so.DatabaseID, so.InstanceName, so.DatabaseName
+SELECT so._InstanceID, so._DatabaseID, so.InstanceName, so.DatabaseName
     , so.SyncObjectID, so.SyncObjectName, so.SyncObjectLevelID
     , so.LastSyncChecksum, so.LastSyncTime, so.LastSyncCheck, so.LastSyncError, so.LastSyncErrorMessage
     , so.ImportTable, so.ImportProc, so.ImportType, so.ExportQueryPath, so.ChecksumQueryText

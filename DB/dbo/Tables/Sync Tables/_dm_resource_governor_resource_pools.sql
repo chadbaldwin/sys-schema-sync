@@ -1,5 +1,5 @@
 CREATE TABLE dbo._dm_resource_governor_resource_pools (
-    _InstanceID                             int             NOT NULL CONSTRAINT FK__dm_resource_governor_resource_pools__InstanceID REFERENCES dbo.[Instance] (InstanceID),
+    _InstanceID                             int             NOT NULL CONSTRAINT FK__dm_resource_governor_resource_pools__InstanceID REFERENCES dbo.[Instance] (_InstanceID),
     _CollectionDate                         datetime2       NOT NULL,
     --
     pool_id                                 int             NOT NULL,

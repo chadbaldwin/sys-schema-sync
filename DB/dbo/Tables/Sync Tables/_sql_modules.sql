@@ -1,6 +1,6 @@
 CREATE TABLE dbo._sql_modules (
-    _DatabaseID             int             NOT NULL CONSTRAINT FK__sql_modules__DatabaseID REFERENCES dbo.[Database]   (DatabaseID),
-    _ObjectID               int             NOT NULL CONSTRAINT FK__sql_modules__ObjectID   REFERENCES dbo.[Object]     (ObjectID),
+    _DatabaseID             int             NOT NULL CONSTRAINT FK__sql_modules__DatabaseID REFERENCES dbo.[Database]   (_DatabaseID),
+    _ObjectID               int             NOT NULL CONSTRAINT FK__sql_modules__ObjectID   REFERENCES dbo.[Object]     (_ObjectID),
     _InsertDate             datetime2       NOT NULL CONSTRAINT DF__sql_modules__InsertDate DEFAULT (SYSUTCDATETIME()),
     _ModifyDate             datetime2       NOT NULL CONSTRAINT DF__sql_modules__ModifyDate DEFAULT (SYSUTCDATETIME()),
     _RowHash                binary(32)      NOT NULL,
@@ -8,7 +8,7 @@ CREATE TABLE dbo._sql_modules (
     _ValidTo                datetime2       GENERATED ALWAYS AS ROW END     NOT NULL,
     --
     [object_id]             int             NOT NULL,
-    _ObjectDefinitionID     int             NOT NULL CONSTRAINT FK__sql_modules__ObjectDefinitionID REFERENCES dbo.ObjectDefinition (ObjectDefinitionID),
+    _ObjectDefinitionID     int             NOT NULL CONSTRAINT FK__sql_modules__ObjectDefinitionID REFERENCES dbo.ObjectDefinition (_ObjectDefinitionID),
     uses_ansi_nulls         bit                 NULL,
     uses_quoted_identifier  bit                 NULL,
     is_schema_bound         bit                 NULL,

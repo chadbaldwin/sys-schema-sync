@@ -23,7 +23,7 @@ BEGIN;
     INSERT INTO @input (ID, SchemaName, ObjectName, ObjectType)
     SELECT ID, _SchemaName, _ObjectName, _ObjectType FROM #Dataset;
 
-    INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, ObjectID, IndexID, ColumnID)
+    INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
     ------------------------------------------------------------------------------
 
@@ -37,7 +37,7 @@ BEGIN;
             SELECT *
             FROM @output o
                 JOIN #Dataset d ON d.ID = o.ID
-            WHERE o.ObjectID = x._ObjectID
+            WHERE o._ObjectID = x._ObjectID
                 AND d.artid = x.artid
         );
     RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
@@ -71,7 +71,7 @@ BEGIN;
         , x.custom_script               = d.custom_script
         , x.fire_triggers_on_snapshot   = d.fire_triggers_on_snapshot
     FROM dbo._sysarticles x
-        JOIN @output y ON y.ObjectID = x._ObjectID
+        JOIN @output y ON y._ObjectID = x._ObjectID
         JOIN #Dataset d ON d.ID = y.ID AND d.artid = x.artid
     WHERE x._RowHash <> d._RowHash;
     RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
@@ -79,14 +79,14 @@ BEGIN;
     RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     INSERT INTO dbo._sysarticles (_DatabaseID, _ObjectID, _RowHash
         , artid, creation_script, del_cmd, [description], dest_table, [filter], filter_clause, ins_cmd, [name], [objid], pubid, pre_creation_cmd, [status], sync_objid, [type], upd_cmd, schema_option, dest_owner, ins_scripting_proc, del_scripting_proc, upd_scripting_proc, custom_script, fire_triggers_on_snapshot)
-    SELECT @DatabaseID, y.ObjectID, d._RowHash
+    SELECT @DatabaseID, y._ObjectID, d._RowHash
         , d.artid, d.creation_script, d.del_cmd, d.[description], d.dest_table, d.[filter], d.filter_clause, d.ins_cmd, d.[name], d.[objid], d.pubid, d.pre_creation_cmd, d.[status], d.sync_objid, d.[type], d.upd_cmd, d.schema_option, d.dest_owner, d.ins_scripting_proc, d.del_scripting_proc, d.upd_scripting_proc, d.custom_script, d.fire_triggers_on_snapshot
     FROM #Dataset d
         JOIN @output y ON y.ID = d.ID
     WHERE NOT EXISTS (
             SELECT *
             FROM dbo._sysarticles x
-            WHERE x._ObjectID = y.ObjectID
+            WHERE x._ObjectID = y._ObjectID
                 AND x.artid = d.artid
         );
     RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;

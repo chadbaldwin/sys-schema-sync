@@ -1,5 +1,5 @@
 CREATE TABLE dbo._dm_os_nodes (
-    _InstanceID                     int             NOT NULL CONSTRAINT FK__dm_os_nodes__InstanceID REFERENCES dbo.[Instance] (InstanceID),
+    _InstanceID                     int             NOT NULL CONSTRAINT FK__dm_os_nodes__InstanceID REFERENCES dbo.[Instance] (_InstanceID),
     _CollectionDate                 datetime2       NOT NULL,
     --
     node_id                         smallint        NOT NULL,

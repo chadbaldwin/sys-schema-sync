@@ -1,5 +1,5 @@
 CREATE TABLE dbo._database_query_store_options (
-    _DatabaseID                                 int             NOT NULL CONSTRAINT FK__database_query_store_options__DatabaseID REFERENCES dbo.[Database] (DatabaseID),
+    _DatabaseID                                 int             NOT NULL CONSTRAINT FK__database_query_store_options__DatabaseID REFERENCES dbo.[Database] (_DatabaseID),
     _CollectionDate                             datetime2       NOT NULL,
     --
     [desired_state]                             smallint        NOT NULL,

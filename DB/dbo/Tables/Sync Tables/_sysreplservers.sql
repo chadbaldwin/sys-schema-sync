@@ -1,5 +1,5 @@
 CREATE TABLE dbo._sysreplservers (
-    _DatabaseID         int             NOT NULL CONSTRAINT FK__sysreplservers__DatabaseID REFERENCES dbo.[Database] (DatabaseID),
+    _DatabaseID         int             NOT NULL CONSTRAINT FK__sysreplservers__DatabaseID REFERENCES dbo.[Database] (_DatabaseID),
     _CollectionDate     datetime2       NOT NULL,
     --
     srvname             nvarchar(128)   NOT NULL,

@@ -1,7 +1,7 @@
 CREATE TABLE dbo._computed_columns (
-    _DatabaseID                         int             NOT NULL CONSTRAINT FK__computed_columns__DatabaseID    REFERENCES dbo.[Database]   (DatabaseID),
-    _ObjectID                           int             NOT NULL CONSTRAINT FK__computed_columns__ObjectID      REFERENCES dbo.[Object]     (ObjectID),
-    _ColumnID                           int             NOT NULL CONSTRAINT FK__computed_columns__ColumnID      REFERENCES dbo.[Column]     (ColumnID),
+    _DatabaseID                         int             NOT NULL CONSTRAINT FK__computed_columns__DatabaseID    REFERENCES dbo.[Database]   (_DatabaseID),
+    _ObjectID                           int             NOT NULL CONSTRAINT FK__computed_columns__ObjectID      REFERENCES dbo.[Object]     (_ObjectID),
+    _ColumnID                           int             NOT NULL CONSTRAINT FK__computed_columns__ColumnID      REFERENCES dbo.[Column]     (_ColumnID),
     _InsertDate                         datetime2       NOT NULL CONSTRAINT DF__computed_columns__InsertDate    DEFAULT (SYSUTCDATETIME()),
     _ModifyDate                         datetime2       NOT NULL CONSTRAINT DF__computed_columns__ModifyDate    DEFAULT (SYSUTCDATETIME()),
     _RowHash                            binary(32)      NOT NULL,

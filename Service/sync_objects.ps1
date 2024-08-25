@@ -22,7 +22,7 @@ $conn_tgt = Connect-DbaInstance -ConnectionString $config.RepositoryDatabaseConn
 Write-Output 'Getting list of syncs to run for DB'
 
 $query = @'
-    SELECT InstanceID, DatabaseID, SyncObjectID
+    SELECT _InstanceID, _DatabaseID, SyncObjectID
         , SyncObjectName, SyncObjectLevelID, LastSyncChecksum, ImportTable
         , ImportProc, ImportType, ExportQueryPath, ChecksumQueryText
     FROM import.vw_DatabaseSyncObjectQueue
@@ -53,8 +53,8 @@ try {
         $errorMsg = Get-Error $_ | Out-String
         Invoke-DbaQuery $conn_tgt -CommandType StoredProcedure -Query 'import.usp_SetSyncStatus' `
                         -SqlParameter @(
-                              (New-DbaSqlParameter -ParameterName 'InstanceID'   -SqlDbType Int      -Value $syncList[0].InstanceID)
-                            , (New-DbaSqlParameter -ParameterName 'DatabaseID'   -SqlDbType Int      -Value ($syncList[0].DatabaseID ?? [DBNull]::Value))
+                              (New-DbaSqlParameter -ParameterName 'InstanceID'   -SqlDbType Int      -Value $syncList[0]._InstanceID)
+                            , (New-DbaSqlParameter -ParameterName 'DatabaseID'   -SqlDbType Int      -Value ($syncList[0]._DatabaseID ?? [DBNull]::Value))
                             , (New-DbaSqlParameter -ParameterName 'ErrorMessage' -SqlDbType NVarChar -Value $errorMsg)
                         ) | Write-Output
         return

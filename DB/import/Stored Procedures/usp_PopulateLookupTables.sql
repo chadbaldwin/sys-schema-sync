@@ -52,7 +52,7 @@ BEGIN;
                                         If Database level is specified, it will run against each configured user database.
                                     
                                         In either case, if an ExportQueryPath is not provided, one will be generated and will use either
-                                        the InstanceID or DatabaseID when inserting into its configured ImportTable.
+                                        the _InstanceID or _DatabaseID when inserting into its configured ImportTable.
         
             IsEnabled               =   Controls whether the sync object is enabled. Disabling immediately removes all records from
                                         the sync queue, but does not remove any records from import.DatabaseSyncObjectStatus.
@@ -292,7 +292,7 @@ BEGIN;
             FROM #tmp_SyncObject so
                 JOIN sys.objects o ON o.[object_id] = OBJECT_ID(so.ImportProc, 'P')
             WHERE NOT EXISTS (
-                    -- InstanceID/DatabaseID parameter is missing or has the wrong type
+                    -- _InstanceID/_DatabaseID parameter is missing or has the wrong type
                     SELECT * FROM sys.parameters p
                     WHERE p.[object_id] = o.[object_id]
                         AND TYPE_NAME(p.system_type_id) = 'int'

@@ -1,7 +1,7 @@
 CREATE TABLE dbo._stats (
-    _DatabaseID                     int             NOT NULL CONSTRAINT FK__stats__DatabaseID   REFERENCES dbo.[Database]   (DatabaseID),
-    _ObjectID                       int             NOT NULL CONSTRAINT FK__stats__ObjectID     REFERENCES dbo.[Object]     (ObjectID),
-    _IndexID                        int             NOT NULL CONSTRAINT FK__stats__IndexID      REFERENCES dbo.[Index]      (IndexID),
+    _DatabaseID                     int             NOT NULL CONSTRAINT FK__stats__DatabaseID   REFERENCES dbo.[Database]   (_DatabaseID),
+    _ObjectID                       int             NOT NULL CONSTRAINT FK__stats__ObjectID     REFERENCES dbo.[Object]     (_ObjectID),
+    _IndexID                        int             NOT NULL CONSTRAINT FK__stats__IndexID      REFERENCES dbo.[Index]      (_IndexID),
     _InsertDate                     datetime2       NOT NULL CONSTRAINT DF__stats__InsertDate   DEFAULT (SYSUTCDATETIME()),
     _ModifyDate                     datetime2       NOT NULL CONSTRAINT DF__stats__ModifyDate   DEFAULT (SYSUTCDATETIME()),
     _RowHash                        binary(32)      NOT NULL,

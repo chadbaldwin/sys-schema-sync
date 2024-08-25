@@ -1,5 +1,5 @@
 CREATE TABLE dbo._dm_hadr_database_replica_states (
-    _DatabaseID                 int                 NOT NULL CONSTRAINT FK__dm_hadr_database_replica_states__DatabaseID REFERENCES dbo.[Database] (DatabaseID),
+    _DatabaseID                 int                 NOT NULL CONSTRAINT FK__dm_hadr_database_replica_states__DatabaseID REFERENCES dbo.[Database] (_DatabaseID),
     _CollectionDate             datetime2           NOT NULL,
     --
     database_id                 int                 NOT NULL,

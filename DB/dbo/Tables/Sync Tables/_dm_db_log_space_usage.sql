@@ -1,5 +1,5 @@
 CREATE TABLE dbo._dm_db_log_space_usage (
-    _DatabaseID                             int         NOT NULL CONSTRAINT FK__dm_db_log_space_usage__DatabaseID REFERENCES dbo.[Database] (DatabaseID),
+    _DatabaseID                             int         NOT NULL CONSTRAINT FK__dm_db_log_space_usage__DatabaseID REFERENCES dbo.[Database] (_DatabaseID),
     _CollectionDate                         datetime2   NOT NULL,
     --
     database_id                             int             NULL,

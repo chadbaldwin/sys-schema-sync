@@ -1,5 +1,5 @@
 CREATE TABLE dbo._dm_os_process_memory (
-    _InstanceID                         int         NOT NULL CONSTRAINT FK__dm_os_process_memory__InstanceID REFERENCES dbo.[Instance] (InstanceID),
+    _InstanceID                         int         NOT NULL CONSTRAINT FK__dm_os_process_memory__InstanceID REFERENCES dbo.[Instance] (_InstanceID),
     _CollectionDate                     datetime2   NOT NULL,
     --
     physical_memory_in_use_kb           bigint      NOT NULL,

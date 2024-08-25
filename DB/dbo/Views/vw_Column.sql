@@ -1,10 +1,10 @@
 CREATE VIEW dbo.vw_Column
 AS
-SELECT o.InstanceID, o.InstanceName
-    , o.DatabaseID, o.DatabaseName
-    , o.ObjectID, o.SchemaName, o.ObjectName, o.ObjectType
-    , c.ColumnID, c.ColumnName
+SELECT o._InstanceID, o.InstanceName
+    , o._DatabaseID, o.DatabaseName
+    , o._ObjectID, o.SchemaName, o.ObjectName, o.ObjectType
+    , c._ColumnID, c.ColumnName
 FROM dbo.[Column] c
-    JOIN dbo.vw_Object o ON o.DatabaseID = c.DatabaseID AND o.ObjectID = c.ObjectID
+    JOIN dbo.vw_Object o ON o._DatabaseID = c._DatabaseID AND o._ObjectID = c._ObjectID
 WHERE c.IsDeleted = 0;
 GO

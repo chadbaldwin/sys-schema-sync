@@ -1,5 +1,5 @@
 CREATE TABLE dbo._dm_os_sys_info (
-    _InstanceID                     int             NOT NULL CONSTRAINT FK__dm_os_sys_info__InstanceID REFERENCES dbo.[Instance] (InstanceID),
+    _InstanceID                     int             NOT NULL CONSTRAINT FK__dm_os_sys_info__InstanceID REFERENCES dbo.[Instance] (_InstanceID),
     _CollectionDate                 datetime2       NOT NULL,
     --
     cpu_ticks                       bigint          NOT NULL,

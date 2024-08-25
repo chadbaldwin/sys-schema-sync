@@ -1,8 +1,8 @@
 CREATE TABLE dbo._check_constraints (
-    _DatabaseID             int             NOT NULL CONSTRAINT FK__check_constraints__DatabaseID       REFERENCES dbo.[Database]   (DatabaseID),
-    _ObjectID               int             NOT NULL CONSTRAINT FK__check_constraints__ObjectID         REFERENCES dbo.[Object]     (ObjectID),
-    _ParentObjectID         int             NOT NULL CONSTRAINT FK__check_constraints__ParentObjectID   REFERENCES dbo.[Object]     (ObjectID),
-    _ParentColumnID         int                 NULL CONSTRAINT FK__check_constraints__ParentColumnID   REFERENCES dbo.[Column]     (ColumnID),
+    _DatabaseID             int             NOT NULL CONSTRAINT FK__check_constraints__DatabaseID       REFERENCES dbo.[Database]   (_DatabaseID),
+    _ObjectID               int             NOT NULL CONSTRAINT FK__check_constraints__ObjectID         REFERENCES dbo.[Object]     (_ObjectID),
+    _ParentObjectID         int             NOT NULL CONSTRAINT FK__check_constraints__ParentObjectID   REFERENCES dbo.[Object]     (_ObjectID),
+    _ParentColumnID         int                 NULL CONSTRAINT FK__check_constraints__ParentColumnID   REFERENCES dbo.[Column]     (_ColumnID),
     _InsertDate             datetime2       NOT NULL CONSTRAINT DF__check_constraints__InsertDate       DEFAULT (SYSUTCDATETIME()),
     _ModifyDate             datetime2       NOT NULL CONSTRAINT DF__check_constraints__ModifyDate       DEFAULT (SYSUTCDATETIME()),
     _RowHash                binary(32)      NOT NULL,

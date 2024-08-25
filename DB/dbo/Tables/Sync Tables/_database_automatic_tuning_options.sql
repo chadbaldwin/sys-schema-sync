@@ -1,5 +1,5 @@
 CREATE TABLE dbo._database_automatic_tuning_options (
-    _DatabaseID         int             NOT NULL CONSTRAINT FK__database_automatic_tuning_options__DatabaseID REFERENCES dbo.[Database] (DatabaseID),
+    _DatabaseID         int             NOT NULL CONSTRAINT FK__database_automatic_tuning_options__DatabaseID REFERENCES dbo.[Database] (_DatabaseID),
     _CollectionDate     datetime2       NOT NULL,
     --
     [name]              nvarchar(128)       NULL,

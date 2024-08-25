@@ -1,5 +1,5 @@
 CREATE TABLE dbo._dm_os_enumerate_fixed_drives (
-    _InstanceID         int             NOT NULL CONSTRAINT FK__dm_os_enumerate_fixed_drives__InstanceID REFERENCES dbo.[Instance] (InstanceID),
+    _InstanceID         int             NOT NULL CONSTRAINT FK__dm_os_enumerate_fixed_drives__InstanceID REFERENCES dbo.[Instance] (_InstanceID),
     _CollectionDate     datetime2       NOT NULL,
     --
     fixed_drive_path    nvarchar(256)       NULL,

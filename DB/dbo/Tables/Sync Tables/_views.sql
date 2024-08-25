@@ -1,6 +1,6 @@
 CREATE TABLE dbo._views (
-    _DatabaseID                 int             NOT NULL CONSTRAINT FK__views__DatabaseID   REFERENCES dbo.[Database]   (DatabaseID),
-    _ObjectID                   int             NOT NULL CONSTRAINT FK__views__ObjectID     REFERENCES dbo.[Object]     (ObjectID),
+    _DatabaseID                 int             NOT NULL CONSTRAINT FK__views__DatabaseID   REFERENCES dbo.[Database]   (_DatabaseID),
+    _ObjectID                   int             NOT NULL CONSTRAINT FK__views__ObjectID     REFERENCES dbo.[Object]     (_ObjectID),
     _InsertDate                 datetime2       NOT NULL CONSTRAINT DF__views__InsertDate   DEFAULT (SYSUTCDATETIME()),
     _ModifyDate                 datetime2       NOT NULL CONSTRAINT DF__views__ModifyDate   DEFAULT (SYSUTCDATETIME()),
     _RowHash                    binary(32)      NOT NULL,

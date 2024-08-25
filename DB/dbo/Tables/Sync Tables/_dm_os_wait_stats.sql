@@ -1,5 +1,5 @@
 CREATE TABLE dbo._dm_os_wait_stats (
-    _InstanceID         int             NOT NULL CONSTRAINT FK__dm_os_wait_stats__InstanceID REFERENCES dbo.[Instance] (InstanceID),
+    _InstanceID         int             NOT NULL CONSTRAINT FK__dm_os_wait_stats__InstanceID REFERENCES dbo.[Instance] (_InstanceID),
     _InsertDate         datetime2       NOT NULL CONSTRAINT DF__dm_os_wait_stats__InsertDate DEFAULT (SYSUTCDATETIME()),
     _ModifyDate         datetime2       NOT NULL CONSTRAINT DF__dm_os_wait_stats__ModifyDate DEFAULT (SYSUTCDATETIME()),
     --

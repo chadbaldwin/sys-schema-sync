@@ -1,5 +1,5 @@
 CREATE TABLE dbo._database_scoped_configurations (
-    _DatabaseID         int             NOT NULL CONSTRAINT FK__database_scoped_configurations__DatabaseID REFERENCES dbo.[Database] (DatabaseID),
+    _DatabaseID         int             NOT NULL CONSTRAINT FK__database_scoped_configurations__DatabaseID REFERENCES dbo.[Database] (_DatabaseID),
     _CollectionDate     datetime2       NOT NULL,
     --
     configuration_id    int                 NULL,

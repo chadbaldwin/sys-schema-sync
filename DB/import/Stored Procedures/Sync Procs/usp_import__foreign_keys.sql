@@ -27,7 +27,7 @@ BEGIN;
     INSERT INTO @input (ID, SchemaName, ObjectName, ObjectType)
     SELECT ID, _SchemaName, _ObjectName, _ObjectType FROM #Dataset;
 
-    INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, ObjectID, IndexID, ColumnID)
+    INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
 
     DELETE @input;
@@ -36,7 +36,7 @@ BEGIN;
     INSERT INTO @input (ID, SchemaName, ObjectName, ObjectType)
     SELECT ID, _ParentSchemaName, _ParentObjectName, _ParentObjectType FROM #Dataset;
 
-    INSERT INTO @parent (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, ObjectID, IndexID, ColumnID)
+    INSERT INTO @parent (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
 
     DELETE @input;
@@ -45,7 +45,7 @@ BEGIN;
     INSERT INTO @input (ID, SchemaName, ObjectName, ObjectType, IndexName)
     SELECT ID, _ReferencedSchemaName, _ReferencedObjectName, _ReferencedObjectType, _ReferencedIndexName FROM #Dataset;
 
-    INSERT INTO @reference (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, ObjectID, IndexID, ColumnID)
+    INSERT INTO @reference (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
     ------------------------------------------------------------------------------
 
@@ -55,14 +55,14 @@ BEGIN;
     RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     DELETE x FROM dbo._foreign_keys x
     WHERE x._DatabaseID = @DatabaseID
-        AND NOT EXISTS (SELECT * FROM @output o WHERE o.ObjectID = x._ObjectID);
+        AND NOT EXISTS (SELECT * FROM @output o WHERE o._ObjectID = x._ObjectID);
     RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
     RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     UPDATE x
-    SET   x._ParentObjectID                 = p.ObjectID
-        , x._ReferencedObjectID             = r.ObjectID
-        , x._ReferencedIndexID              = r.IndexID
+    SET   x._ParentObjectID                 = p._ObjectID
+        , x._ReferencedObjectID             = r._ObjectID
+        , x._ReferencedIndexID              = r._IndexID
         , x._ModifyDate                     = SYSUTCDATETIME()
         , x._RowHash                        = d._RowHash
         --
@@ -90,7 +90,7 @@ BEGIN;
         , x.update_referential_action_desc  = d.update_referential_action_desc
         , x.is_system_named                 = d.is_system_named
     FROM dbo._foreign_keys x
-        JOIN @output y ON y.ObjectID = x._ObjectID
+        JOIN @output y ON y._ObjectID = x._ObjectID
         JOIN #Dataset d ON d.ID = y.ID
         JOIN @parent p ON p.ID = y.ID
         JOIN @reference r ON r.ID = y.ID
@@ -101,7 +101,7 @@ BEGIN;
     INSERT INTO dbo._foreign_keys (_DatabaseID, _ObjectID, _ParentObjectID, _ReferencedObjectID, _ReferencedIndexID, _RowHash
         , [name], [object_id], principal_id, [schema_id], parent_object_id, [type], [type_desc], create_date, modify_date, is_ms_shipped, is_published, is_schema_published
         , referenced_object_id, key_index_id, is_disabled, is_not_for_replication, is_not_trusted, delete_referential_action, delete_referential_action_desc, update_referential_action, update_referential_action_desc, is_system_named)
-    SELECT @DatabaseID, y.ObjectID, p.ObjectID, r.ObjectID, r.IndexID, d._RowHash
+    SELECT @DatabaseID, y._ObjectID, p._ObjectID, r._ObjectID, r._IndexID, d._RowHash
         , d.[name], d.[object_id], d.principal_id, d.[schema_id], d.parent_object_id, d.[type], d.[type_desc], d.create_date, d.modify_date, d.is_ms_shipped, d.is_published, d.is_schema_published
         , d.referenced_object_id, d.key_index_id, d.is_disabled, d.is_not_for_replication, d.is_not_trusted, d.delete_referential_action, d.delete_referential_action_desc, d.update_referential_action, d.update_referential_action_desc, d.is_system_named
     FROM #Dataset d
@@ -111,7 +111,7 @@ BEGIN;
     WHERE NOT EXISTS (
             SELECT *
             FROM dbo._foreign_keys x
-            WHERE x._ObjectID  = y.ObjectID
+            WHERE x._ObjectID  = y._ObjectID
         );
     RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
     ------------------------------------------------------------------------------

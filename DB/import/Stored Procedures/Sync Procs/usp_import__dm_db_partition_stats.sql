@@ -23,7 +23,7 @@ BEGIN;
     INSERT INTO @input (ID, SchemaName, ObjectName, ObjectType, IndexName)
     SELECT ID, _SchemaName, _ObjectName, _ObjectType, _IndexName FROM #Dataset;
 
-    INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, ObjectID, IndexID, ColumnID)
+    INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
     ------------------------------------------------------------------------------
 
@@ -37,7 +37,7 @@ BEGIN;
             SELECT *
             FROM #Dataset d
                 JOIN @output o ON o.ID = d.ID
-            WHERE o.IndexID = x._IndexID
+            WHERE o._IndexID = x._IndexID
                 AND x.partition_number = d.partition_number
         );
     RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
@@ -62,7 +62,7 @@ BEGIN;
         , x.reserved_page_count                 = d.reserved_page_count
         , x.row_count                           = d.row_count
     FROM dbo._dm_db_partition_stats x
-        JOIN @output y ON y.IndexID = x._IndexID
+        JOIN @output y ON y._IndexID = x._IndexID
         JOIN #Dataset d ON d.ID = y.ID AND d.partition_number = x.partition_number
     WHERE x._RowHash <> d._RowHash;
     RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
@@ -70,14 +70,14 @@ BEGIN;
     RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     INSERT INTO dbo._dm_db_partition_stats (_DatabaseID, _ObjectID, _IndexID, _RowHash
         , [partition_id], [object_id], index_id, partition_number, in_row_data_page_count, in_row_used_page_count, in_row_reserved_page_count, lob_used_page_count, lob_reserved_page_count, row_overflow_used_page_count, row_overflow_reserved_page_count, used_page_count, reserved_page_count, row_count)
-    SELECT @DatabaseID, y.ObjectID, y.IndexID, d._RowHash
+    SELECT @DatabaseID, y._ObjectID, y._IndexID, d._RowHash
         , d.[partition_id], d.[object_id], d.index_id, d.partition_number, d.in_row_data_page_count, d.in_row_used_page_count, d.in_row_reserved_page_count, d.lob_used_page_count, d.lob_reserved_page_count, d.row_overflow_used_page_count, d.row_overflow_reserved_page_count, d.used_page_count, d.reserved_page_count, d.row_count
     FROM #Dataset d
         JOIN @output y ON y.ID = d.ID
     WHERE NOT EXISTS (
             SELECT *
             FROM dbo._dm_db_partition_stats x
-            WHERE x._IndexID  = y.IndexID
+            WHERE x._IndexID  = y._IndexID
                 AND x.partition_number = d.partition_number
         );
     RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;

@@ -24,8 +24,8 @@ $PSDefaultParameterValues= @{
 $sw_syncItem = [Diagnostics.Stopwatch]::StartNew()
 Write-Output 'Start: Sync'
 
-$InstanceID = $syncList[0].InstanceID
-$DatabaseID = $syncList[0].DatabaseID
+$InstanceID = $syncList[0]._InstanceID
+$DatabaseID = $syncList[0]._DatabaseID
 
 # Creating as script blocks due to bug in dbatools (Invoke-DbaAsync), it does not clear the parameters on the SqlCommand after use
 $sqlParamInstance = { New-DbaSqlParameter -ParameterName 'InstanceID' -SqlDbType Int -Value $InstanceID }
@@ -109,7 +109,7 @@ try {
 
             if ($data.Tables[0].Rows.Count -gt 0) {
                 Write-Output 'Start: Write'; $sw.Restart()
-                Write-Output 'Add InstanceID/DatabaseID column to DataTable'
+                Write-Output 'Add _InstanceID/_DatabaseID column to DataTable'
                 $data.Tables[0].Columns.Add($column); $column.SetOrdinal(0)
 
                 <# Really odd behavior with sys.dm_os_enumerate_fixed_drives. Kept running into all sorts of

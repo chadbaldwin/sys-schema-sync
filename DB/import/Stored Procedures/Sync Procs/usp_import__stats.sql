@@ -23,7 +23,7 @@ BEGIN;
     INSERT INTO @input (ID, SchemaName, ObjectName, ObjectType, IndexName)
     SELECT ID, _SchemaName, _ObjectName, _ObjectType, _IndexName FROM #Dataset;
 
-    INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, ObjectID, IndexID, ColumnID)
+    INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
     ------------------------------------------------------------------------------
 
@@ -33,7 +33,7 @@ BEGIN;
     RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     DELETE x FROM dbo._stats x
     WHERE x._DatabaseID = @DatabaseID
-        AND NOT EXISTS (SELECT * FROM @output o WHERE o.IndexID = x._IndexID);
+        AND NOT EXISTS (SELECT * FROM @output o WHERE o._IndexID = x._IndexID);
     RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
     RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
@@ -56,7 +56,7 @@ BEGIN;
         , x.stats_generation_method_desc    = d.stats_generation_method_desc
         , x.auto_drop                       = d.auto_drop
     FROM dbo._stats x
-        JOIN @output y ON y.IndexID = x._IndexID
+        JOIN @output y ON y._IndexID = x._IndexID
         JOIN #Dataset d ON d.ID = y.ID
     WHERE x._RowHash <> d._RowHash;
     RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
@@ -64,14 +64,14 @@ BEGIN;
     RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     INSERT INTO dbo._stats (_DatabaseID, _ObjectID, _IndexID, _RowHash
         , [object_id], [name], stats_id, auto_created, user_created, no_recompute, has_filter, filter_definition, is_temporary, is_incremental, has_persisted_sample, stats_generation_method, stats_generation_method_desc, auto_drop)
-    SELECT @DatabaseID, y.ObjectID, y.IndexID, d._RowHash
+    SELECT @DatabaseID, y._ObjectID, y._IndexID, d._RowHash
         , d.[object_id], d.[name], d.stats_id, d.auto_created, d.user_created, d.no_recompute, d.has_filter, d.filter_definition, d.is_temporary, d.is_incremental, d.has_persisted_sample, d.stats_generation_method, d.stats_generation_method_desc, d.auto_drop
     FROM #Dataset d
         JOIN @output y ON y.ID = d.ID
     WHERE NOT EXISTS (
             SELECT *
             FROM dbo._stats x
-            WHERE x._IndexID  = y.IndexID
+            WHERE x._IndexID  = y._IndexID
         );
     RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
     ------------------------------------------------------------------------------

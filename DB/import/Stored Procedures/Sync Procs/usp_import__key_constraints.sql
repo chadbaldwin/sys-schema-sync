@@ -24,7 +24,7 @@ BEGIN;
     INSERT INTO @input (ID, SchemaName, ObjectName, ObjectType)
     SELECT ID, _SchemaName, _ObjectName, _ObjectType FROM #Dataset;
 
-    INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, ObjectID, IndexID, ColumnID)
+    INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
 
     DELETE @input;
@@ -33,7 +33,7 @@ BEGIN;
     INSERT INTO @input (ID, SchemaName, ObjectName, ObjectType, IndexName)
     SELECT ID, _SchemaName, _ParentObjectName, _ParentObjectType, _UniqueIndexName FROM #Dataset;
 
-    INSERT INTO @parent (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, ObjectID, IndexID, ColumnID)
+    INSERT INTO @parent (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
     ------------------------------------------------------------------------------
 
@@ -43,13 +43,13 @@ BEGIN;
     RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     DELETE x FROM dbo._key_constraints x
     WHERE x._DatabaseID = @DatabaseID
-        AND NOT EXISTS (SELECT * FROM @output o WHERE o.ObjectID = x._ObjectID);
+        AND NOT EXISTS (SELECT * FROM @output o WHERE o._ObjectID = x._ObjectID);
     RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
     RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     UPDATE x
-    SET   x._IndexID            = p.IndexID
-        , x._ParentObjectID     = p.ObjectID
+    SET   x._IndexID            = p._IndexID
+        , x._ParentObjectID     = p._ObjectID
         , x._ModifyDate         = SYSUTCDATETIME()
         , x._RowHash            = d._RowHash
         --
@@ -70,7 +70,7 @@ BEGIN;
         , x.is_system_named     = d.is_system_named
         , x.is_enforced         = d.is_enforced
     FROM dbo._key_constraints x
-        JOIN @output y ON y.ObjectID = x._ObjectID
+        JOIN @output y ON y._ObjectID = x._ObjectID
         JOIN #Dataset d ON d.ID = y.ID
         JOIN @parent p ON p.ID = y.ID
     WHERE x._RowHash <> d._RowHash;
@@ -80,7 +80,7 @@ BEGIN;
     INSERT INTO dbo._key_constraints (_DatabaseID, _ObjectID, _IndexID, _ParentObjectID, _RowHash
         , [name], [object_id], principal_id, [schema_id], parent_object_id, [type], [type_desc], create_date, modify_date, is_ms_shipped, is_published, is_schema_published
         , unique_index_id, is_system_named, is_enforced)
-    SELECT @DatabaseID, y.ObjectID, p.IndexID, p.ObjectID, d._RowHash
+    SELECT @DatabaseID, y._ObjectID, p._IndexID, p._ObjectID, d._RowHash
         , d.[name], d.[object_id], d.principal_id, d.[schema_id], d.parent_object_id, d.[type], d.[type_desc], d.create_date, d.modify_date, d.is_ms_shipped, d.is_published, d.is_schema_published
         , d.unique_index_id, d.is_system_named, d.is_enforced
     FROM #Dataset d
@@ -89,7 +89,7 @@ BEGIN;
     WHERE NOT EXISTS (
             SELECT *
             FROM dbo._key_constraints x
-            WHERE x._ObjectID  = y.ObjectID
+            WHERE x._ObjectID  = y._ObjectID
         );
     RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
     ------------------------------------------------------------------------------

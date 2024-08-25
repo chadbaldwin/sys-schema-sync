@@ -1,7 +1,7 @@
 # sys-schema-sync
 
 > [!CAUTION]
-> This project is still in early development and testing. Behavior is subect to (and expected to) change, including breaking changes of configurations, installation, file names, database schema, etc.
+> This project is still in early development and testing. Behavior is subject to (and expected to) change, including breaking changes of configurations, installation, file names, database schema, etc.
 
 ## What is this, and how does it help?
 
@@ -37,7 +37,7 @@ For now, the database is populated manually in regard to the Instances and Datab
 
 To configure the database, you can do one of a few things...
 
-1. You can manually insert the Instances and Databases into the appropriate tables yourself. You can do this in `dbo.[Instance]` `dbo.[Database]`. These tables are read by the service and fed into dbatoools for connecting to the various instances and collecting the data.
+1. You can manually insert the Instances and Databases into the appropriate tables yourself. You can do this in `dbo.[Instance]` `dbo.[Database]`. These tables are read by the service and fed into dbatools for connecting to the various instances and collecting the data.
 1. I have provided a sample stored procedure which you can modify to hardcode the list within the proc here: `/DB/import/Stored Procedures/usp_UpdateTargets.sql`
 
 > TODO: In the future I may end up going the route of storing this information in a JSON file where users will populate connection strings into the `appsettings.json` file, and the Instance and Database tables would be updated accordingly.
@@ -87,7 +87,7 @@ Now set up an automated job / Windows Scheduled Task to call `/Service/database_
 
 That's it. So to sum it up...
 
-1. Deploy databawse via SSDT / Visual Studio
+1. Deploy database via SSDT / Visual Studio
 1. Configure database `dbo.[Instance]` and `dbo.[Database]` tables
 1. Copy service files to host
 1. Configure service `appsettings.json` file
@@ -164,9 +164,9 @@ GO
 SELECT vc.ColumnName
     , ic.[object_id], ic.index_id, ic.index_column_id, ic.column_id, ic.key_ordinal, ic.partition_ordinal, ic.is_descending_key, ic.is_included_column
 FROM dbo._indexes i
-    JOIN dbo._index_columns ic ON ic._IndexID = i._IndexID -- notice only IndexID is needed since it is unique within the system
-    JOIN dbo.vw_Index vi  ON vi.IndexID = i._IndexID -- to follow soft delete logic
-    JOIN dbo.vw_Column vc ON vc.ColumnID = ic._ColumnID -- again, to follow soft delete logic
+    JOIN dbo._index_columns ic ON ic._IndexID = i._IndexID -- notice only _IndexID is needed since it is unique within the system
+    JOIN dbo.vw_Index vi  ON vi._IndexID = i._IndexID -- to follow soft delete logic
+    JOIN dbo.vw_Column vc ON vc._ColumnID = ic._ColumnID -- again, to follow soft delete logic
 WHERE vi.InstanceName = 'Instance1'
     AND vi.DatabaseName = 'DBFoo'
     AND vi.SchemaName = 'dbo'
@@ -202,7 +202,7 @@ USE SysSchemaSync;
 GO
 SELECT sqlserver_start_time
 FROM dbo.vw_Instance vd
-    JOIN dbo._dm_os_sys_info d ON d._InstanceID = vd.InstanceID
+    JOIN dbo._dm_os_sys_info d ON d._InstanceID = vd._InstanceID
 WHERE vd.InstanceName = 'Instance1'
 ```
 
@@ -214,8 +214,8 @@ One special case to point out is how object definitions are handled. In order to
 -- Get the object definition of a specific stored procedure
 SELECT od.ObjectDefinition
 FROM vw_Object vo
-    JOIN dbo.sql_modules sm ON sm._ObjectID = vo.ObjectID
-    JOIN dbo.ObjectDefinition od ON od.ObjectDefinitionID = sm._ObjectDefinitionID
+    JOIN dbo.sql_modules sm ON sm._ObjectID = vo._ObjectID
+    JOIN dbo.ObjectDefinition od ON od._ObjectDefinitionID = sm._ObjectDefinitionID
 WHERE vo.InstanceName = 'Instance1'
     AND vo.DatabaseName = 'DBFoo'
     AND vo.ObjectName = 'usp_SomeProcName'
@@ -228,8 +228,8 @@ Storing the object definitions this way also makes it easier to get a list of al
 -- Get the object definition of a specific stored procedure
 SELECT vo.SchemaName, vo.ObjectName, od.ObjectDefinition, COUNT(*)
 FROM dbo.vw_Object vo
-    JOIN dbo._sql_modules sm ON sm._ObjectID = vo.ObjectID
-    JOIN dbo.ObjectDefinition od ON od.ObjectDefinitionID = sm._ObjectDefinitionID
+    JOIN dbo._sql_modules sm ON sm._ObjectID = vo._ObjectID
+    JOIN dbo.ObjectDefinition od ON od._ObjectDefinitionID = sm._ObjectDefinitionID
 WHERE vo.ObjectType = 'P'
     AND vo.ObjectName = 'usp_SomeProcName'
 GROUP BY vo.SchemaName, vo.ObjectName, od.ObjectDefinition

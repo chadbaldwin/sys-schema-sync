@@ -23,7 +23,7 @@ BEGIN;
     INSERT INTO @input (ID, SchemaName, ObjectName, ObjectType, IndexName)
     SELECT ID, _SchemaName, _ObjectName, _ObjectType, _IndexName FROM #Dataset;
 
-    INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, ObjectID, IndexID, ColumnID)
+    INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
     ------------------------------------------------------------------------------
 
@@ -33,7 +33,7 @@ BEGIN;
     RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     DELETE x FROM dbo._dm_db_index_usage_stats x
     WHERE x._DatabaseID = @DatabaseID
-        AND NOT EXISTS (SELECT * FROM @output o WHERE o.IndexID = x._IndexID);
+        AND NOT EXISTS (SELECT * FROM @output o WHERE o._IndexID = x._IndexID);
     RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
     RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
@@ -61,7 +61,7 @@ BEGIN;
         , x.last_system_lookup  = COALESCE(d.last_system_lookup, x.last_system_lookup)
         , x.last_system_update  = COALESCE(d.last_system_update, x.last_system_update)
     FROM dbo._dm_db_index_usage_stats x
-        JOIN @output y ON y.IndexID = x._IndexID
+        JOIN @output y ON y._IndexID = x._IndexID
         JOIN #Dataset d ON d.ID = y.ID
     WHERE x._RowHash <> d._RowHash;
     RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
@@ -69,14 +69,14 @@ BEGIN;
     RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     INSERT INTO dbo._dm_db_index_usage_stats (_DatabaseID, _ObjectID, _IndexID, _RowHash
         , database_id, [object_id], index_id, user_seeks, user_scans, user_lookups, user_updates, last_user_seek, last_user_scan, last_user_lookup, last_user_update, system_seeks, system_scans, system_lookups, system_updates, last_system_seek, last_system_scan, last_system_lookup, last_system_update)
-    SELECT @DatabaseID, y.ObjectID, y.IndexID, d._RowHash
+    SELECT @DatabaseID, y._ObjectID, y._IndexID, d._RowHash
         , d.database_id, d.[object_id], d.index_id, d.user_seeks, d.user_scans, d.user_lookups, d.user_updates, d.last_user_seek, d.last_user_scan, d.last_user_lookup, d.last_user_update, d.system_seeks, d.system_scans, d.system_lookups, d.system_updates, d.last_system_seek, d.last_system_scan, d.last_system_lookup, d.last_system_update
     FROM #Dataset d
         JOIN @output y ON y.ID = d.ID
     WHERE NOT EXISTS (
             SELECT *
             FROM dbo._dm_db_index_usage_stats x
-            WHERE x._IndexID  = y.IndexID
+            WHERE x._IndexID  = y._IndexID
         );
     RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
     ------------------------------------------------------------------------------

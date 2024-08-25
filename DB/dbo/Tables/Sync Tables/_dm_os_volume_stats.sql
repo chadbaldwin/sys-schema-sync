@@ -1,5 +1,5 @@
 CREATE TABLE dbo._dm_os_volume_stats (
-    _DatabaseID                 int             NOT NULL CONSTRAINT FK__dm_os_volume_stats__DatabaseID REFERENCES dbo.[Database] (DatabaseID),
+    _DatabaseID                 int             NOT NULL CONSTRAINT FK__dm_os_volume_stats__DatabaseID REFERENCES dbo.[Database] (_DatabaseID),
     _CollectionDate             datetime2       NOT NULL,
     --
     database_id                 int             NOT NULL,

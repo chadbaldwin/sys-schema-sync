@@ -1,6 +1,6 @@
 CREATE TABLE dbo._databases (
-    _InstanceID                                 int                 NOT NULL CONSTRAINT FK__databases__InstanceID   REFERENCES dbo.Instance     (InstanceID),
-    _DatabaseID                                 int                     NULL CONSTRAINT FK__databases__DatabaseID   REFERENCES dbo.[Database]   (DatabaseID),
+    _InstanceID                                 int                 NOT NULL CONSTRAINT FK__databases__InstanceID   REFERENCES dbo.Instance     (_InstanceID),
+    _DatabaseID                                 int                     NULL CONSTRAINT FK__databases__DatabaseID   REFERENCES dbo.[Database]   (_DatabaseID),
     _InsertDate                                 datetime2           NOT NULL CONSTRAINT DF__databases__InsertDate   DEFAULT (SYSUTCDATETIME()),
     _ModifyDate                                 datetime2           NOT NULL CONSTRAINT DF__databases__ModifyDate   DEFAULT (SYSUTCDATETIME()),
     _RowHash                                    binary(32)          NOT NULL,

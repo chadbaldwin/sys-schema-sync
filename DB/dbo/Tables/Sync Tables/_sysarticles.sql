@@ -1,6 +1,6 @@
 CREATE TABLE dbo._sysarticles (
-    _DatabaseID                 int             NOT NULL CONSTRAINT FK__sysarticles__DatabaseID REFERENCES dbo.[Database]   (DatabaseID),
-    _ObjectID                   int             NOT NULL CONSTRAINT FK__sysarticles__ObjectID   REFERENCES dbo.[Object]     (ObjectID),
+    _DatabaseID                 int             NOT NULL CONSTRAINT FK__sysarticles__DatabaseID REFERENCES dbo.[Database]   (_DatabaseID),
+    _ObjectID                   int             NOT NULL CONSTRAINT FK__sysarticles__ObjectID   REFERENCES dbo.[Object]     (_ObjectID),
     _InsertDate                 datetime2       NOT NULL CONSTRAINT DF__sysarticles__InsertDate DEFAULT (SYSUTCDATETIME()),
     _ModifyDate                 datetime2       NOT NULL CONSTRAINT DF__sysarticles__ModifyDate DEFAULT (SYSUTCDATETIME()),
     _RowHash                    binary(32)      NOT NULL,

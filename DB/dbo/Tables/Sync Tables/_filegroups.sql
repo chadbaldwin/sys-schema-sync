@@ -1,5 +1,5 @@
 CREATE TABLE dbo._filegroups (
-    _DatabaseID             int                 NOT NULL CONSTRAINT FK__filegroups__DatabaseID REFERENCES dbo.[Database] (DatabaseID),
+    _DatabaseID             int                 NOT NULL CONSTRAINT FK__filegroups__DatabaseID REFERENCES dbo.[Database] (_DatabaseID),
     _CollectionDate         datetime2           NOT NULL,
     --
     [name]                  nvarchar(128)       NOT NULL,

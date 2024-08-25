@@ -5,14 +5,14 @@ CREATE TYPE import.ItemName AS TABLE (
     ObjectType    char(2)          NOT NULL,
     IndexName     nvarchar(128)        NULL,
     ColumnName    nvarchar(128)        NULL,
-    ObjectID      int                  NULL,
-    IndexID       int                  NULL,
-    ColumnID      int                  NULL,
+    _ObjectID     int                  NULL,
+    _IndexID      int                  NULL,
+    _ColumnID     int                  NULL,
 
     INDEX CIX_ID CLUSTERED (ID),
-    INDEX IX_SchemaName_ObjectName_ObjectType_ObjectID NONCLUSTERED (SchemaName, ObjectName, ObjectType, ObjectID),
-    INDEX IX_ObjectID_IndexName NONCLUSTERED (ObjectID, IndexName),
-    INDEX IX_ObjectID_ColumnName NONCLUSTERED (ObjectID, ColumnName),
-    INDEX IX_IndexID NONCLUSTERED (IndexID),
-    INDEX IX_ColumnID NONCLUSTERED (ColumnID)
+    INDEX IX_SchemaName_ObjectName_ObjectType__ObjectID NONCLUSTERED (SchemaName, ObjectName, ObjectType, _ObjectID),
+    INDEX IX__ObjectID_IndexName NONCLUSTERED (_ObjectID, IndexName),
+    INDEX IX__ObjectID_ColumnName NONCLUSTERED (_ObjectID, ColumnName),
+    INDEX IX__IndexID NONCLUSTERED (_IndexID),
+    INDEX IX__ColumnID NONCLUSTERED (_ColumnID)
 );

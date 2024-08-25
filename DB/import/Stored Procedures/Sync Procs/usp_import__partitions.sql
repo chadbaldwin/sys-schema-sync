@@ -23,7 +23,7 @@ BEGIN;
     INSERT INTO @input (ID, SchemaName, ObjectName, ObjectType, IndexName)
     SELECT ID, _SchemaName, _ObjectName, _ObjectType, _IndexName FROM #Dataset;
 
-    INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, ObjectID, IndexID, ColumnID)
+    INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
     ------------------------------------------------------------------------------
 
@@ -37,7 +37,7 @@ BEGIN;
             SELECT *
             FROM #Dataset d
                 JOIN @output o ON o.ID = d.ID
-            WHERE o.IndexID = x._IndexID
+            WHERE o._IndexID = x._IndexID
                 AND x.partition_number = d.partition_number
         );
     RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
@@ -59,7 +59,7 @@ BEGIN;
         , x.xml_compression         = d.xml_compression
         , x.xml_compression_desc    = d.xml_compression_desc
     FROM dbo._partitions x
-        JOIN @output y ON y.IndexID = x._IndexID
+        JOIN @output y ON y._IndexID = x._IndexID
         JOIN #Dataset d ON d.ID = y.ID AND d.partition_number = x.partition_number
     WHERE x._RowHash <> d._RowHash;
     RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
@@ -67,14 +67,14 @@ BEGIN;
     RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     INSERT INTO dbo._partitions (_DatabaseID, _ObjectID, _IndexID, _RowHash
         , [partition_id], [object_id], index_id, partition_number, hobt_id, [rows], filestream_filegroup_id, [data_compression], data_compression_desc, xml_compression, xml_compression_desc)
-    SELECT @DatabaseID, y.ObjectID, y.IndexID, d._RowHash
+    SELECT @DatabaseID, y._ObjectID, y._IndexID, d._RowHash
         , d.[partition_id], d.[object_id], d.index_id, d.partition_number, d.hobt_id, d.[rows], d.filestream_filegroup_id, d.[data_compression], d.data_compression_desc, d.xml_compression, d.xml_compression_desc
     FROM #Dataset d
         JOIN @output y ON y.ID = d.ID
     WHERE NOT EXISTS (
             SELECT *
             FROM dbo._partitions x
-            WHERE x._IndexID  = y.IndexID
+            WHERE x._IndexID  = y._IndexID
                 AND x.partition_number = d.partition_number
         );
     RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;

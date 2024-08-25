@@ -23,7 +23,7 @@ BEGIN;
             SELECT ProperName = CONCAT_WS(N'_', 'DF', OBJECT_NAME(dc.parent_object_id), COL_NAME(dc.parent_object_id, dc.parent_column_id))
         ) n
     WHERE dc.is_ms_shipped = 0
-        AND dc.[name] COLLATE SQL_Latin1_General_CP1_CS_AS <> n.ProperName COLLATE SQL_Latin1_General_CP1_CS_AS
+        AND dc.[name] COLLATE SQL_Latin1_General_CP1_CS_AS <> n.ProperName COLLATE SQL_Latin1_General_CP1_CS_AS;
 
     -- Check FK names
     INSERT INTO #naming_issues (SmellDesc, ObjectName, TypeDesc, CurrentName, ProperName, RenameScript)
@@ -38,7 +38,7 @@ BEGIN;
         CROSS APPLY (
             SELECT ProperName = CONCAT_WS('_', 'FK', OBJECT_NAME(fk.parent_object_id), x.Cols)
         ) n
-    WHERE fk.[name] COLLATE SQL_Latin1_General_CP1_CS_AS <> n.ProperName COLLATE SQL_Latin1_General_CP1_CS_AS
+    WHERE fk.[name] COLLATE SQL_Latin1_General_CP1_CS_AS <> n.ProperName COLLATE SQL_Latin1_General_CP1_CS_AS;
 
     -- Check index names
     INSERT INTO #naming_issues (SmellDesc, ObjectName, TypeDesc, CurrentName, ProperName, RenameScript)
@@ -58,7 +58,7 @@ BEGIN;
             SELECT ProperName = CONCAT_WS(N'_', IIF(i.[type] = 1, 'C', '') + CASE WHEN i.is_primary_key = 1 THEN 'PK' WHEN i.is_unique_constraint = 1 THEN 'UQ' ELSE 'IX' END, o.[name], x.Cols)
         ) n
     WHERE o.is_ms_shipped = 0
-        AND i.[name] COLLATE SQL_Latin1_General_CP1_CS_AS <> n.ProperName COLLATE SQL_Latin1_General_CP1_CS_AS
+        AND i.[name] COLLATE SQL_Latin1_General_CP1_CS_AS <> n.ProperName COLLATE SQL_Latin1_General_CP1_CS_AS;
 
     IF EXISTS (SELECT * FROM #naming_issues)
     BEGIN;
@@ -99,7 +99,7 @@ BEGIN;
         JOIN sys.columns c ON c.[object_id] = t.[object_id]
     WHERE t.is_ms_shipped = 0 AND t.temporal_type_desc <> 'HISTORY_TABLE'
         AND c.[name] IN ('_ModifyDate', '_InsertDate')
-        AND c.default_object_id = 0
+        AND c.default_object_id = 0;
 
     -- Common columns missing FK constraints
     INSERT INTO #issues (SmellDesc, ObjectName, ColumnName)
@@ -110,6 +110,7 @@ BEGIN;
         JOIN sys.columns c ON c.[object_id] = t.[object_id]
     WHERE t.is_ms_shipped = 0 AND t.temporal_type_desc <> 'HISTORY_TABLE'
         AND c.[name] IN ('_ColumnID','_DatabaseID','_IndexID','_InstanceID','_ObjectDefinitionID','_ObjectID','_ParentColumnID','_ParentObjectID','_ReferencedColumnID','_ReferencedIndexID','_ReferencedObjectID')
+        AND (SCHEMA_NAME(t.[schema_id]) = 'import' AND t.[name] NOT IN ('Instance','Database','Object','ObjectDefinition','Index','Column'))
         AND NOT EXISTS (
             SELECT *
             FROM sys.foreign_key_columns fkc
@@ -130,7 +131,7 @@ BEGIN;
     FROM sys.tables t
         JOIN sys.columns c ON c.[object_id] = t.[object_id]
     WHERE TYPE_NAME(c.system_type_id) = 'datetime'
-        AND NOT (t.[name] LIKE '[_]%' AND c.[name] NOT LIKE '[_]%')
+        AND NOT (t.[name] LIKE '[_]%' AND c.[name] NOT LIKE '[_]%');
 
     -- TVP's with sql_variant are not supported by the import process which uses System.Data.Common.DbDataAdapter.Fill
     INSERT INTO #issues (SmellDesc, ObjectName, ColumnName, DataType)

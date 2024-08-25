@@ -1,7 +1,7 @@
 CREATE TABLE dbo._triggers (
-    _DatabaseID             int             NOT NULL CONSTRAINT FK__triggers__DatabaseID        REFERENCES dbo.[Database]   (DatabaseID),
-    _ObjectID               int             NOT NULL CONSTRAINT FK__triggers__ObjectID          REFERENCES dbo.[Object]     (ObjectID),
-    _ParentObjectID         int                 NULL CONSTRAINT FK__triggers__ParentObjectID    REFERENCES dbo.[Object]     (ObjectID),
+    _DatabaseID             int             NOT NULL CONSTRAINT FK__triggers__DatabaseID        REFERENCES dbo.[Database]   (_DatabaseID),
+    _ObjectID               int             NOT NULL CONSTRAINT FK__triggers__ObjectID          REFERENCES dbo.[Object]     (_ObjectID),
+    _ParentObjectID         int                 NULL CONSTRAINT FK__triggers__ParentObjectID    REFERENCES dbo.[Object]     (_ObjectID),
     _InsertDate             datetime2       NOT NULL CONSTRAINT DF__triggers__InsertDate        DEFAULT (SYSUTCDATETIME()),
     _ModifyDate             datetime2       NOT NULL CONSTRAINT DF__triggers__ModifyDate        DEFAULT (SYSUTCDATETIME()),
     _RowHash                binary(32)      NOT NULL,

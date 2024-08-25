@@ -24,7 +24,7 @@ BEGIN;
     INSERT INTO @input (ID, SchemaName, ObjectName, ObjectType)
     SELECT ID, _SchemaName, _ObjectName, _ObjectType FROM #Dataset;
 
-    INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, ObjectID, IndexID, ColumnID)
+    INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
 
     DELETE @input;
@@ -33,7 +33,7 @@ BEGIN;
     INSERT INTO @input (ID, SchemaName, ObjectName, ObjectType)
     SELECT ID, _SchemaName, _ParentObjectName, _ParentObjectType FROM #Dataset WHERE _ParentObjectName IS NOT NULL;
 
-    INSERT INTO @parent (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, ObjectID, IndexID, ColumnID)
+    INSERT INTO @parent (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
     ------------------------------------------------------------------------------
 
@@ -43,12 +43,12 @@ BEGIN;
     RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     DELETE x FROM dbo._triggers x
     WHERE x._DatabaseID = @DatabaseID
-        AND NOT EXISTS (SELECT * FROM @output o WHERE o.ObjectID = x._ObjectID);
+        AND NOT EXISTS (SELECT * FROM @output o WHERE o._ObjectID = x._ObjectID);
     RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
     RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     UPDATE x
-    SET   x._ParentObjectID         = p.ObjectID
+    SET   x._ParentObjectID         = p._ObjectID
         , x._ModifyDate             = SYSUTCDATETIME()
         , x._RowHash                = d._RowHash
         --
@@ -66,7 +66,7 @@ BEGIN;
         , x.is_not_for_replication  = d.is_not_for_replication
         , x.is_instead_of_trigger   = d.is_instead_of_trigger
     FROM dbo._triggers x
-        JOIN @output y ON y.ObjectID = x._ObjectID
+        JOIN @output y ON y._ObjectID = x._ObjectID
         JOIN #Dataset d ON d.ID = y.ID
         LEFT JOIN @parent p ON p.ID = y.ID
     WHERE x._RowHash <> d._RowHash;
@@ -75,7 +75,7 @@ BEGIN;
     RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     INSERT INTO dbo._triggers (_DatabaseID, _ObjectID, _ParentObjectID, _RowHash
         , [name], [object_id], parent_class, parent_class_desc, parent_id, [type], [type_desc], create_date, modify_date, is_ms_shipped, is_disabled, is_not_for_replication, is_instead_of_trigger)
-    SELECT @DatabaseID, y.ObjectID, p.ObjectID, d._RowHash
+    SELECT @DatabaseID, y._ObjectID, p._ObjectID, d._RowHash
         , d.[name], d.[object_id], d.parent_class, d.parent_class_desc, d.parent_id, d.[type], d.[type_desc], d.create_date, d.modify_date, d.is_ms_shipped, d.is_disabled, d.is_not_for_replication, d.is_instead_of_trigger
     FROM #Dataset d
         JOIN @output y ON y.ID = d.ID
@@ -83,7 +83,7 @@ BEGIN;
     WHERE NOT EXISTS (
             SELECT *
             FROM dbo._triggers x
-            WHERE x._ObjectID = y.ObjectID
+            WHERE x._ObjectID = y._ObjectID
         );
     RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
     ------------------------------------------------------------------------------

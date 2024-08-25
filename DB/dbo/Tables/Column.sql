@@ -1,21 +1,21 @@
 CREATE TABLE dbo.[Column] (
-    DatabaseID      int             NOT NULL CONSTRAINT FK_Column_DatabaseID    REFERENCES dbo.[Database] (DatabaseID),
-    ObjectID        int             NOT NULL CONSTRAINT FK_Column_ObjectID      REFERENCES dbo.[Object]   (ObjectID),
-    ColumnID        int             NOT NULL IDENTITY,
+    _DatabaseID     int             NOT NULL CONSTRAINT FK_Column__DatabaseID   REFERENCES dbo.[Database] (_DatabaseID),
+    _ObjectID       int             NOT NULL CONSTRAINT FK_Column__ObjectID     REFERENCES dbo.[Object]   (_ObjectID),
+    _ColumnID       int             NOT NULL IDENTITY,
     ColumnName      nvarchar(128)   NOT NULL,
     IsDeleted       bit             NOT NULL CONSTRAINT DF_Column_IsDeleted     DEFAULT (0),
     InsertDate      datetime2       NOT NULL CONSTRAINT DF_Column_InsertDate    DEFAULT (SYSUTCDATETIME()),
     DeleteDate      datetime2           NULL,
 
-    INDEX CIX_Column_DatabaseID_ColumnID UNIQUE CLUSTERED (DatabaseID, ColumnID),
-    CONSTRAINT PK_Column_ColumnID PRIMARY KEY NONCLUSTERED (ColumnID),
+    INDEX CIX_Column__DatabaseID__ColumnID UNIQUE CLUSTERED (_DatabaseID, _ColumnID),
+    CONSTRAINT PK_Column__ColumnID PRIMARY KEY NONCLUSTERED (_ColumnID),
 );
 GO
 
-CREATE NONCLUSTERED INDEX IX_Column_DatabaseID_ObjectID_ColumnName
-    ON dbo.[Column] (DatabaseID, ObjectID, ColumnName)
+CREATE NONCLUSTERED INDEX IX_Column__DatabaseID__ObjectID_ColumnName
+    ON dbo.[Column] (_DatabaseID, _ObjectID, ColumnName)
 GO
 
-CREATE NONCLUSTERED INDEX IX_Column_DatabaseID_IsDeleted
-    ON dbo.[Column] (DatabaseID, IsDeleted)
+CREATE NONCLUSTERED INDEX IX_Column__DatabaseID_IsDeleted
+    ON dbo.[Column] (_DatabaseID, IsDeleted)
 GO
