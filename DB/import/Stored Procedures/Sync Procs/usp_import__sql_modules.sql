@@ -44,7 +44,7 @@ BEGIN;
             WHERE od.ObjectDefinitionHash = d._ObjectDefinitionHash
         );
     ------------------------------------------------------------------------------
-    
+
     ------------------------------------------------------------------------------
     /*  For some reason, SQL Server stores database level items, like database triggers, in sys.sql_modules
         Because of this, when the full import for sys.objects runs, it sees those as missing and marks them

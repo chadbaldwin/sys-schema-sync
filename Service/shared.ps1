@@ -2,7 +2,7 @@
     Note: Add-Content is not thread-safe while writing to a file.
     If enough concurrent writes to the same file happen, they will start to step
     on each other and will cause some partially complete lines.
-    
+
     https://github.com/PowerShell/PowerShell/issues/14416
 #>
 function Write-Log {

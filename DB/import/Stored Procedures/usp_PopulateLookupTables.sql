@@ -3,7 +3,7 @@ AS
 BEGIN;
     SET NOCOUNT ON;
     ------------------------------------------------------------------------------
-    
+
     ------------------------------------------------------------------------------
     -- Update SyncObjectLevel
     ------------------------------------------------------------------------------
@@ -19,7 +19,7 @@ BEGIN;
             VALUES (n.SyncObjectLevelID, n.SyncObjectLevelName)
         OUTPUT $action, 'Deleted', Deleted.*, 'Inserted', Inserted.*;
     ------------------------------------------------------------------------------
-    
+
     ------------------------------------------------------------------------------
     -- SyncObject configuration
     ------------------------------------------------------------------------------
@@ -35,7 +35,7 @@ BEGIN;
                                         Which means no matter which database you are querying the DMV from, it will always return
                                         the same information about the instance and does not contain database level information.
                                         For example, `sys.dm_os_host_info` returns information about the instance.
-                                    
+
                                         Some DMV's run at the Database level, which means the results returned by the object will change
                                         based on which database you are querying from and they return information specific to databases.
 
@@ -50,21 +50,21 @@ BEGIN;
                                         This field controls two things...
                                         If Instance level is specified, it will run against the master database on each instance.
                                         If Database level is specified, it will run against each configured user database.
-                                    
+
                                         In either case, if an ExportQueryPath is not provided, one will be generated and will use either
                                         the _InstanceID or _DatabaseID when inserting into its configured ImportTable.
-        
+
             IsEnabled               =   Controls whether the sync object is enabled. Disabling immediately removes all records from
                                         the sync queue, but does not remove any records from import.DatabaseSyncObjectStatus.
-        
+
             SyncStaleAgeMinutes     =   Minimum amount of time the sync process should wait before kicking off another sync. This is
                                         checked at the Database+SyncObject level.
-                                        
+
                                         180=3hr;  360=6hr;  480=8hr;  720=12hr;  1440=24hr;
-        
+
             ImportTable             =   Used for simple imports (delete and insert). Tells the sync process which table to use for import.
             ImportProc, ImportType  =   Used for complex imports (proc and type). Tells the sync process which proc and table type to use for import.
-        
+
             ExportQueryPath         =   Used to override the default export query (typically `SELECT _CollectionDate = SYSUTCDATETIME(), * FROM {SyncObjectName}`)
                                         If configured, a file must be created in the SQL scripts directory of the service. Can be used
                                         with both simple and complex sync types.
@@ -131,7 +131,7 @@ BEGIN;
                 ,  (         7, 'global_variables'                          , 1, 1, 1440, 'dbo._global_variables'                   , NULL                                          , NULL                                      , 'global_variables.sql'                    , NULL)
         ) n (SyncObjectID, SyncObjectName, SyncObjectLevelID, IsEnabled, SyncStaleAgeMinutes, ImportTable, ImportProc, ImportType, ExportQueryPath, ChecksumQueryText);
     ------------------------------------------------------------------------------
-    
+
     ------------------------------------------------------------------------------
     -- Perform checks against SyncObject configuration
     ------------------------------------------------------------------------------
@@ -283,7 +283,7 @@ BEGIN;
             THROW 51000, @errmsg, 1;
         END;
         ------------------------------------------
-        
+
         ------------------------------------------
         -- Ensure ImportProcs have the required parameters
         ------------------------------------------
@@ -312,7 +312,7 @@ BEGIN;
             THROW 51000, 'Schema error: At least one ImportProc is missing a required parameter or has the wrong type', 1;
         END;
         ------------------------------------------
-        
+
         ------------------------------------------
         -- Ensure simple imports have correct schema
         ------------------------------------------
@@ -377,7 +377,7 @@ BEGIN;
         THEN DELETE -- Will only work if there are no sync records in import.DatabaseSyncObjectStatus
         OUTPUT $action, 'Deleted', Deleted.*, 'Inserted', Inserted.*;
     ------------------------------------------------------------------------------
-    
+
     ------------------------------------------------------------------------------
 END;
 GO

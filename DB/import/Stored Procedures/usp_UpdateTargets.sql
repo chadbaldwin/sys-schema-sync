@@ -9,7 +9,7 @@ BEGIN;
         DatabaseName nvarchar(128) NOT NULL,
     )
     ------------------------------------------------------------------------------
-    
+
     ------------------------------------------------------------------------------
     -- Temporary data until I figure out how I want to handle this in the future
     -- More than likely will abandon this proc entirely and go with a JSON configuration file along with a PowerShell script to sync configuration
@@ -19,7 +19,7 @@ BEGIN;
         ,  ('Instance2', 'DBFoo')
         ,  ('Instance3', 'DBQux');
     ------------------------------------------------------------------------------
-    
+
     ------------------------------------------------------------------------------
     MERGE INTO dbo.Instance WITH(HOLDLOCK) o
     USING (

@@ -12,7 +12,7 @@ BEGIN;
         RenameScript    nvarchar(500)       NULL,
     );
     ------------------------------------------------------------------------------
-    
+
     ------------------------------------------------------------------------------
     -- Check default constraint names
     INSERT INTO #naming_issues (SmellDesc, ObjectName, TypeDesc, CurrentName, ProperName, RenameScript)
@@ -66,7 +66,7 @@ BEGIN;
         THROW 51000, 'Schema object naming issues detected', 1;
     END;
     ------------------------------------------------------------------------------
-    
+
     ------------------------------------------------------------------------------
     CREATE TABLE #issues (
         SmellDesc       nvarchar(200)   NOT NULL,
@@ -75,7 +75,7 @@ BEGIN;
         DataType        nvarchar(128)       NULL,
     );
     ------------------------------------------------------------------------------
-    
+
     ------------------------------------------------------------------------------
     -- Check for heaps
     INSERT INTO #issues (SmellDesc, ObjectName)
@@ -86,7 +86,7 @@ BEGIN;
     WHERE o.is_ms_shipped = 0
         AND i.[type] = 0;
     ------------------------------------------------------------------------------
-    
+
     ------------------------------------------------------------------------------
     -- Check for columns missing constraints
     ------------------------------------------------------------------------------
