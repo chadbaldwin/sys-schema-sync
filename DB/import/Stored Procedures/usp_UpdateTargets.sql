@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE import.usp_UpdateTargets (
+CREATE PROCEDURE import.usp_UpdateTargets (
     @ServiceConfigJSON nvarchar(MAX)
 )
 AS

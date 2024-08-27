@@ -1,6 +1,6 @@
 #Requires -PSEdition Core -Version 7.0 -Modules @{ ModuleName="dbatools"; ModuleVersion="2.1.7" }
 
-$config = gc .\appsettings.jsonc -Raw  | ConvertFrom-Json
+$config = gc "${PSScriptRoot}\appsettings.jsonc" -Raw  | ConvertFrom-Json
 
 # Converting back to JSON rather than using the source so we can remove comments.
 # PowerShell supports comments in JSON, but SQL Server does not
