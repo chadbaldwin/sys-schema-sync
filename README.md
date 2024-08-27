@@ -37,7 +37,7 @@ This does not replace existing tools like SentryOne, DBADash, SQLWATCH, dbacheck
 
 For now, because this project is still in the early stages of development, there isn't a simple setup. Maybe in the future I'll find a nice way to package it.
 
-## First things first...Set up the configuration file
+### First things first...Set up the configuration file
 
 The main configuration file controls multiple things. It defines how the sync concurrency level of the service, the connection strings, the name of the new central database, which databases to sync from, etc.
 
@@ -93,9 +93,9 @@ Note: The SysSchemaSync Service uses a generic PowerShell utility script that I 
 }
 ```
 
-### Deploy the database
+### Publish the database
 
-To deploy the database you currently have two options, you can either use the provided script that uses dbatools to deploy the DACPAC. Or, if you don't want to put your faith in blindly deploying a DACPAC, you can build and publish it yourself.
+To publish the database you currently have two options, you can either use the provided script that uses dbatools to deploy the DACPAC. Or, if you don't want to put your faith in blindly deploying a DACPAC, you can build and publish it yourself.
 
 #### Using the script
 
@@ -109,15 +109,17 @@ Use as follows:
 
 `.\publish_dacpac.ps1 -DacPacPath 'C:\Path\To\Wherever\You\Downloaded\The\DacPac\SysSchemaSync.dacpac'`
 
-The script will look up the connection string and database name from the service `appsettings.jsonc` file and publish the database.
+The script will look up the connection string and database name from the service `/Service/appsettings.jsonc` file and publish the database.
 
 #### Using SSDT
 
-Open the SSDT Solution `/DB/SysSchemaSync.sln`, and publish the database to your location of choosing.
+Open the SSDT Solution `/DB/SysSchemaSync.sln`, build and publish the database manually.
 
 ### Configure the database
 
-TODO: Provide instructions on how to use the `update_targets.ps1` file.
+Now that the database is published, we need to populate it with the list of instances and databases to want to sync from.
+
+To do this, run the `/Service/update_targets.ps1` script. This will pull the list of instances and databases out of the `/Service/appsettings.jsonc` file and update the SysSchemaSync database.
 
 ### Deploy the service
 
@@ -125,7 +127,7 @@ Once that is set up, next you need to set up the sync service. Copy the "Service
 
 ### Schedule the service
 
-Now set up an automated job / Windows Scheduled Task to call `/Service/database_parallel_runner.ps1`. I recommend running it every 5 minutes. You can run it as often as you like, but the process will only pick up items that are scheduled to run in the queue. If there's nothing to do, it will almost immediately close.
+Now set up an automated job / Windows Scheduled Task to call `/Service/database_parallel_runner.ps1`. I recommend running it every 5 minutes for larger installations with hundreds of databases. You can run it as often as you like, but the process will only pick up items that are scheduled to run in the queue. If there's nothing to do, it will almost immediately close.
 
 > TODO: In the future possibly include a script to set up the scheduled task automatically?
 
@@ -133,10 +135,10 @@ Now set up an automated job / Windows Scheduled Task to call `/Service/database_
 
 That's it. So to sum it up...
 
-1. Deploy database via SSDT / Visual Studio
-1. Configure database `dbo.[Instance]` and `dbo.[Database]` tables
+1. Configure `/Service/appsettings.jsonc` file
+1. Publish database
+1. Run `/Service/update_targets.ps1`
 1. Copy service files to host
-1. Configure service `appsettings.jsonc` file
 1. Set up scheduled job to run (recommended every 5 minutes)
 1. Database should start populating
 
