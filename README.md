@@ -37,30 +37,13 @@ This does not replace existing tools like SentryOne, DBADash, SQLWATCH, dbacheck
 
 For now, because this project is still in the early stages of development, there isn't a simple setup. Maybe in the future I'll find a nice way to package it.
 
-### Deploy the database
+## First things first...Set up the configuration file
 
-To deploy the database, you need to be familiar with SSDT. Open the SSDT Solution `/DB/SysSchemaSync.sln`, and publish the database to your location of choosing.
+The main configuration file controls multiple things. It defines how the sync concurrency level of the service, the connection strings, the name of the new central database, which databases to sync from, etc.
 
-> TODO: In the future I may have releases which include things like a DACPAC or a database backup that can be restored. Along with things like scripts to make deployment easier. Such as using `sqlpackage.exe` or a PowerShell wrapper to publish the database.
+The file can be found here: `/Service/appsettings.jsonc`
 
-### Configure the database
-
-For now, the database is populated manually in regard to the Instances and Databases we want to target for syncing. However, I have not yet decided how I want the database configuration to be handled for the public version of this service.
-
-To configure the database, you can do one of a few things...
-
-1. You can manually insert the Instances and Databases into the appropriate tables yourself. You can do this in `dbo.[Instance]` `dbo.[Database]`. These tables are read by the service and fed into dbatools for connecting to the various instances and collecting the data.
-1. I have provided a sample stored procedure which you can modify to hardcode the list within the proc here: `/DB/import/Stored Procedures/usp_UpdateTargets.sql`
-
-> TODO: In the future I may end up going the route of storing this information in a JSON file where users will populate connection strings into the `appsettings.jsonc` file, and the Instance and Database tables would be updated accordingly.
-
-### Deploy the service
-
-Once that is set up, next you need to set up the sync service. Copy the "Service" directory wherever you plan to host the service as you will need to set up a Scheduled task. You can use anything that is able to run a PowerShell script in a regular interval, I'm using Windows Task Scheduler, but you can use whatever works for you.
-
-### Configure the service
-
-Next, update the `/Service/appsettings.jsonc` file. Note: SysSchemaSync Service uses a generic PowerShell utility script that I use in multiple projects, which is why some of the configuration parameters are pre-configured and do not need to be changed.
+Note: The SysSchemaSync Service uses a generic PowerShell utility script that I use in multiple projects, which is why some of the configuration parameters are pre-configured and do not need to be changed.
 
 ```jsonc
 {
@@ -83,8 +66,9 @@ Next, update the `/Service/appsettings.jsonc` file. Note: SysSchemaSync Service 
   "DatabaseConcurrencyLimit": 3,
   // If Instance is set to 10 and Database is set to 3, then the highest number of concurrent processes possible is 30
 
-  // Connection string pointing to where the SysSchemaSync database was deployed
-  // This connection string is used by the SysSchemaSync scripts to know where to push the collected data
+  // This connection string is used for two purposes...
+  // 1) To know what to name the database upon deploying the DACPAC
+  // 2) For the service to know where to push the collected data
   "RepositoryDatabaseConnectionString": "Server=MYINSTANCE;Database=SysSchemaSync;MultiSubnetFailover=True;Application Name=SysSchemaSyncService",
 
   // List of Instances and databases to target
@@ -108,6 +92,36 @@ Next, update the `/Service/appsettings.jsonc` file. Note: SysSchemaSync Service 
   ]
 }
 ```
+
+### Deploy the database
+
+To deploy the database you currently have two options, you can either use the provided script that uses dbatools to deploy the DACPAC. Or, if you don't want to put your faith in blindly deploying a DACPAC, you can build and publish it yourself.
+
+#### Using the script
+
+First, download the DACPAC from the GitHub Releases section:
+
+<https://github.com/chadbaldwin/sys-schema-sync/releases>
+
+Using the DACPAC publish script, located here: `/Service/publish_dacpac.ps1`
+
+Use as follows:
+
+`.\publish_dacpac.ps1 -DacPacPath 'C:\Path\To\Wherever\You\Downloaded\The\DacPac\SysSchemaSync.dacpac'`
+
+The script will look up the connection string and database name from the service `appsettings.jsonc` file and publish the database.
+
+#### Using SSDT
+
+Open the SSDT Solution `/DB/SysSchemaSync.sln`, and publish the database to your location of choosing.
+
+### Configure the database
+
+TODO: Provide instructions on how to use the `update_targets.ps1` file.
+
+### Deploy the service
+
+Once that is set up, next you need to set up the sync service. Copy the "Service" directory wherever you plan to host the service as you will need to set up a Scheduled task. You can use anything that is able to run a PowerShell script in a regular interval, I'm using Windows Task Scheduler, but you can use whatever works for you.
 
 ### Schedule the service
 
