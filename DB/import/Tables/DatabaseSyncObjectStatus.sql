@@ -9,6 +9,7 @@ CREATE TABLE import.DatabaseSyncObjectStatus (
     LastSyncCheck        datetime2      NOT NULL CONSTRAINT DF_DatabaseSyncObjectStatus_LastSyncCheck        DEFAULT (SYSUTCDATETIME()),
     LastSyncError        datetime2          NULL,
     LastSyncErrorMessage nvarchar(MAX)      NULL,
+    LastSyncWasError     bit            NOT NULL CONSTRAINT DF_DatabaseSyncObjectStatus_LastSyncWasError     DEFAULT (0),
 
     INDEX CIX_DatabaseSyncObjectStatus__InstanceID__DatabaseID_SyncObjectID
         UNIQUE CLUSTERED (_InstanceID, _DatabaseID, SyncObjectID),

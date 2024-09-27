@@ -12,6 +12,8 @@ BEGIN
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
     RAISERROR('[%s] Start',0,1,@ProcName) WITH NOWAIT;
 
+    DECLARE @CurrentTime datetime2 = SYSUTCDATETIME();
+
     -- Including the entire exception message in the output is excessive, so reducing it down to just yes/no on IsError
     DECLARE @HasError nvarchar(10) = IIF(@ErrorMessage IS NOT NULL, 'true','false');
     RAISERROR(N'[%s] Input parameters: @InstanceID = %i, @DatabaseID = %i, @SyncObjectID = %i, @Checksum = %i, @ErrorMessage is populated: %s',0,1
@@ -40,15 +42,16 @@ BEGIN
         BEGIN;
             RAISERROR('[%s] Attempting to update status record as a successful sync',0,1,@ProcName) WITH NOWAIT;
             UPDATE x
-            SET x.LastSyncChecksum      = @Checksum,
+            SET x.LastSyncChecksum  = @Checksum,
                 /*  '=' logic handles NULL's, be careful changing
                     NULL exceptions are already handled above. So if either side is NULL here, it's intentional
                     and should be counted as a change. NULL on either side of '=' is false, so it is logged.
 
                     If both sides are NULL, then that means this SyncObject does not utilize Cheecksums, so
                     it should _always_ be logged. */
-                x.LastSyncTime          = IIF(x.LastSyncChecksum = @Checksum, x.LastSyncTime, SYSUTCDATETIME()),
-                x.LastSyncCheck         = SYSUTCDATETIME()
+                x.LastSyncTime       = IIF(x.LastSyncChecksum = @Checksum, x.LastSyncTime, @CurrentTime),
+                x.LastSyncCheck      = @CurrentTime,
+                x.LastSyncWasError   = 0
             FROM import.DatabaseSyncObjectStatus x
             WHERE EXISTS (
                     SELECT @InstanceID, @DatabaseID, @SyncObjectID
@@ -61,9 +64,10 @@ BEGIN
         BEGIN
             RAISERROR('[%s] Attempting to update status record as a failed sync with error message',0,1,@ProcName) WITH NOWAIT;
             UPDATE x
-            SET x.LastSyncCheck         = SYSUTCDATETIME(),
-                x.LastSyncError         = SYSUTCDATETIME(),
-                x.LastSyncErrorMessage  = @ErrorMessage
+            SET x.LastSyncCheck         = @CurrentTime,
+                x.LastSyncError         = @CurrentTime,
+                x.LastSyncErrorMessage  = @ErrorMessage,
+                x.LastSyncWasError      = 1
             FROM import.DatabaseSyncObjectStatus x
             WHERE EXISTS (
                     SELECT @InstanceID, @DatabaseID, @SyncObjectID
@@ -87,8 +91,8 @@ BEGIN
             ELSE
             BEGIN;
                 RAISERROR('[%s] Creating new status record with error',0,1,@ProcName) WITH NOWAIT;
-                INSERT INTO import.DatabaseSyncObjectStatus (_InstanceID, _DatabaseID, SyncObjectID, LastSyncChecksum, LastSyncTime, LastSyncError, LastSyncErrorMessage)
-                VALUES (@InstanceID, @DatabaseID, @SyncObjectID, @Checksum, NULL, SYSUTCDATETIME(), @ErrorMessage);
+                INSERT INTO import.DatabaseSyncObjectStatus (_InstanceID, _DatabaseID, SyncObjectID, LastSyncChecksum, LastSyncTime, LastSyncError, LastSyncErrorMessage, LastSyncWasError)
+                VALUES (@InstanceID, @DatabaseID, @SyncObjectID, @Checksum, NULL, @CurrentTime, @ErrorMessage, 1);
             END;
         END;
     END;
@@ -98,11 +102,16 @@ BEGIN
         BEGIN;
             RAISERROR('[%s] A database wide error has occured, pushing back all syncs for database',0,1,@ProcName) WITH NOWAIT;
             /*  In this case, a database wide error is being logged which means we want to push all sync object tasks
-                to prevent them from running until their next interval. */
+                to prevent them from running until their next interval.
+                
+                Known issues: This does not handle delaying instance level syncs because they operate on the master
+                database which does not have an entry in the Database or DatabaseSyncObjectStatus tables.
+            */
             UPDATE x
-            SET x.LastSyncCheck         = SYSUTCDATETIME(),
-                x.LastSyncError         = SYSUTCDATETIME(),
-                x.LastSyncErrorMessage  = @ErrorMessage
+            SET x.LastSyncCheck         = @CurrentTime,
+                x.LastSyncError         = @CurrentTime,
+                x.LastSyncErrorMessage  = @ErrorMessage,
+                x.LastSyncWasError      = 1
             FROM import.DatabaseSyncObjectStatus x
             WHERE EXISTS (
                     SELECT @InstanceID, @DatabaseID
@@ -110,10 +119,11 @@ BEGIN
                     SELECT x._InstanceID, x._DatabaseID
                 );
 
-            INSERT INTO import.DatabaseSyncObjectStatus (_InstanceID, _DatabaseID, SyncObjectID, LastSyncError, LastSyncErrorMessage)
+            INSERT INTO import.DatabaseSyncObjectStatus (_InstanceID, _DatabaseID, SyncObjectID, LastSyncError, LastSyncErrorMessage, LastSyncWasError)
             SELECT x._InstanceID, x._DatabaseID, x.SyncObjectID
-                , LastSyncError         = SYSUTCDATETIME()
+                , LastSyncError         = @CurrentTime
                 , LastSyncErrorMessage  = @ErrorMessage
+                , LastSyncWasError      = 1
             FROM import.vw_DatabaseSyncObject x
             WHERE EXISTS (
                     SELECT @InstanceID, @DatabaseID

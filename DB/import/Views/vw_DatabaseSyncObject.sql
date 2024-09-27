@@ -3,7 +3,7 @@ AS
 -- Database level syncs
 SELECT d._InstanceID, d._DatabaseID, d.InstanceName, d.DatabaseName
     , so.SyncObjectID, so.SyncObjectName, so.SyncObjectLevelID
-    , dso.LastSyncChecksum, dso.LastSyncTime, dso.LastSyncCheck, dso.LastSyncError, dso.LastSyncErrorMessage
+    , dso.LastSyncChecksum, dso.LastSyncTime, dso.LastSyncCheck, dso.LastSyncError, dso.LastSyncErrorMessage, dso.LastSyncWasError
     , so.ImportTable, so.ImportProc, so.ImportType, so.ExportQueryPath, so.ChecksumQueryText, so.SyncStaleAgeMinutes
 FROM dbo.vw_Database d
     CROSS JOIN import.SyncObject so
@@ -14,7 +14,7 @@ UNION
 -- Instance level syncs
 SELECT i._InstanceID, NULL, i.InstanceName, 'master'
     , so.SyncObjectID, so.SyncObjectName, so.SyncObjectLevelID
-    , dso.LastSyncChecksum, dso.LastSyncTime, dso.LastSyncCheck, dso.LastSyncError, dso.LastSyncErrorMessage
+    , dso.LastSyncChecksum, dso.LastSyncTime, dso.LastSyncCheck, dso.LastSyncError, dso.LastSyncErrorMessage, dso.LastSyncWasError
     , so.ImportTable, so.ImportProc, so.ImportType, so.ExportQueryPath, so.ChecksumQueryText, so.SyncStaleAgeMinutes
 FROM dbo.vw_Instance i
     CROSS JOIN import.SyncObject so
