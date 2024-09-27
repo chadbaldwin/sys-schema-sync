@@ -19,4 +19,6 @@ FROM sys.indexes i
     JOIN sys.objects o ON o.[object_id] = i.[object_id]
     JOIN sys.schemas s ON s.[schema_id] = o.[schema_id]
     LEFT JOIN sys.dm_db_index_usage_stats x ON x.database_id = DB_ID() AND x.[object_id] = i.[object_id] AND x.index_id = i.index_id
-WHERE o.is_ms_shipped = 0;
+WHERE o.is_ms_shipped = 0
+	AND CHECKSUM(*) IS NOT NULL
+OPTION(RECOMPILE);
