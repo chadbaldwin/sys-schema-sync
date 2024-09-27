@@ -97,6 +97,7 @@
     <Build Include="dbo\Tables\Sync Tables\_computed_columns.sql" />
     <Build Include="dbo\Tables\Sync Tables\_configurations_history.sql" />
     <Build Include="dbo\Tables\Sync Tables\_configurations.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_database_automatic_tuning_options_history.sql" />
     <Build Include="dbo\Tables\Sync Tables\_database_automatic_tuning_options.sql" />
     <Build Include="dbo\Tables\Sync Tables\_database_files.sql" />
     <Build Include="dbo\Tables\Sync Tables\_database_query_store_options.sql" />
@@ -163,6 +164,7 @@
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__columns.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__computed_columns.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__configurations.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__database_automatic_tuning_options.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__databases.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__default_constraints.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__dm_db_index_usage_stats.sql" />
@@ -198,6 +200,7 @@
     <Build Include="import\User Defined Types\Sync Types\import__columns.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__computed_columns.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__configurations.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__database_automatic_tuning_options.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__databases.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__default_constraints.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__dm_db_index_usage_stats.sql" />
