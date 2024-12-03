@@ -5,6 +5,7 @@ CREATE TABLE dbo._foreign_key_columns (
     _ParentColumnID         int         NOT NULL CONSTRAINT FK__foreign_key_columns__ParentColumnID     REFERENCES dbo.[Column]     (_ColumnID),
     _ReferencedObjectID     int         NOT NULL CONSTRAINT FK__foreign_key_columns__ReferencedObjectID REFERENCES dbo.[Object]     (_ObjectID),
     _ReferencedColumnID     int         NOT NULL CONSTRAINT FK__foreign_key_columns__ReferencedColumnID REFERENCES dbo.[Column]     (_ColumnID),
+    --
     _InsertDate             datetime2   NOT NULL CONSTRAINT DF__foreign_key_columns__InsertDate         DEFAULT (SYSUTCDATETIME()),
     _ModifyDate             datetime2   NOT NULL CONSTRAINT DF__foreign_key_columns__ModifyDate         DEFAULT (SYSUTCDATETIME()),
     _RowHash                binary(32)  NOT NULL,

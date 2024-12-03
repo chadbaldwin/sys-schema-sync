@@ -22,3 +22,4 @@ CREATE TABLE dbo._objects_history (
 
     INDEX CIX__objects_history__ValidTo__ValidFrom CLUSTERED (_ValidTo, _ValidFrom) WITH (DATA_COMPRESSION = PAGE),
 );
+GO
