@@ -3,6 +3,7 @@ AS
 SELECT d._InstanceID, d.InstanceName
     , d._DatabaseID, d.DatabaseName
     , o._ObjectID, o.SchemaName, o.ObjectName, o.ObjectType
+    , o.FQON
 FROM dbo.[Object] o
     JOIN dbo.vw_Database d ON d._DatabaseID = o._DatabaseID
 WHERE o.IsDeleted = 0;
