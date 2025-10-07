@@ -28,17 +28,18 @@ BEGIN;
 
     RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     UPDATE x
-    SET   x._ModifyDate     = SYSUTCDATETIME()
-        , x._RowHash        = d._RowHash
+    SET   x._ModifyDate      = SYSUTCDATETIME()
+        , x._RowHash         = d._RowHash
         --
-        , x.[name]          = d.[name]
-        , x.[value]         = d.[value]
-        , x.minimum         = d.minimum
-        , x.maximum         = d.maximum
-        , x.value_in_use    = d.value_in_use
-        , x.[description]   = d.[description]
-        , x.is_dynamic      = d.is_dynamic
-        , x.is_advanced     = d.is_advanced
+        , x.configuration_id = d.configuration_id
+        , x.[name]           = d.[name]
+        , x.[value]          = d.[value]
+        , x.minimum          = d.minimum
+        , x.maximum          = d.maximum
+        , x.value_in_use     = d.value_in_use
+        , x.[description]    = d.[description]
+        , x.is_dynamic       = d.is_dynamic
+        , x.is_advanced      = d.is_advanced
     FROM dbo._configurations x
         JOIN @Dataset d ON d.configuration_id = x.configuration_id
     WHERE x._InstanceID = @InstanceID

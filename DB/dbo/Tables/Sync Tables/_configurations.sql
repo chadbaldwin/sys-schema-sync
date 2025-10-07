@@ -9,10 +9,10 @@ CREATE TABLE dbo._configurations (
     --
     configuration_id int           NOT NULL,
     [name]           nvarchar(35)  NOT NULL,
-    [value]          int               NULL, -- Deviation: sql_variant
-    minimum          int               NULL, -- Deviation: sql_variant
-    maximum          int               NULL, -- Deviation: sql_variant
-    value_in_use     int               NULL, -- Deviation: sql_variant
+    [value]          int               NULL, -- Deviation: Original data type: sql_variant
+    minimum          int               NULL, -- Deviation: Original data type: sql_variant
+    maximum          int               NULL, -- Deviation: Original data type: sql_variant
+    value_in_use     int               NULL, -- Deviation: Original data type: sql_variant
     [description]    nvarchar(255) NOT NULL,
     is_dynamic       bit           NOT NULL,
     is_advanced      bit           NOT NULL,

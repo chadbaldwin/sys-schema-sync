@@ -65,7 +65,6 @@ BEGIN;
         , x.is_ms_shipped           = d.is_ms_shipped
         , x.is_published            = d.is_published
         , x.is_schema_published     = d.is_schema_published
-        --
         , x.is_disabled             = d.is_disabled
         , x.is_not_for_replication  = d.is_not_for_replication
         , x.is_not_trusted          = d.is_not_trusted

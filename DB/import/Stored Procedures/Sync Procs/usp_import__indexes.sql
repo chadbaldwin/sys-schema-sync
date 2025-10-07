@@ -38,31 +38,32 @@ BEGIN;
 
     RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     UPDATE x
-    SET   x._ModifyDate                     = SYSUTCDATETIME()
-        , x._RowHash                        = d._RowHash
+    SET   x._ModifyDate                   = SYSUTCDATETIME()
+        , x._RowHash                      = d._RowHash
         --
-        , x.[object_id]                     = d.[object_id]
-        , x.index_id                        = d.index_id
-        , x.[type]                          = d.[type]
-        , x.[type_desc]                     = d.[type_desc]
-        , x.is_unique                       = d.is_unique
-        , x.data_space_id                   = d.data_space_id
-        , x.[ignore_dup_key]                = d.[ignore_dup_key]
-        , x.is_primary_key                  = d.is_primary_key
-        , x.is_unique_constraint            = d.is_unique_constraint
-        , x.fill_factor                     = d.fill_factor
-        , x.is_padded                       = d.is_padded
-        , x.is_disabled                     = d.is_disabled
-        , x.is_hypothetical                 = d.is_hypothetical
-        , x.is_ignored_in_optimization      = d.is_ignored_in_optimization
-        , x.[allow_row_locks]               = d.[allow_row_locks]
-        , x.[allow_page_locks]              = d.[allow_page_locks]
-        , x.has_filter                      = d.has_filter
-        , x.filter_definition               = d.filter_definition
-        , x.[compression_delay]             = d.[compression_delay]
-        , x.suppress_dup_key_messages       = d.suppress_dup_key_messages
-        , x.auto_created                    = d.auto_created
-        , x.[optimize_for_sequential_key]   = d.[optimize_for_sequential_key]
+        , x.[object_id]                   = d.[object_id]
+        , x.[name]                        = d.[name]
+        , x.index_id                      = d.index_id
+        , x.[type]                        = d.[type]
+        , x.[type_desc]                   = d.[type_desc]
+        , x.is_unique                     = d.is_unique
+        , x.data_space_id                 = d.data_space_id
+        , x.[ignore_dup_key]              = d.[ignore_dup_key]
+        , x.is_primary_key                = d.is_primary_key
+        , x.is_unique_constraint          = d.is_unique_constraint
+        , x.fill_factor                   = d.fill_factor
+        , x.is_padded                     = d.is_padded
+        , x.is_disabled                   = d.is_disabled
+        , x.is_hypothetical               = d.is_hypothetical
+        , x.is_ignored_in_optimization    = d.is_ignored_in_optimization
+        , x.[allow_row_locks]             = d.[allow_row_locks]
+        , x.[allow_page_locks]            = d.[allow_page_locks]
+        , x.has_filter                    = d.has_filter
+        , x.filter_definition             = d.filter_definition
+        , x.[compression_delay]           = d.[compression_delay]
+        , x.suppress_dup_key_messages     = d.suppress_dup_key_messages
+        , x.auto_created                  = d.auto_created
+        , x.[optimize_for_sequential_key] = d.[optimize_for_sequential_key]
     FROM dbo._indexes x
         JOIN @output y ON y._IndexID = x._IndexID
         JOIN #Dataset d ON d.ID = y.ID

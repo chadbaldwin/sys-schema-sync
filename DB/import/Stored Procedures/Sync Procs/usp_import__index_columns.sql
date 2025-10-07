@@ -38,18 +38,19 @@ BEGIN;
 
     RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     UPDATE x
-    SET   x._ModifyDate                 = SYSUTCDATETIME()
-        , x._RowHash                    = d._RowHash
+    SET   x._ModifyDate                = SYSUTCDATETIME()
+        , x._RowHash                   = d._RowHash
         --
-        , x.[object_id]                 = d.[object_id]
-        , x.index_id                    = d.index_id
-        , x.index_column_id             = d.index_column_id
-        , x.column_id                   = d.column_id
-        , x.key_ordinal                 = d.key_ordinal
-        , x.partition_ordinal           = d.partition_ordinal
-        , x.is_descending_key           = d.is_descending_key
-        , x.is_included_column          = d.is_included_column
-        , x.column_store_order_ordinal  = d.column_store_order_ordinal
+        , x.[object_id]                = d.[object_id]
+        , x.index_id                   = d.index_id
+        , x.index_column_id            = d.index_column_id
+        , x.column_id                  = d.column_id
+        , x.key_ordinal                = d.key_ordinal
+        , x.partition_ordinal          = d.partition_ordinal
+        , x.is_descending_key          = d.is_descending_key
+        , x.is_included_column         = d.is_included_column
+        , x.column_store_order_ordinal = d.column_store_order_ordinal
+        , x.data_clustering_ordinal    = d.data_clustering_ordinal
     FROM dbo._index_columns x
         JOIN @output y ON y._IndexID = x._IndexID AND y._ColumnID = x._ColumnID
         JOIN #Dataset d ON d.ID = y.ID
@@ -58,9 +59,9 @@ BEGIN;
 
     RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     INSERT INTO dbo._index_columns (_DatabaseID, _ObjectID, _IndexID, _ColumnID, _RowHash
-        , [object_id], index_id, index_column_id, column_id, key_ordinal, partition_ordinal, is_descending_key, is_included_column, column_store_order_ordinal)
+        , [object_id], index_id, index_column_id, column_id, key_ordinal, partition_ordinal, is_descending_key, is_included_column, column_store_order_ordinal, data_clustering_ordinal)
     SELECT @DatabaseID, y._ObjectID, y._IndexID, y._ColumnID, d._RowHash
-        , d.[object_id], d.index_id, d.index_column_id, d.column_id, d.key_ordinal, d.partition_ordinal, d.is_descending_key, d.is_included_column, d.column_store_order_ordinal
+        , d.[object_id], d.index_id, d.index_column_id, d.column_id, d.key_ordinal, d.partition_ordinal, d.is_descending_key, d.is_included_column, d.column_store_order_ordinal, d.data_clustering_ordinal
     FROM #Dataset d
         JOIN @output y ON y.ID = d.ID
     WHERE NOT EXISTS (

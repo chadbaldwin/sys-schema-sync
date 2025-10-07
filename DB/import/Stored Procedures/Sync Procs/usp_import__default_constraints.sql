@@ -48,27 +48,26 @@ BEGIN;
 
     RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     UPDATE x
-    SET   x._ParentObjectID         = p._ObjectID
-        , x._ParentColumnID         = p._ColumnID
-        , x._ModifyDate             = SYSUTCDATETIME()
-        , x._RowHash                = d._RowHash
+    SET   x._ParentObjectID     = p._ObjectID
+        , x._ParentColumnID     = p._ColumnID
+        , x._ModifyDate         = SYSUTCDATETIME()
+        , x._RowHash            = d._RowHash
         --
-        , x.[name]                  = d.[name]
-        , x.[object_id]             = d.[object_id]
-        , x.principal_id            = d.principal_id
-        , x.[schema_id]             = d.[schema_id]
-        , x.parent_object_id        = d.parent_object_id
-        , x.[type]                  = d.[type]
-        , x.[type_desc]             = d.[type_desc]
-        , x.create_date             = d.create_date
-        , x.modify_date             = d.modify_date
-        , x.is_ms_shipped           = d.is_ms_shipped
-        , x.is_published            = d.is_published
-        , x.is_schema_published     = d.is_schema_published
-        --
-        , x.parent_column_id        = d.parent_column_id
-        , x.[definition]            = d.[definition]
-        , x.is_system_named         = d.is_system_named
+        , x.[name]              = d.[name]
+        , x.[object_id]         = d.[object_id]
+        , x.principal_id        = d.principal_id
+        , x.[schema_id]         = d.[schema_id]
+        , x.parent_object_id    = d.parent_object_id
+        , x.[type]              = d.[type]
+        , x.[type_desc]         = d.[type_desc]
+        , x.create_date         = d.create_date
+        , x.modify_date         = d.modify_date
+        , x.is_ms_shipped       = d.is_ms_shipped
+        , x.is_published        = d.is_published
+        , x.is_schema_published = d.is_schema_published
+        , x.parent_column_id    = d.parent_column_id
+        , x.[definition]        = d.[definition]
+        , x.is_system_named     = d.is_system_named
     FROM dbo._default_constraints x
         JOIN @output y ON y._ObjectID = x._ObjectID
         JOIN #Dataset d ON d.ID = y.ID

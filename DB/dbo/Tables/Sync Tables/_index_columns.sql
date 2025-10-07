@@ -18,7 +18,8 @@ CREATE TABLE dbo._index_columns (
     partition_ordinal          tinyint    NOT NULL,
     is_descending_key          bit            NULL,
     is_included_column         bit            NULL,
-    column_store_order_ordinal tinyint        NULL, -- Added: SQL Server 2019 - Deviation: NOT NULL
+    column_store_order_ordinal tinyint        NULL, -- Added: SQL Server 2019
+    data_clustering_ordinal    tinyint        NULL, -- Added: SQL Server 2025
 
     PERIOD FOR SYSTEM_TIME (_ValidFrom, _ValidTo),
     CONSTRAINT CPK__index_columns__IndexID__ColumnID PRIMARY KEY CLUSTERED (_IndexID, _ColumnID),

@@ -60,35 +60,34 @@ BEGIN;
 
     RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     UPDATE x
-    SET   x._ParentObjectID                 = p._ObjectID
-        , x._ReferencedObjectID             = r._ObjectID
-        , x._ReferencedIndexID              = r._IndexID
-        , x._ModifyDate                     = SYSUTCDATETIME()
-        , x._RowHash                        = d._RowHash
+    SET   x._ParentObjectID                = p._ObjectID
+        , x._ReferencedObjectID            = r._ObjectID
+        , x._ReferencedIndexID             = r._IndexID
+        , x._ModifyDate                    = SYSUTCDATETIME()
+        , x._RowHash                       = d._RowHash
         --
-        , x.[name]                          = d.[name]
-        , x.[object_id]                     = d.[object_id]
-        , x.principal_id                    = d.principal_id
-        , x.[schema_id]                     = d.[schema_id]
-        , x.parent_object_id                = d.parent_object_id
-        , x.[type]                          = d.[type]
-        , x.[type_desc]                     = d.[type_desc]
-        , x.create_date                     = d.create_date
-        , x.modify_date                     = d.modify_date
-        , x.is_ms_shipped                   = d.is_ms_shipped
-        , x.is_published                    = d.is_published
-        , x.is_schema_published             = d.is_schema_published
-        --
-        , x.referenced_object_id            = d.referenced_object_id
-        , x.key_index_id                    = d.key_index_id
-        , x.is_disabled                     = d.is_disabled
-        , x.is_not_for_replication          = d.is_not_for_replication
-        , x.is_not_trusted                  = d.is_not_trusted
-        , x.delete_referential_action       = d.delete_referential_action
-        , x.delete_referential_action_desc  = d.delete_referential_action_desc
-        , x.update_referential_action       = d.update_referential_action
-        , x.update_referential_action_desc  = d.update_referential_action_desc
-        , x.is_system_named                 = d.is_system_named
+        , x.[name]                         = d.[name]
+        , x.[object_id]                    = d.[object_id]
+        , x.principal_id                   = d.principal_id
+        , x.[schema_id]                    = d.[schema_id]
+        , x.parent_object_id               = d.parent_object_id
+        , x.[type]                         = d.[type]
+        , x.[type_desc]                    = d.[type_desc]
+        , x.create_date                    = d.create_date
+        , x.modify_date                    = d.modify_date
+        , x.is_ms_shipped                  = d.is_ms_shipped
+        , x.is_published                   = d.is_published
+        , x.is_schema_published            = d.is_schema_published
+        , x.referenced_object_id           = d.referenced_object_id
+        , x.key_index_id                   = d.key_index_id
+        , x.is_disabled                    = d.is_disabled
+        , x.is_not_for_replication         = d.is_not_for_replication
+        , x.is_not_trusted                 = d.is_not_trusted
+        , x.delete_referential_action      = d.delete_referential_action
+        , x.delete_referential_action_desc = d.delete_referential_action_desc
+        , x.update_referential_action      = d.update_referential_action
+        , x.update_referential_action_desc = d.update_referential_action_desc
+        , x.is_system_named                = d.is_system_named
     FROM dbo._foreign_keys x
         JOIN @output y ON y._ObjectID = x._ObjectID
         JOIN #Dataset d ON d.ID = y.ID

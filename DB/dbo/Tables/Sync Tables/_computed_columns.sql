@@ -44,7 +44,7 @@ CREATE TABLE dbo._computed_columns (
     encryption_algorithm_name           nvarchar(128)     NULL,
     column_encryption_key_id            int               NULL,
     column_encryption_key_database_name nvarchar(128)     NULL,
-    is_hidden                           bit           NOT NULL,
+    is_hidden                           bit               NULL,
     is_masked                           bit           NOT NULL,
     graph_type                          int               NULL,
     graph_type_desc                     nvarchar(60)      NULL,
@@ -52,6 +52,7 @@ CREATE TABLE dbo._computed_columns (
     ledger_view_column_type             int               NULL, -- Added: SQL Server 2022
     ledger_view_column_type_desc        nvarchar(60)      NULL, -- Added: SQL Server 2022
     is_dropped_ledger_column            bit               NULL, -- Added: SQL Server 2022
+    is_index_column_expression          bit               NULL, -- Added: SQL Server 2025
 
     PERIOD FOR SYSTEM_TIME (_ValidFrom, _ValidTo),
     CONSTRAINT CPK__computed_columns__ColumnID PRIMARY KEY CLUSTERED (_ColumnID),

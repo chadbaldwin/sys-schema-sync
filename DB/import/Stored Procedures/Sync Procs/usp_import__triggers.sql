@@ -48,23 +48,23 @@ BEGIN;
 
     RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     UPDATE x
-    SET   x._ParentObjectID         = p._ObjectID
-        , x._ModifyDate             = SYSUTCDATETIME()
-        , x._RowHash                = d._RowHash
+    SET   x._ParentObjectID        = p._ObjectID
+        , x._ModifyDate            = SYSUTCDATETIME()
+        , x._RowHash               = d._RowHash
         --
-        , x.[name]                  = d.[name]
-        , x.[object_id]             = d.[object_id]
-        , x.parent_class            = d.parent_class
-        , x.parent_class_desc       = d.parent_class_desc
-        , x.parent_id               = d.parent_id
-        , x.[type]                  = d.[type]
-        , x.[type_desc]             = d.[type_desc]
-        , x.create_date             = d.create_date
-        , x.modify_date             = d.modify_date
-        , x.is_ms_shipped           = d.is_ms_shipped
-        , x.is_disabled             = d.is_disabled
-        , x.is_not_for_replication  = d.is_not_for_replication
-        , x.is_instead_of_trigger   = d.is_instead_of_trigger
+        , x.[name]                 = d.[name]
+        , x.[object_id]            = d.[object_id]
+        , x.parent_class           = d.parent_class
+        , x.parent_class_desc      = d.parent_class_desc
+        , x.parent_id              = d.parent_id
+        , x.[type]                 = d.[type]
+        , x.[type_desc]            = d.[type_desc]
+        , x.create_date            = d.create_date
+        , x.modify_date            = d.modify_date
+        , x.is_ms_shipped          = d.is_ms_shipped
+        , x.is_disabled            = d.is_disabled
+        , x.is_not_for_replication = d.is_not_for_replication
+        , x.is_instead_of_trigger  = d.is_instead_of_trigger
     FROM dbo._triggers x
         JOIN @output y ON y._ObjectID = x._ObjectID
         JOIN #Dataset d ON d.ID = y.ID

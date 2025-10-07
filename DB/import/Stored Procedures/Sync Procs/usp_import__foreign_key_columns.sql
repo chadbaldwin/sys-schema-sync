@@ -58,19 +58,19 @@ BEGIN;
 
     RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     UPDATE x
-    SET   x._ParentObjectID         = p._ObjectID
-        , x._ParentColumnID         = p._ColumnID
-        , x._ReferencedObjectID     = r._ObjectID
-        , x._ReferencedColumnID     = r._ColumnID
-        , x._ModifyDate             = SYSUTCDATETIME()
-        , x._RowHash                = d._RowHash
+    SET   x._ParentObjectID      = p._ObjectID
+        , x._ParentColumnID      = p._ColumnID
+        , x._ReferencedObjectID  = r._ObjectID
+        , x._ReferencedColumnID  = r._ColumnID
+        , x._ModifyDate          = SYSUTCDATETIME()
+        , x._RowHash             = d._RowHash
         --
-        , x.constraint_object_id    = d.constraint_object_id
-        , x.constraint_column_id    = d.constraint_column_id
-        , x.parent_object_id        = d.parent_object_id
-        , x.parent_column_id        = d.parent_column_id
-        , x.referenced_object_id    = d.referenced_object_id
-        , x.referenced_column_id    = d.referenced_column_id
+        , x.constraint_object_id = d.constraint_object_id
+        , x.constraint_column_id = d.constraint_column_id
+        , x.parent_object_id     = d.parent_object_id
+        , x.parent_column_id     = d.parent_column_id
+        , x.referenced_object_id = d.referenced_object_id
+        , x.referenced_column_id = d.referenced_column_id
     FROM dbo._foreign_key_columns x
         JOIN @output y ON y._ObjectID = x._ObjectID
         JOIN #Dataset d ON d.ID = y.ID AND d.constraint_column_id = x.constraint_column_id

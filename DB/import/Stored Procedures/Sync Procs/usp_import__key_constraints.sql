@@ -65,7 +65,6 @@ BEGIN;
         , x.is_ms_shipped       = d.is_ms_shipped
         , x.is_published        = d.is_published
         , x.is_schema_published = d.is_schema_published
-        --
         , x.unique_index_id     = d.unique_index_id
         , x.is_system_named     = d.is_system_named
         , x.is_enforced         = d.is_enforced
@@ -78,11 +77,9 @@ BEGIN;
 
     RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     INSERT INTO dbo._key_constraints (_DatabaseID, _ObjectID, _IndexID, _ParentObjectID, _RowHash
-        , [name], [object_id], principal_id, [schema_id], parent_object_id, [type], [type_desc], create_date, modify_date, is_ms_shipped, is_published, is_schema_published
-        , unique_index_id, is_system_named, is_enforced)
+        , [name], [object_id], principal_id, [schema_id], parent_object_id, [type], [type_desc], create_date, modify_date, is_ms_shipped, is_published, is_schema_published, unique_index_id, is_system_named, is_enforced)
     SELECT @DatabaseID, y._ObjectID, p._IndexID, p._ObjectID, d._RowHash
-        , d.[name], d.[object_id], d.principal_id, d.[schema_id], d.parent_object_id, d.[type], d.[type_desc], d.create_date, d.modify_date, d.is_ms_shipped, d.is_published, d.is_schema_published
-        , d.unique_index_id, d.is_system_named, d.is_enforced
+        , d.[name], d.[object_id], d.principal_id, d.[schema_id], d.parent_object_id, d.[type], d.[type_desc], d.create_date, d.modify_date, d.is_ms_shipped, d.is_published, d.is_schema_published, d.unique_index_id, d.is_system_named, d.is_enforced
     FROM #Dataset d
         JOIN @output y ON y.ID = d.ID
         JOIN @parent p ON p.ID = d.ID

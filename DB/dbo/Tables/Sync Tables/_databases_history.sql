@@ -86,7 +86,7 @@ CREATE TABLE dbo._databases_history (
     is_remote_data_archive_enabled             bit                  NULL,
     is_mixed_page_allocation_on                bit                  NULL,
     is_temporal_history_retention_enabled      bit                  NULL,
-    catalog_collation_type                     int                  NULL, -- Added: SQL Server 2019 - Deviation: NOT NULL
+    catalog_collation_type                     int                  NULL, -- Added: SQL Server 2019
     catalog_collation_type_desc                nvarchar(60)         NULL, -- Added: SQL Server 2019
     physical_database_name                     nvarchar(128)        NULL, -- Added: SQL Server 2019
     is_result_set_caching_on                   bit                  NULL, -- Added: SQL Server 2019
@@ -97,6 +97,15 @@ CREATE TABLE dbo._databases_history (
     is_data_retention_enabled                  bit                  NULL, -- Added: SQL Server 2022
     is_ledger_on                               bit                  NULL, -- Added: SQL Server 2022
     is_change_feed_enabled                     bit                  NULL, -- Added: SQL Server 2022
+    is_data_lake_replication_enabled           bit                  NULL, -- Added: SQL Server 2025
+    is_event_stream_enabled                    bit                  NULL, -- Added: SQL Server 2025
+    data_compaction                            tinyint              NULL, -- Added: SQL Server 2025
+    data_compaction_desc                       nvarchar(60)         NULL, -- Added: SQL Server 2025
+    data_lake_log_publishing                   tinyint              NULL, -- Added: SQL Server 2025
+    data_lake_log_publishing_desc              nvarchar(60)         NULL, -- Added: SQL Server 2025
+    is_vorder_enabled                          bit                  NULL, -- Added: SQL Server 2025
+    is_proactive_statistics_refresh_on         bit                  NULL, -- Added: SQL Server 2025
+    is_optimized_locking_on                    bit                  NULL, -- Added: SQL Server 2025
 
     INDEX CIX__databases_history__ValidTo__ValidFrom CLUSTERED (_ValidTo, _ValidFrom) WITH (DATA_COMPRESSION = PAGE),
 );

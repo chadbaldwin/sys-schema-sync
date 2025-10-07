@@ -80,13 +80,21 @@ try {
             Write-Output 'Sync object using proc and table type'
 
             Write-Output 'Start: Export'; $sw.Restart()
-            $data = Invoke-DbaQuery $SourceSqlConnection -Query $exportQuery -As DataTable
+            $dt_src = Invoke-DbaQuery $SourceSqlConnection -Query $exportQuery -As DataTable
             Write-Output "Done: Export [$($sw.Elapsed)]"
 
             # No delete step because the import proc will handle it - deletes, updates, etc
-            if ($data.Rows.Count -gt 0) {
+            if ($dt_src.Rows.Count -gt 0) {
                 Write-Output 'Start: Write'; $sw.Restart()
-                $sqlParamData = New-DbaSqlParameter -ParameterName 'Dataset' -SqlDbType Structured -Value $data -TypeName $syncItem.ImportType
+
+                # Create empty datatable in the shape of the target table type
+                $empty_dt_query = 'DECLARE @x {0}; SELECT * FROM @x' -f $syncItem.ImportType
+                $dt_dst = Invoke-DbaQuery -SqlInstance DestinationInstance -Database SomeDatabase -Query $empty_dt_query -As DataTable
+
+                # Merge the source data into the destination datatable
+                $dt_dst.Merge($dt_src, $false, [System.Data.MissingSchemaAction]::Ignore)
+
+                $sqlParamData = New-DbaSqlParameter -ParameterName 'Dataset' -SqlDbType Structured -Value $dt_dst -TypeName $syncItem.ImportType
                 Invoke-DbaQuery $TargetSqlConnection -CommandType StoredProcedure -Query $syncItem.ImportProc -SqlParameter @((&$sqlParamImportID), $sqlParamData) | Write-Output
                 Write-Output "Done: Write [$($sw.Elapsed)]"
             } else {

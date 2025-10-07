@@ -44,23 +44,23 @@ BEGIN;
 
     RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     UPDATE x
-    SET   x._ModifyDate                         = SYSUTCDATETIME()
-        , x._RowHash                            = d._RowHash
+    SET   x._ModifyDate                      = SYSUTCDATETIME()
+        , x._RowHash                         = d._RowHash
         --
-        , x.[partition_id]                      = d.[partition_id]
-        , x.[object_id]                         = d.[object_id]
-        , x.index_id                            = d.index_id
-        , x.partition_number                    = d.partition_number
-        , x.in_row_data_page_count              = d.in_row_data_page_count
-        , x.in_row_used_page_count              = d.in_row_used_page_count
-        , x.in_row_reserved_page_count          = d.in_row_reserved_page_count
-        , x.lob_used_page_count                 = d.lob_used_page_count
-        , x.lob_reserved_page_count             = d.lob_reserved_page_count
-        , x.row_overflow_used_page_count        = d.row_overflow_used_page_count
-        , x.row_overflow_reserved_page_count    = d.row_overflow_reserved_page_count
-        , x.used_page_count                     = d.used_page_count
-        , x.reserved_page_count                 = d.reserved_page_count
-        , x.row_count                           = d.row_count
+        , x.[partition_id]                   = d.[partition_id]
+        , x.[object_id]                      = d.[object_id]
+        , x.index_id                         = d.index_id
+        , x.partition_number                 = d.partition_number
+        , x.in_row_data_page_count           = d.in_row_data_page_count
+        , x.in_row_used_page_count           = d.in_row_used_page_count
+        , x.in_row_reserved_page_count       = d.in_row_reserved_page_count
+        , x.lob_used_page_count              = d.lob_used_page_count
+        , x.lob_reserved_page_count          = d.lob_reserved_page_count
+        , x.row_overflow_used_page_count     = d.row_overflow_used_page_count
+        , x.row_overflow_reserved_page_count = d.row_overflow_reserved_page_count
+        , x.used_page_count                  = d.used_page_count
+        , x.reserved_page_count              = d.reserved_page_count
+        , x.row_count                        = d.row_count
     FROM dbo._dm_db_partition_stats x
         JOIN @output y ON y._IndexID = x._IndexID
         JOIN #Dataset d ON d.ID = y.ID AND d.partition_number = x.partition_number

@@ -42,13 +42,16 @@ CREATE TABLE dbo._columns_history (
     column_encryption_key_id            int               NULL,
     column_encryption_key_database_name nvarchar(128)     NULL,
     is_hidden                           bit               NULL,
-    is_masked                           bit           NOT NULL,
+    is_masked                           bit               NULL,
     graph_type                          int               NULL,
     graph_type_desc                     nvarchar(60)      NULL,
     is_data_deletion_filter_column      bit               NULL, -- Added: SQL Server 2022
     ledger_view_column_type             int               NULL, -- Added: SQL Server 2022
     ledger_view_column_type_desc        nvarchar(60)      NULL, -- Added: SQL Server 2022
     is_dropped_ledger_column            bit               NULL, -- Added: SQL Server 2022
+    vector_dimensions                   int               NULL, -- Added: SQL Server 2025
+    vector_base_type                    tinyint           NULL, -- Added: SQL Server 2025
+    vector_base_type_desc               nvarchar(10)      NULL, -- Added: SQL Server 2025
 
     INDEX CIX__columns_history__ValidTo__ValidFrom CLUSTERED (_ValidTo, _ValidFrom) WITH (DATA_COMPRESSION = PAGE),
 );

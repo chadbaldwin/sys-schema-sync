@@ -18,7 +18,8 @@ CREATE TABLE dbo._index_columns_history (
     partition_ordinal          tinyint    NOT NULL,
     is_descending_key          bit            NULL,
     is_included_column         bit            NULL,
-    column_store_order_ordinal tinyint        NULL, -- Added: SQL Server 2019 - Deviation: NOT NULL
+    column_store_order_ordinal tinyint        NULL, -- Added: SQL Server 2019
+    data_clustering_ordinal    tinyint        NULL, -- Added: SQL Server 2025
 
     INDEX CIX__index_columns_history__ValidTo__ValidFrom CLUSTERED (_ValidTo, _ValidFrom) WITH (DATA_COMPRESSION = PAGE),
 );
