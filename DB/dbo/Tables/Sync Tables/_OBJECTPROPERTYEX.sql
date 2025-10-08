@@ -112,7 +112,7 @@ CREATE TABLE dbo._OBJECTPROPERTYEX (
     Cardinality                          bigint          NULL,
     TableTemporalType                    int             NULL,
 
-    CONSTRAINT CPK__OBJECTPROPERTYEX__ObjectID PRIMARY KEY CLUSTERED (_ObjectID),
+    CONSTRAINT CPK__OBJECTPROPERTYEX__ObjectID PRIMARY KEY CLUSTERED (_ObjectID) WITH (DATA_COMPRESSION = PAGE),
     INDEX IX__OBJECTPROPERTYEX__DatabaseID NONCLUSTERED (_DatabaseID),
     INDEX IX__OBJECTPROPERTYEX__ObjectID_Cardinality NONCLUSTERED (_ObjectID, Cardinality),
 );

@@ -22,7 +22,7 @@ CREATE TABLE dbo._objects (
     is_schema_published bit           NOT NULL,
 
     PERIOD FOR SYSTEM_TIME (_ValidFrom, _ValidTo),
-    CONSTRAINT CPK__objects__ObjectID PRIMARY KEY CLUSTERED (_ObjectID),
+    CONSTRAINT CPK__objects__ObjectID PRIMARY KEY CLUSTERED (_ObjectID) WITH (DATA_COMPRESSION = PAGE),
     INDEX IX__objects__DatabaseID NONCLUSTERED (_DatabaseID),
 ) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo._objects_history, DATA_CONSISTENCY_CHECK = ON, HISTORY_RETENTION_PERIOD = 6 MONTH));
 GO

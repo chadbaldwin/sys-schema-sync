@@ -7,15 +7,16 @@ CREATE TABLE dbo.[Column] (
     InsertDate      datetime2       NOT NULL CONSTRAINT DF_Column_InsertDate    DEFAULT (SYSUTCDATETIME()),
     DeleteDate      datetime2           NULL,
 
-    INDEX CIX_Column__DatabaseID__ColumnID UNIQUE CLUSTERED (_DatabaseID, _ColumnID),
+    INDEX CIX_Column__DatabaseID__ColumnID UNIQUE CLUSTERED (_DatabaseID, _ColumnID) WITH (DATA_COMPRESSION = PAGE),
     CONSTRAINT PK_Column__ColumnID PRIMARY KEY NONCLUSTERED (_ColumnID),
 );
 GO
 
 CREATE NONCLUSTERED INDEX IX_Column__DatabaseID__ObjectID_ColumnName
     ON dbo.[Column] (_DatabaseID, _ObjectID, ColumnName)
+    WITH (DATA_COMPRESSION = PAGE);
 GO
 
 CREATE NONCLUSTERED INDEX IX_Column__DatabaseID_IsDeleted
-    ON dbo.[Column] (_DatabaseID, IsDeleted)
+    ON dbo.[Column] (_DatabaseID, IsDeleted);
 GO

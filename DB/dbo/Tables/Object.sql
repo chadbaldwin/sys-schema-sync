@@ -9,13 +9,14 @@ CREATE TABLE dbo.[Object] (
     DeleteDate      datetime2           NULL,
     FQON            AS (CONVERT(nvarchar(300), QUOTENAME(SchemaName) + '.' + QUOTENAME(ObjectName))) PERSISTED,
 
-    INDEX CIX_Object__DatabaseID__ObjectID UNIQUE CLUSTERED (_DatabaseID, _ObjectID),
+    INDEX CIX_Object__DatabaseID__ObjectID UNIQUE CLUSTERED (_DatabaseID, _ObjectID) WITH (DATA_COMPRESSION = PAGE),
     CONSTRAINT PK_Object__ObjectID PRIMARY KEY NONCLUSTERED (_ObjectID),
 );
 GO
 
 CREATE UNIQUE NONCLUSTERED INDEX IX_Object__DatabaseID_SchemaName_ObjectName_ObjectType
-    ON dbo.[Object] (_DatabaseID, SchemaName, ObjectName, ObjectType);
+    ON dbo.[Object] (_DatabaseID, SchemaName, ObjectName, ObjectType)
+    WITH (DATA_COMPRESSION = PAGE);
 GO
 
 CREATE NONCLUSTERED INDEX IX_Object__DatabaseID_IsDeleted
@@ -23,5 +24,6 @@ CREATE NONCLUSTERED INDEX IX_Object__DatabaseID_IsDeleted
 GO
 
 CREATE NONCLUSTERED INDEX IX_Object_FQON
-    ON dbo.[Object] (FQON);
+    ON dbo.[Object] (FQON)
+    WITH (DATA_COMPRESSION = PAGE);
 GO
