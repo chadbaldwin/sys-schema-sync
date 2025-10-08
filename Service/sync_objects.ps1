@@ -26,10 +26,10 @@ Write-Output 'Getting list of syncs to run for DB'
 $query = @'
     -- Throwing in some sql injection protection - still need to figure out how to handle the ChecksumQueryText
     SELECT _InstanceID, _DatabaseID, SyncObjectID, SyncObjectName, SyncObjectLevelID, LastSyncChecksum
-        , SyncObjectNameClean = QUOTENAME(PARSENAME(q.SyncObjectName, 2)) + '.' + QUOTENAME(PARSENAME(q.SyncObjectName, 1))
-        , ImportTableClean    = QUOTENAME(PARSENAME(q.ImportTable   , 2)) + '.' + QUOTENAME(PARSENAME(q.ImportTable   , 1))
-        , ImportProcClean     = QUOTENAME(PARSENAME(q.ImportProc    , 2)) + '.' + QUOTENAME(PARSENAME(q.ImportProc    , 1))
-        , ImportTypeClean     = QUOTENAME(PARSENAME(q.ImportType    , 2)) + '.' + QUOTENAME(PARSENAME(q.ImportType    , 1))
+        , SyncObjectNameClean = NULLIF(CONCAT_WS('.', QUOTENAME(PARSENAME(q.SyncObjectName, 3)), QUOTENAME(PARSENAME(q.SyncObjectName, 2)), QUOTENAME(PARSENAME(q.SyncObjectName, 1))), '')
+        , ImportTableClean    = NULLIF(CONCAT_WS('.', QUOTENAME(PARSENAME(q.ImportTable   , 3)), QUOTENAME(PARSENAME(q.ImportTable   , 2)), QUOTENAME(PARSENAME(q.ImportTable   , 1))), '')
+        , ImportProcClean     = NULLIF(CONCAT_WS('.', QUOTENAME(PARSENAME(q.ImportProc    , 3)), QUOTENAME(PARSENAME(q.ImportProc    , 2)), QUOTENAME(PARSENAME(q.ImportProc    , 1))), '')
+        , ImportTypeClean     = NULLIF(CONCAT_WS('.', QUOTENAME(PARSENAME(q.ImportType    , 3)), QUOTENAME(PARSENAME(q.ImportType    , 2)), QUOTENAME(PARSENAME(q.ImportType    , 1))), '')
         , ExportQueryPath, ChecksumQueryText
     FROM import.vw_DatabaseSyncObjectQueue q
     WHERE InstanceName = @InstanceName
