@@ -55,18 +55,18 @@ try {
         if ($syncItem.ExportQueryPath) {
             $exportQuery = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'SQL' $syncItem.ExportQueryPath) -Raw
         } else {
-            $exportQuery = 'SELECT _CollectionDate = SYSUTCDATETIME(), * FROM {0}' -f $syncItem.SyncObjectName
+            $exportQuery = 'SELECT _CollectionDate = SYSUTCDATETIME(), * FROM {0}' -f $syncItem.SyncObjectNameClean
         }
         $exportQuery = "SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED; ${exportQuery}"
 
         switch ($syncItem.SyncObjectLevelID) {
             1 {
-                $deleteQuery = 'DELETE {0} WHERE _InstanceID = @InstanceID' -f $syncItem.ImportTable
+                $deleteQuery = 'DELETE {0} WHERE _InstanceID = @InstanceID' -f $syncItem.ImportTableClean
                 $column = [System.Data.DataColumn]::new('_InstanceID', [Int], $InstanceID)
                 $sqlParamImportID = $sqlParamInstance
             }
             2 {
-                $deleteQuery = 'DELETE {0} WHERE _DatabaseID = @DatabaseID' -f $syncItem.ImportTable
+                $deleteQuery = 'DELETE {0} WHERE _DatabaseID = @DatabaseID' -f $syncItem.ImportTableClean
                 $column = [System.Data.DataColumn]::new('_DatabaseID', [Int], $DatabaseID)
                 $sqlParamImportID = $sqlParamDatabase
             }
@@ -75,11 +75,11 @@ try {
 
         $sw = [Diagnostics.Stopwatch]::StartNew()
 
-        if (($syncItem.ImportProc) -and ($null -eq $syncItem.ImportTable)) {
-
-            Write-Output 'Sync object using proc and table type'
+        if (($syncItem.ImportProcClean) -and ($null -eq $syncItem.ImportTableClean)) {
+            Write-Output 'Complex sync - Sync object using proc and table type'
 
             Write-Output 'Start: Export'; $sw.Restart()
+            # Using DataTable here because it is preferred by .NET when populating a table valued parameter
             $dt_src = Invoke-DbaQuery $SourceSqlConnection -Query $exportQuery -As DataTable
             Write-Output "Done: Export [$($sw.Elapsed)]"
 
@@ -88,24 +88,26 @@ try {
                 Write-Output 'Start: Write'; $sw.Restart()
 
                 # Create empty datatable in the shape of the target table type
-                $empty_dt_query = 'DECLARE @x {0}; SELECT * FROM @x' -f $syncItem.ImportType
-                $dt_dst = Invoke-DbaQuery -SqlInstance DestinationInstance -Database SomeDatabase -Query $empty_dt_query -As DataTable
+                $empty_dt_query = 'DECLARE @x {0}; SELECT * FROM @x' -f $syncItem.ImportTypeClean
+                $dt_dst = Invoke-DbaQuery $TargetSqlConnection -Query $empty_dt_query -As DataTable
 
                 # Merge the source data into the destination datatable
                 $dt_dst.Merge($dt_src, $false, [System.Data.MissingSchemaAction]::Ignore)
 
-                $sqlParamData = New-DbaSqlParameter -ParameterName 'Dataset' -SqlDbType Structured -Value $dt_dst -TypeName $syncItem.ImportType
-                Invoke-DbaQuery $TargetSqlConnection -CommandType StoredProcedure -Query $syncItem.ImportProc -SqlParameter @((&$sqlParamImportID), $sqlParamData) | Write-Output
+                $sqlParamData = New-DbaSqlParameter -ParameterName 'Dataset' -SqlDbType Structured -Value $dt_dst -TypeName $syncItem.ImportTypeClean
+                Invoke-DbaQuery $TargetSqlConnection -CommandType StoredProcedure -Query $syncItem.ImportProcClean -SqlParameter @((&$sqlParamImportID), $sqlParamData) | Write-Output
                 Write-Output "Done: Write [$($sw.Elapsed)]"
             } else {
                 Write-Output 'Skip: Write - No data to import'
             }
-
-        } elseif (($null -eq $syncItem.ImportProc) -and ($syncItem.ImportTable)) {
-
-            Write-Output 'Sync object directly using delete and insert'
+        } elseif (($null -eq $syncItem.ImportProcClean) -and ($syncItem.ImportTableClean)) {
+            Write-Output 'Simple sync - Sync object directly using delete and insert'
 
             Write-Output 'Start: Export'; $sw.Restart()
+            <#  Note from dbatools documentation for Write-DbaDbTableData:
+                Use DataSet for optimal performance as all records import in a single SqlBulkCopy call.
+                DataTable also performs well but avoid piping directly as it converts to slower DataRow processing.
+            #>
             $data = Invoke-DbaQuery $SourceSqlConnection -Query $exportQuery -As DataSet
             Write-Output "Done: Export [$($sw.Elapsed)]"
 
@@ -129,7 +131,7 @@ try {
                     $data = $data.Tables[0]
                 }
 
-                Write-DbaDbTableData -InputObject $data -SqlInstance $TargetSqlConnection -Table $syncItem.ImportTable
+                Write-DbaDbTableData -InputObject $data -SqlInstance $TargetSqlConnection -Table $syncItem.ImportTableClean
                 Write-Output "Done: Write [$($sw.Elapsed)]"
             } else {
                 Write-Output 'Skip: Write - No data to import'

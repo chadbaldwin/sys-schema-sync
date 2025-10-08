@@ -229,6 +229,9 @@
     <Build Include="dbo\Tables\Sync Tables\_dm_xe_sessions.sql" />
     <Build Include="dbo\Tables\Sync Tables\_dm_os_memory_nodes.sql" />
     <Build Include="dbo\Tables\Sync Tables\_server_event_sessions.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_dm_db_stats_properties.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__dm_db_stats_properties.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__dm_db_stats_properties.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="StaticCodeAnalysis.SuppressMessages.xml" />

@@ -24,21 +24,14 @@ $conn_tgt = Connect-DbaInstance -ConnectionString $config.RepositoryDatabaseConn
 Write-Output 'Getting list of syncs to run for DB'
 
 $query = @'
-    SELECT _InstanceID, _DatabaseID, SyncObjectID
-        , SyncObjectName
-        , SyncObjectLevelID
-        , LastSyncChecksum
-        , ImportTable = CONCAT(QUOTENAME(OBJECT_SCHEMA_NAME(OBJECT_ID(q.ImportTable))), '.', QUOTENAME(OBJECT_NAME(OBJECT_ID(q.ImportTable))))
-        , ImportProc  = CONCAT(QUOTENAME(OBJECT_SCHEMA_NAME(OBJECT_ID(q.ImportProc))), '.', QUOTENAME(OBJECT_NAME(OBJECT_ID(q.ImportProc))))
-        , ImportType  = t.clean_import_type
-        , ExportQueryPath
-        , ChecksumQueryText
+    -- Throwing in some sql injection protection - still need to figure out how to handle the ChecksumQueryText
+    SELECT _InstanceID, _DatabaseID, SyncObjectID, SyncObjectName, SyncObjectLevelID, LastSyncChecksum
+        , SyncObjectNameClean = QUOTENAME(PARSENAME(q.SyncObjectName, 2)) + '.' + QUOTENAME(PARSENAME(q.SyncObjectName, 1))
+        , ImportTableClean    = QUOTENAME(PARSENAME(q.ImportTable   , 2)) + '.' + QUOTENAME(PARSENAME(q.ImportTable   , 1))
+        , ImportProcClean     = QUOTENAME(PARSENAME(q.ImportProc    , 2)) + '.' + QUOTENAME(PARSENAME(q.ImportProc    , 1))
+        , ImportTypeClean     = QUOTENAME(PARSENAME(q.ImportType    , 2)) + '.' + QUOTENAME(PARSENAME(q.ImportType    , 1))
+        , ExportQueryPath, ChecksumQueryText
     FROM import.vw_DatabaseSyncObjectQueue q
-        OUTER APPLY (
-            SELECT clean_import_type = CONCAT(QUOTENAME(SCHEMA_NAME([schema_id])), '.', QUOTENAME([name]))
-            FROM sys.types
-            WHERE user_type_id = TYPE_ID(q.ImportType)
-        ) t
     WHERE InstanceName = @InstanceName
         AND DatabaseName = @DatabaseName;
 '@

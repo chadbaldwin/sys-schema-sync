@@ -9,10 +9,10 @@ CREATE TYPE import.ItemName AS TABLE (
     _IndexID      int                  NULL,
     _ColumnID     int                  NULL,
 
-    INDEX CIX_ID CLUSTERED (ID),
-    INDEX IX_SchemaName_ObjectName_ObjectType__ObjectID NONCLUSTERED (SchemaName, ObjectName, ObjectType, _ObjectID),
-    INDEX IX__ObjectID_IndexName NONCLUSTERED (_ObjectID, IndexName),
-    INDEX IX__ObjectID_ColumnName NONCLUSTERED (_ObjectID, ColumnName),
-    INDEX IX__IndexID NONCLUSTERED (_IndexID),
-    INDEX IX__ColumnID NONCLUSTERED (_ColumnID)
+    INDEX CIX_ItemName_ID CLUSTERED (ID),
+    INDEX IX_ItemName_SchemaName_ObjectName_ObjectType__ObjectID NONCLUSTERED (SchemaName, ObjectName, ObjectType, _ObjectID),
+    INDEX IX_ItemName__ObjectID_IndexName NONCLUSTERED (_ObjectID, IndexName),
+    INDEX IX_ItemName__ObjectID_ColumnName NONCLUSTERED (_ObjectID, ColumnName),
+    INDEX IX_ItemName__IndexID NONCLUSTERED (_IndexID),
+    INDEX IX_ItemName__ColumnID NONCLUSTERED (_ColumnID)
 );
