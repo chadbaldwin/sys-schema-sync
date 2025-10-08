@@ -45,6 +45,7 @@ CREATE TABLE dbo._SERVERPROPERTY (
     ProductMinorVersion                 nvarchar(128)       NULL,
     ProductUpdateLevel                  nvarchar(128)       NULL,
     ProductUpdateReference              nvarchar(128)       NULL,
+    ProductUpdateType                   nvarchar(128)       NULL,
     ProductVersion                      nvarchar(128)       NULL,
     ResourceLastUpdateDateTime          datetime            NULL,
     ResourceVersion                     nvarchar(128)       NULL,
