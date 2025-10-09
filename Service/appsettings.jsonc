@@ -1,16 +1,7 @@
 {
   // For now, this is simply the NAME of the folder to create within the "Service" folder to use for logs
   "LogDirectory": "Logs",
-
-  // Tells the generic PowerShell script runner what Instances and Databases to run against
-  "TargetDatabaseListScriptPath": "target_databases.sql", // Do not change
-
-  // Connection string pointing to where the SysSchemaSync database was deployed
-  // This connection string is used by the generic script runner to get the list of databases to run against
-  "TargetDatabaseListConnectionString": "Server=MYINSTANCE;Database=SysSchemaSync;MultiSubnetFailover=True;Application Name=SysSchemaSyncService",
-
-  // Tells the generic PowerShell script runner what file we want to execute for each instance/database
-  "PowerShellScriptToRunPath": "sync_objects.ps1", // Do not change
+  "LogRetentionDays": 30,
 
   // How many instances do we want to run syncs against in parallel
   "InstanceConcurrencyLimit": 10,

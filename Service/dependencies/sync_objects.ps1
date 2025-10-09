@@ -68,7 +68,7 @@ try {
 
     foreach ($syncItem in $syncList) {
         $key = "[$($syncItem.SyncObjectName)]"
-        & .\sync_object_process.ps1 -syncItem $syncItem -SourceSqlConnection $conn_src -TargetSqlConnection $conn_tgt |
+        & .\dependencies\sync_object_process.ps1 -syncItem $syncItem -SourceSqlConnection $conn_src -TargetSqlConnection $conn_tgt |
             % { Write-Output "${key} ${_}" }
     }
 } catch {

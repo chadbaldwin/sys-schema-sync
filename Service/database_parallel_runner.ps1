@@ -8,8 +8,12 @@ Import-Module -Name dbatools
 $ErrorActionPreference = 'Stop'
 $PSDefaultParameterValues['Invoke-DbaQuery:EnableException'] = $true
 
-# Get script configuration
-$config = Get-Content -LiteralPath "${PSScriptRoot}\appsettings.jsonc" -Raw | ConvertFrom-Json
+$current_path = [string]::IsNullOrWhiteSpace($PSScriptRoot) ? $PWD.Path : $PSScriptRoot
+
+# Get dependencies
+$config            = Get-Content -LiteralPath "${current_path}\appsettings.jsonc" -Raw | ConvertFrom-Json
+$target_dbs_script = Get-Item -LiteralPath "${current_path}\target_databases.sql"
+$script_to_run     = Get-Item -LiteralPath "${current_path}\dependencies\sync_objects.ps1"
 
 # Progress bar style - 'Classic' = always on top, larger; 'Minimal' = inline with output, smaller;
 #$PSStyle.Progress.View = 'Classic'
@@ -17,16 +21,21 @@ $config = Get-Content -LiteralPath "${PSScriptRoot}\appsettings.jsonc" -Raw | Co
 $InstanceConcurrencyLimit = $config.InstanceConcurrencyLimit ?? 5
 $DatabaseConcurrencyLimit = $config.DatabaseConcurrencyLimit ?? 1
 
-$logdir = mkdir "${PSScriptRoot}\$($config.LogDirectory)" -Force
+$logdir = mkdir "${current_path}\$($config.LogDirectory)" -Force
 
-$target_dbs_script = Get-Item "${PSScriptRoot}\$($config.TargetDatabaseListScriptPath)"
-$script_to_run     = Get-Item "${PSScriptRoot}\$($config.PowerShellScriptToRunPath)"
+#################################################
+# Log cleanup
+#################################################
+
+Get-ChildItem -Path $logdir -Filter '*.log' -File |
+    Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-($config.LogRetentionDays ?? 30)) } |
+    Remove-Item -Force -ErrorAction SilentlyContinue
 
 #################################################
 # Helper functions
 #################################################
 
-. "${PSScriptRoot}\shared.ps1"
+. "${current_path}\shared.ps1"
 $PSDefaultParameterValues['Write-Log:LogDirectory'] = $logdir
 
 #################################################
@@ -40,13 +49,12 @@ Write-Log "Concurrent database throttle limit: ${DatabaseConcurrencyLimit}"
 $sw = [Diagnostics.Stopwatch]::StartNew()
 
 #################################################
-# Main
+# Get targets
 #################################################
-
 
 Write-Log 'Establishing connection to database'
 try {
-    $conn = Connect-DbaInstance -ConnectionString $config.TargetDatabaseListConnectionString
+    $conn = Connect-DbaInstance -ConnectionString $config.RepositoryDatabaseConnectionString
 } catch {
     Write-Log "[ERROR] Failed to connect to database. Exception: $(Get-Error $_ | Out-String)"
     throw
@@ -55,7 +63,7 @@ try {
 Write-Log 'Getting list of instances and databases to run against'
 try {
     $targets = Invoke-DbaQuery -SqlInstance $conn -File $target_dbs_script -ReadOnly -As PSObject -QueryTimeout 30 |
-        Group-Object InstanceName | Sort-Object Count -Descending
+        Group-Object Instance | Sort-Object Count -Descending
 } catch {
     Write-Log "[ERROR] Failed to get list of instances and databases to run against. Exception: $(Get-Error $_ | Out-String)"
     throw
@@ -70,16 +78,21 @@ if ($targets.Count -eq 0) {
 
 Write-Log "Total instances: $($targets.Count)"
 Write-Log "Total databases: $($targets.Group.Count)"
+
+#################################################
+# Main
+#################################################
+
 Write-Log "Total sync tasks: $(($targets.Group.SyncTaskCount | Measure-Object -Sum).Sum)"
 
 # Create a thread-safe dictionary containing each DB
 # Used for displaying progress bar and recording progress
 $sync = [Collections.Hashtable]::Synchronized(@{})
 $targets.Group | ForEach-Object {
-    $key = "[$($_.InstanceName)].[$($_.DatabaseName)]"
+    $key = "[$($_.Instance)].[$($_.Database)]"
     $sync[$key] = @{
-        InstanceName = $_.InstanceName
-        DatabaseName = $_.DatabaseName
+        Instance = $_.Instance
+        Database = $_.Database
         Completed = $false
         ExecutionTime = $null
         Error = $null
@@ -99,7 +112,7 @@ $targets | ForEach-Object -Parallel {
     $_.Group | ForEach-Object -Parallel {
         $db = $_
         $sqlInstance = $using:sqlInstance
-        $sqlDatabase = $db.DatabaseName
+        $sqlDatabase = $db.Database
         $syncCopy = $using:syncCopy
         $script_to_run = $using:script_to_run
 
