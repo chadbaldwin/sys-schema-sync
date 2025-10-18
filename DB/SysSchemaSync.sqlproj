@@ -237,6 +237,9 @@
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__OBJECTPROPERTYEX.sql" />
     <Build Include="import\Stored Procedures\usp_DatabaseSyncObjectStatus_Reset.sql" />
     <Build Include="dbo\Tables\Sync Tables\_data_spaces.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_missing_indexes.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__missing_indexes.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__missing_indexes.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="StaticCodeAnalysis.SuppressMessages.xml" />
