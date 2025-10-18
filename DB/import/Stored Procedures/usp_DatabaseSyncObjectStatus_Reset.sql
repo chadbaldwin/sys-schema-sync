@@ -15,5 +15,6 @@ BEGIN;
     WHERE   (s.SyncObjectID = @SyncObjectID OR @SyncObjectID IS NULL)
         AND (s._InstanceID  = @InstanceID   OR @InstanceID   IS NULL)
         AND (s._DatabaseID  = @DatabaseID   OR @DatabaseID   IS NULL)
+		AND s.LastSyncCheck <> '1900-01-01'
     OPTION (RECOMPILE);
 END;

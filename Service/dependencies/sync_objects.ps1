@@ -3,7 +3,8 @@
 [CmdletBinding()]
 param (
     [Parameter(Mandatory,Position=0)][string]$SqlInstance,
-    [Parameter(Mandatory,Position=1)][string]$SqlDatabase
+    [Parameter(Mandatory,Position=1)][string]$SqlDatabase,
+    [Parameter(Mandatory,Position=2)][pscustomobject[]]$SyncObjects
 )
 
 $ErrorActionPreference = 'Stop'
@@ -14,8 +15,11 @@ $PSDefaultParameterValues= @{
     'Invoke-DbaQuery:MessagesToOutput' = $true
 }
 
+$current_path = Get-Item ([string]::IsNullOrWhiteSpace($PSScriptRoot) ? $PWD.Path : $PSScriptRoot)
+$current_path = $current_path.Parent
+
 # Get script configuration
-$config = Get-Content -LiteralPath "${PSScriptRoot}\appsettings.jsonc" -Raw | ConvertFrom-Json
+$config = Get-Content -LiteralPath "${current_path}\appsettings.jsonc" -Raw | ConvertFrom-Json
 ##################################################
 
 ##################################################
@@ -23,26 +27,7 @@ $conn_tgt = Connect-DbaInstance -ConnectionString $config.RepositoryDatabaseConn
 
 Write-Output 'Getting list of syncs to run for DB'
 
-$query = @'
-    -- Throwing in some sql injection protection - still need to figure out how to handle the ChecksumQueryText
-    SELECT _InstanceID, _DatabaseID, SyncObjectID, SyncObjectName, SyncObjectLevelID, LastSyncChecksum
-        , SyncObjectNameClean = NULLIF(CONCAT_WS('.', QUOTENAME(PARSENAME(q.SyncObjectName, 3)), QUOTENAME(PARSENAME(q.SyncObjectName, 2)), QUOTENAME(PARSENAME(q.SyncObjectName, 1))), '')
-        , ImportTableClean    = NULLIF(CONCAT_WS('.', QUOTENAME(PARSENAME(q.ImportTable   , 3)), QUOTENAME(PARSENAME(q.ImportTable   , 2)), QUOTENAME(PARSENAME(q.ImportTable   , 1))), '')
-        , ImportProcClean     = NULLIF(CONCAT_WS('.', QUOTENAME(PARSENAME(q.ImportProc    , 3)), QUOTENAME(PARSENAME(q.ImportProc    , 2)), QUOTENAME(PARSENAME(q.ImportProc    , 1))), '')
-        , ImportTypeClean     = NULLIF(CONCAT_WS('.', QUOTENAME(PARSENAME(q.ImportType    , 3)), QUOTENAME(PARSENAME(q.ImportType    , 2)), QUOTENAME(PARSENAME(q.ImportType    , 1))), '')
-        , ExportQueryPath, ChecksumQueryText
-    FROM import.vw_DatabaseSyncObjectQueue q
-    WHERE InstanceName = @InstanceName
-        AND DatabaseName = @DatabaseName;
-'@
-
-$syncList = Invoke-DbaQuery $conn_tgt -Query $query -As PSObject `
-                            -SqlParameter @(
-                                , (New-DbaSqlParameter -ParameterName 'InstanceName' -SqlDbType NVarChar -Value $SqlInstance)
-                                , (New-DbaSqlParameter -ParameterName 'DatabaseName' -SqlDbType NVarChar -Value $SqlDatabase)
-                            )
-
-if ($null -eq $syncList) {
+if ($null -eq $SyncObjects) {
     Write-Output 'No syncs to run'
     $conn_tgt | Disconnect-DbaInstance | Out-Null
     return
@@ -59,17 +44,17 @@ try {
         $errorMsg = Get-Error $_ | Out-String
         Invoke-DbaQuery $conn_tgt -CommandType StoredProcedure -Query 'import.usp_SetSyncStatus' `
                         -SqlParameter @(
-                              (New-DbaSqlParameter -ParameterName 'InstanceID'   -SqlDbType Int      -Value $syncList[0]._InstanceID)
-                            , (New-DbaSqlParameter -ParameterName 'DatabaseID'   -SqlDbType Int      -Value ($syncList[0]._DatabaseID ?? [DBNull]::Value))
+                              (New-DbaSqlParameter -ParameterName 'InstanceID'   -SqlDbType Int      -Value $SyncObjects[0]._InstanceID)
+                            , (New-DbaSqlParameter -ParameterName 'DatabaseID'   -SqlDbType Int      -Value ($SyncObjects[0]._DatabaseID ?? [DBNull]::Value))
                             , (New-DbaSqlParameter -ParameterName 'ErrorMessage' -SqlDbType NVarChar -Value $errorMsg)
                         ) | Write-Output
         return
     }
 
-    foreach ($syncItem in $syncList) {
+    foreach ($syncItem in $SyncObjects) {
         $key = "[$($syncItem.SyncObjectName)]"
         & .\dependencies\sync_object_process.ps1 -syncItem $syncItem -SourceSqlConnection $conn_src -TargetSqlConnection $conn_tgt |
-            % { Write-Output "${key} ${_}" }
+            ForEach-Object { Write-Output "${key} ${_}" }
     }
 } catch {
     Write-Output "Exception: $(Get-Error $_ | Out-String)"

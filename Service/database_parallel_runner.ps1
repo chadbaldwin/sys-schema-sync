@@ -11,12 +11,8 @@ $PSDefaultParameterValues['Invoke-DbaQuery:EnableException'] = $true
 $current_path = [string]::IsNullOrWhiteSpace($PSScriptRoot) ? $PWD.Path : $PSScriptRoot
 
 # Get dependencies
-$config            = Get-Content -LiteralPath "${current_path}\appsettings.jsonc" -Raw | ConvertFrom-Json
-$target_dbs_script = Get-Item -LiteralPath "${current_path}\target_databases.sql"
-$script_to_run     = Get-Item -LiteralPath "${current_path}\dependencies\sync_objects.ps1"
-
-# Progress bar style - 'Classic' = always on top, larger; 'Minimal' = inline with output, smaller;
-#$PSStyle.Progress.View = 'Classic'
+$config        = Get-Content -LiteralPath "${current_path}\appsettings.jsonc" -Raw | ConvertFrom-Json
+$script_to_run = Get-Item -LiteralPath "${current_path}\dependencies\sync_objects.ps1"
 
 $InstanceConcurrencyLimit = $config.InstanceConcurrencyLimit ?? 5
 $DatabaseConcurrencyLimit = $config.DatabaseConcurrencyLimit ?? 1
@@ -61,9 +57,35 @@ try {
 }
 
 Write-Log 'Getting list of instances and databases to run against'
+$query_target = @'
+    -- Throwing in some sql injection protection - still need to figure out how to handle the ChecksumQueryText
+    SELECT _InstanceID, _DatabaseID, InstanceName, DatabaseName
+        , SyncObjectID, SyncObjectName, SyncObjectLevelID, LastSyncChecksum
+        , SyncObjectNameClean = NULLIF(CONCAT_WS('.', QUOTENAME(PARSENAME(q.SyncObjectName, 3)), QUOTENAME(PARSENAME(q.SyncObjectName, 2)), QUOTENAME(PARSENAME(q.SyncObjectName, 1))), '')
+        , ImportTableClean    = NULLIF(CONCAT_WS('.', QUOTENAME(PARSENAME(q.ImportTable   , 3)), QUOTENAME(PARSENAME(q.ImportTable   , 2)), QUOTENAME(PARSENAME(q.ImportTable   , 1))), '')
+        , ImportProcClean     = NULLIF(CONCAT_WS('.', QUOTENAME(PARSENAME(q.ImportProc    , 3)), QUOTENAME(PARSENAME(q.ImportProc    , 2)), QUOTENAME(PARSENAME(q.ImportProc    , 1))), '')
+        , ImportTypeClean     = NULLIF(CONCAT_WS('.', QUOTENAME(PARSENAME(q.ImportType    , 3)), QUOTENAME(PARSENAME(q.ImportType    , 2)), QUOTENAME(PARSENAME(q.ImportType    , 1))), '')
+        , ExportQueryPath, ChecksumQueryText
+    FROM import.vw_DatabaseSyncObjectQueue q;
+'@
 try {
-    $targets = Invoke-DbaQuery -SqlInstance $conn -File $target_dbs_script -ReadOnly -As PSObject -QueryTimeout 30 |
-        Group-Object Instance | Sort-Object Count -Descending
+    $targets = Invoke-DbaQuery -SqlInstance $conn -Query $query_target -ReadOnly -As PSObject -QueryTimeout 30 |
+        Group-Object InstanceName |
+        ForEach-Object {
+            $databases = $_.Group |
+                Group-Object DatabaseName |
+                ForEach-Object {
+                    [pscustomobject]@{
+                        Database = $_.Name
+                        SyncObjects = $_.Group
+                    }
+                }
+
+            [pscustomobject]@{
+                Instance = $_.Name
+                Databases = $databases
+            }
+        }
 } catch {
     Write-Log "[ERROR] Failed to get list of instances and databases to run against. Exception: $(Get-Error $_ | Out-String)"
     throw
@@ -77,45 +99,28 @@ if ($targets.Count -eq 0) {
 }
 
 Write-Log "Total instances: $($targets.Count)"
-Write-Log "Total databases: $($targets.Group.Count)"
+Write-Log "Total databases: $($targets.Databases.Count)"
+Write-Log "Total sync tasks: $($targets.Databases.SyncObjects.Count)"
 
 #################################################
 # Main
 #################################################
 
-Write-Log "Total sync tasks: $(($targets.Group.SyncTaskCount | Measure-Object -Sum).Sum)"
-
-# Create a thread-safe dictionary containing each DB
-# Used for displaying progress bar and recording progress
-$sync = [Collections.Hashtable]::Synchronized(@{})
-$targets.Group | ForEach-Object {
-    $key = "[$($_.Instance)].[$($_.Database)]"
-    $sync[$key] = @{
-        Instance = $_.Instance
-        Database = $_.Database
-        Completed = $false
-        ExecutionTime = $null
-        Error = $null
-    }
-}
-
 Write-Log 'Starting concurrent process against instances'
 # Handles running instances in parallel
 $targets | ForEach-Object -Parallel {
-    $sqlInstance = $_.Name
-    $syncCopy = $using:sync
+    $databases = $_.Databases
+    $sqlInstance = $_.Instance
     $script_to_run = $using:script_to_run
     $DatabaseConcurrencyLimit = $using:DatabaseConcurrencyLimit
 
-    Write-Output "[${sqlInstance}] Starting Instance, DB Count: $($_.Group.Count)"
+    Write-Output "[${sqlInstance}] Starting Instance, DB Count: $($databases.Count)"
     # Handles running databases in parallel
-    $_.Group | ForEach-Object -Parallel {
-        $db = $_
+    $databases | ForEach-Object -Parallel {
+        $syncObjects = $_.SyncObjects
         $sqlInstance = $using:sqlInstance
-        $sqlDatabase = $db.Database
-        $syncCopy = $using:syncCopy
+        $sqlDatabase = $_.Database
         $script_to_run = $using:script_to_run
-
         $key = "[${sqlInstance}].[${sqlDatabase}]"
 
         function Write-Msg {
@@ -124,27 +129,16 @@ $targets | ForEach-Object -Parallel {
         }
 
         Write-Msg "Starting..."
-
         $sw_db = [Diagnostics.Stopwatch]::StartNew()
         try {
-            & $script_to_run -SqlInstance $sqlInstance -SqlDatabase $sqlDatabase | Write-Msg
+            & $script_to_run -SqlInstance $sqlInstance -SqlDatabase $sqlDatabase -SyncObjects $syncObjects | Write-Msg
         } catch {
             Write-Msg "Exception: $(Get-Error $_ | Out-String)"
             # throw # throwing here will cause the parallel loop to stop, so we need to catch, log and continue
         }
         $sw_db.Stop()
 
-        # Update tracker dictionary
-        $syncCopy[$key].Completed = $true
-        $syncCopy[$key].ExecutionTime = $sw_db.Elapsed
-        Write-Msg "Done - [$($syncCopy[$key].ExecutionTime)]"
-
-        # Write progress bar
-        $completed_count  = ($syncCopy.Values | Where-Object Completed -eq $true).Count
-        $total_count      = $syncCopy.Count
-        $pct              = [int]([math]::Floor(($completed_count / $total_count) * 100))
-        $progress_message = "${pct}% Completed (${completed_count}/${total_count});"
-        Write-Progress -Activity 'Scanning databases' -Status $progress_message -PercentComplete ($pct -gt 100 ? 100 : $pct) # -Completed:($pct -eq 100)
+        Write-Msg "Done - [$($sw_db.Elapsed)]"
     } -ThrottleLimit $DatabaseConcurrencyLimit
 } -ThrottleLimit $InstanceConcurrencyLimit *>&1 | Write-Log
 

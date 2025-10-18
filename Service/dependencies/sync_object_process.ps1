@@ -1,3 +1,5 @@
+#Requires -PSEdition Core -Version 7.0 -Modules @{ ModuleName="dbatools"; ModuleVersion="2.1.7" }
+
 [CmdletBinding()]
 param (
     [Parameter(Position=0, Mandatory)][pscustomobject]$syncItem,
@@ -13,36 +15,41 @@ $PSDefaultParameterValues= @{
     'Invoke-DbaQuery:MessagesToOutput' = $true
 }
 
+$current_path = gi ([string]::IsNullOrWhiteSpace($PSScriptRoot) ? $PWD.Path : $PSScriptRoot)
+$current_path = $current_path.Parent
+
 #################################################
 # Helper functions
 #################################################
 
-. "${PSScriptRoot}\shared.ps1"
+. "${current_path}\shared.ps1"
 
 #################################################
 
 $sw_syncItem = [Diagnostics.Stopwatch]::StartNew()
 Write-Output 'Start: Sync'
 
-$InstanceID = $syncList[0]._InstanceID
-$DatabaseID = $syncList[0]._DatabaseID
+$InstanceID = $syncItem._InstanceID
+$DatabaseID = $syncItem._DatabaseID
 
 # Creating as script blocks due to bug in dbatools (Invoke-DbaAsync), it does not clear the parameters on the SqlCommand after use
 $sqlParamInstance = { New-DbaSqlParameter -ParameterName 'InstanceID' -SqlDbType Int -Value $InstanceID }
 $sqlParamDatabase = { New-DbaSqlParameter -ParameterName 'DatabaseID' -SqlDbType Int -Value ($DatabaseID ?? [DBNull]::Value) }
 
 try {
+    $sw = [Diagnostics.Stopwatch]::StartNew()
+
     # Get the new and old checksums
     [Nullable[int]]$oldchecksum = $null
     [Nullable[int]]$newchecksum = $null
     if ($syncItem.ChecksumQueryText) {
-        Write-Output 'Start: Get checksums'
+        Write-Output 'Start: Get checksum'; $sw.Restart()
         $oldchecksum = $syncItem.LastSyncChecksum | ConvertFrom-DBNull
         Write-Output "Old checksum: ${oldchecksum}"
         $checksumQuery = "SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED; {0}" -f $syncItem.ChecksumQueryText
         $newchecksum = Invoke-DbaQuery $SourceSqlConnection -Query $checksumQuery -As SingleValue | ConvertFrom-DBNull
         Write-Output "New checksum: ${newchecksum}"
-        Write-Output 'Done: Get checksums'
+        Write-Output "Done: Get checksum [$($sw.Elapsed)]"
     }
 
     <# If the checksums are different
@@ -53,7 +60,7 @@ try {
     if (($oldchecksum -ne $newchecksum) -or ($null -eq $oldchecksum) -or ($null -eq $syncItem.ChecksumQueryText)) {
         # Use the export query path override otherwise use the default - select *
         if ($syncItem.ExportQueryPath) {
-            $exportQuery = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'dependencies\SQL' $syncItem.ExportQueryPath) -Raw
+            $exportQuery = Get-Content -LiteralPath (Join-Path $current_path 'dependencies\SQL' $syncItem.ExportQueryPath) -Raw
         } else {
             $exportQuery = 'SELECT _CollectionDate = SYSUTCDATETIME(), * FROM {0}' -f $syncItem.SyncObjectNameClean
         }
@@ -72,8 +79,6 @@ try {
             }
             Default { throw "[$($syncItem.SyncObjectName)] Invalid SyncObjectLevelID" }
         }
-
-        $sw = [Diagnostics.Stopwatch]::StartNew()
 
         if (($syncItem.ImportProcClean) -and ($null -eq $syncItem.ImportTableClean)) {
             Write-Output 'Complex sync - Sync object using proc and table type'
