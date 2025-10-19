@@ -14,11 +14,12 @@ WITH limit AS (
     SELECT TOP(500) so.DatabaseSyncObjectID
     FROM (
         SELECT x.DatabaseSyncObjectID, x.[priority]
+            /* Sorting by age group and _then_ NEWID() in order to add some randomization within the age group
+               This helps with breaking up strings of instances/databases that are clustered together and helps
+               with spreading the workload out over time */
             , rn = ROW_NUMBER() OVER (PARTITION BY x.[priority] ORDER BY x.age_group, NEWID())
         FROM (
             SELECT so.DatabaseSyncObjectID, x.[priority]
-                -- Using NTILE so that we can add a bit of randomness to the priority 2 syncs
-                -- Helps to break up clusters of instances stuck together and spread out over time
                 , age_group = NTILE(10) OVER (PARTITION BY x.[priority] ORDER BY so.LastSyncCheck)
             FROM import.vw_DatabaseSyncObject so
                 CROSS APPLY (

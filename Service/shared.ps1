@@ -13,7 +13,7 @@ function Write-Log {
     )
 
     process {
-        $msg = "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss.fff')] ${logLevel} ${Message}"
+        $msg = "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss.fff')] ${Message}"
         if ($LogDirectory) { $msg | Add-Content (Join-Path $LogDirectory "$(Get-Date -Format 'yyyy-MM-dd').log") }
         $msg | Write-Host
     }

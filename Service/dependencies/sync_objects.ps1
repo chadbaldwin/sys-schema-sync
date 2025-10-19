@@ -2,16 +2,16 @@
 
 [CmdletBinding()]
 param (
-    [Parameter(Mandatory,Position=0)][string]$SqlInstance,
-    [Parameter(Mandatory,Position=1)][string]$SqlDatabase,
-    [Parameter(Mandatory,Position=2)][pscustomobject[]]$SyncObjects
+    [Parameter(Mandatory, Position=0)][string]$SqlInstance,
+    [Parameter(Mandatory, Position=1)][string]$SqlDatabase,
+    [Parameter(Mandatory, Position=2)][pscustomobject[]]$SyncObjects
 )
 
 $ErrorActionPreference = 'Stop'
 $PSDefaultParameterValues= @{
     'Write-DbaDbTableData:EnableException' = $true
     'Invoke-DbaQuery:EnableException' = $true
-    'Invoke-DbaQuery:QueryTimeout' = 300
+    'Invoke-DbaQuery:QueryTimeout' = 30
     'Invoke-DbaQuery:MessagesToOutput' = $true
 }
 

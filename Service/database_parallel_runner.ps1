@@ -20,19 +20,20 @@ $DatabaseConcurrencyLimit = $config.DatabaseConcurrencyLimit ?? 1
 $logdir = mkdir "${current_path}\$($config.LogDirectory)" -Force
 
 #################################################
-# Log cleanup
-#################################################
-
-Get-ChildItem -Path $logdir -Filter '*.log' -File |
-    Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-($config.LogRetentionDays ?? 30)) } |
-    Remove-Item -Force -ErrorAction SilentlyContinue
-
-#################################################
 # Helper functions
 #################################################
 
 . "${current_path}\shared.ps1"
 $PSDefaultParameterValues['Write-Log:LogDirectory'] = $logdir
+
+#################################################
+# Log cleanup
+#################################################
+
+Write-Log 'Clean up old log files'
+Get-ChildItem -Path $logdir -Filter '*.log' -File |
+    Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-($config.LogRetentionDays ?? 30)) } |
+    Remove-Item -Force -ErrorAction SilentlyContinue
 
 #################################################
 # Starting
@@ -69,21 +70,17 @@ $query_target = @'
     FROM import.vw_DatabaseSyncObjectQueue q;
 '@
 try {
-    $targets = Invoke-DbaQuery -SqlInstance $conn -Query $query_target -ReadOnly -As PSObject -QueryTimeout 30 |
-        Group-Object InstanceName |
-        ForEach-Object {
-            $databases = $_.Group |
-                Group-Object DatabaseName |
-                ForEach-Object {
-                    [pscustomobject]@{
-                        Database = $_.Name
-                        SyncObjects = $_.Group
-                    }
-                }
-
+    $targets = Invoke-DbaQuery -SqlInstance $conn -Query $query_target -As PSObject -QueryTimeout 30 |
+        Group-Object InstanceName | ForEach-Object {
             [pscustomobject]@{
                 Instance = $_.Name
-                Databases = $databases
+                Databases = $_.Group | Group-Object DatabaseName |
+                    ForEach-Object {
+                        [pscustomobject]@{
+                            Database = $_.Name
+                            SyncObjects = $_.Group
+                        }
+                    }
             }
         }
 } catch {
@@ -109,20 +106,14 @@ Write-Log "Total sync tasks: $($targets.Databases.SyncObjects.Count)"
 Write-Log 'Starting concurrent process against instances'
 # Handles running instances in parallel
 $targets | ForEach-Object -Parallel {
-    $databases = $_.Databases
     $sqlInstance = $_.Instance
     $script_to_run = $using:script_to_run
     $DatabaseConcurrencyLimit = $using:DatabaseConcurrencyLimit
 
-    Write-Output "[${sqlInstance}] Starting Instance, DB Count: $($databases.Count)"
+    Write-Output "[${sqlInstance}] Starting Instance, DB Count: $($_.Databases.Count)"
     # Handles running databases in parallel
-    $databases | ForEach-Object -Parallel {
-        $syncObjects = $_.SyncObjects
-        $sqlInstance = $using:sqlInstance
-        $sqlDatabase = $_.Database
-        $script_to_run = $using:script_to_run
-        $key = "[${sqlInstance}].[${sqlDatabase}]"
-
+    $_.Databases | ForEach-Object -Parallel {
+        $key = "[{0}].[{1}]" -f $using:sqlInstance, $_.Database
         function Write-Msg {
             param ([Parameter(Position=0,ValueFromPipeline)][object]$Message)
             process { Write-Output "${key} ${Message}" }
@@ -131,7 +122,7 @@ $targets | ForEach-Object -Parallel {
         Write-Msg "Starting..."
         $sw_db = [Diagnostics.Stopwatch]::StartNew()
         try {
-            & $script_to_run -SqlInstance $sqlInstance -SqlDatabase $sqlDatabase -SyncObjects $syncObjects | Write-Msg
+            & $using:script_to_run -SqlInstance $using:sqlInstance -SqlDatabase $_.Database -SyncObjects $_.SyncObjects | Write-Msg
         } catch {
             Write-Msg "Exception: $(Get-Error $_ | Out-String)"
             # throw # throwing here will cause the parallel loop to stop, so we need to catch, log and continue
@@ -139,7 +130,7 @@ $targets | ForEach-Object -Parallel {
         $sw_db.Stop()
 
         Write-Msg "Done - [$($sw_db.Elapsed)]"
-    } -ThrottleLimit $DatabaseConcurrencyLimit
+    } -ThrottleLimit $using:DatabaseConcurrencyLimit
 } -ThrottleLimit $InstanceConcurrencyLimit *>&1 | Write-Log
 
 Clear-DbaConnectionPool

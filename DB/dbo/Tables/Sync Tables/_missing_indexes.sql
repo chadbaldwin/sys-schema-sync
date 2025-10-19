@@ -20,5 +20,5 @@ CREATE TABLE dbo._missing_indexes (
     column_data         nvarchar(MAX)  NOT NULL,
 
     INDEX CIX__missing_indexes__ObjectID_missing_index_hash CLUSTERED (_ObjectID, missing_index_hash),
-    INDEX IX__missing_indexes__DatabaseID NONCLUSTERED (_DatabaseID),
+    INDEX IX__missing_indexes__DatabaseID__ModifyDate NONCLUSTERED (_DatabaseID, _ModifyDate),
 );

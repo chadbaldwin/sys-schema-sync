@@ -2,20 +2,20 @@
 
 [CmdletBinding()]
 param (
-    [Parameter(Position=0, Mandatory)][pscustomobject]$syncItem,
-    [Parameter(Position=1, Mandatory)][Microsoft.SqlServer.Management.Smo.Server]$SourceSqlConnection,
-    [Parameter(Position=2, Mandatory)][Microsoft.SqlServer.Management.Smo.Server]$TargetSqlConnection
+    [Parameter(Mandatory, Position=0)][pscustomobject]$syncItem,
+    [Parameter(Mandatory, Position=1)][Microsoft.SqlServer.Management.Smo.Server]$SourceSqlConnection,
+    [Parameter(Mandatory, Position=2)][Microsoft.SqlServer.Management.Smo.Server]$TargetSqlConnection
 )
 
 $ErrorActionPreference = 'Stop'
 $PSDefaultParameterValues= @{
     'Write-DbaDbTableData:EnableException' = $true
     'Invoke-DbaQuery:EnableException' = $true
-    'Invoke-DbaQuery:QueryTimeout' = 300
+    'Invoke-DbaQuery:QueryTimeout' = 30
     'Invoke-DbaQuery:MessagesToOutput' = $true
 }
 
-$current_path = gi ([string]::IsNullOrWhiteSpace($PSScriptRoot) ? $PWD.Path : $PSScriptRoot)
+$current_path = Get-Item ([string]::IsNullOrWhiteSpace($PSScriptRoot) ? $PWD.Path : $PSScriptRoot)
 $current_path = $current_path.Parent
 
 #################################################
