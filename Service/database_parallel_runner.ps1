@@ -1,12 +1,11 @@
-#Requires -PSEdition Core -Version 7.0 -Modules @{ ModuleName="dbatools"; ModuleVersion="2.1.7" }
+#Requires -PSEdition Core -Version 7.2 -Modules @{ ModuleName="dbatools"; ModuleVersion="2.1.7" }
 
 $env:DBATOOLS_DISABLE_TEPP = $true
 $env:DBATOOLS_DISABLE_LOGGING = $true
-
 Import-Module -Name dbatools
+$PSDefaultParameterValues['Invoke-DbaQuery:EnableException'] = $true
 
 $ErrorActionPreference = 'Stop'
-$PSDefaultParameterValues['Invoke-DbaQuery:EnableException'] = $true
 
 $current_path = [string]::IsNullOrWhiteSpace($PSScriptRoot) ? $PWD.Path : $PSScriptRoot
 
@@ -23,7 +22,27 @@ $logdir = mkdir "${current_path}\$($config.LogDirectory)" -Force
 # Helper functions
 #################################################
 
-. "${current_path}\shared.ps1"
+<#
+    Note: Add-Content is not thread-safe while writing to a file.
+    If enough concurrent writes to the same file happen, they will start to step
+    on each other and will cause some partially complete lines.
+
+    https://github.com/PowerShell/PowerShell/issues/14416
+#>
+function Write-Log {
+    [CmdletBinding()]
+    param (
+        [Parameter(Position=0,ValueFromPipeline)][object]$Message,
+        [Parameter(Position=1)][string]$LogDirectory
+    )
+
+    process {
+        $msg = "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss.fff')] ${Message}"
+        if ($LogDirectory) { $msg | Add-Content (Join-Path $LogDirectory "$(Get-Date -Format 'yyyy-MM-dd').log") }
+        $msg | Write-Host
+    }
+}
+
 $PSDefaultParameterValues['Write-Log:LogDirectory'] = $logdir
 
 #################################################

@@ -1,4 +1,4 @@
-#Requires -PSEdition Core -Version 7.0 -Modules @{ ModuleName="dbatools"; ModuleVersion="2.1.7" }
+#Requires -PSEdition Core -Version 7.2 -Modules @{ ModuleName="dbatools"; ModuleVersion="2.1.7" }
 
 [CmdletBinding()]
 param (
@@ -22,7 +22,10 @@ $current_path = $current_path.Parent
 # Helper functions
 #################################################
 
-. "${current_path}\shared.ps1"
+function ConvertFrom-DBNull {
+    param ([Parameter(Position=0, ValueFromPipeline=$true)][object]$value)
+    process { $value -is [DBNull] ? $null : $value }
+}
 
 #################################################
 
@@ -141,7 +144,6 @@ try {
             } else {
                 Write-Output 'Skip: Write - No data to import'
             }
-
         } else {
             throw "[$($syncItem.SyncObjectName)] Invalid configuration"
         }
