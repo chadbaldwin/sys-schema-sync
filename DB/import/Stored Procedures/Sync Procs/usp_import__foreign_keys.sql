@@ -1,19 +1,20 @@
 CREATE PROCEDURE import.usp_import__foreign_keys (
     @DatabaseID int,
-    @Dataset    import.import__foreign_keys READONLY
+    @Dataset    import.import__foreign_keys READONLY,
+    @Verbose    bit = 0
 )
 AS
 BEGIN;
     SET NOCOUNT ON;
 
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
-    RAISERROR('[%s] Start',0,1,@ProcName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] Start',0,1,@ProcName) WITH NOWAIT;
 
     IF (@DatabaseID IS NULL) BEGIN; RAISERROR('[%s] ERROR: Required parameter @DatabaseID is NULL',16,1,@ProcName) WITH NOWAIT; END;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    RAISERROR('[%s] Create missing object and get IDs',0,1,@ProcName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] Create missing object and get IDs',0,1,@ProcName) WITH NOWAIT;
 
     IF OBJECT_ID('tempdb..#Dataset','U') IS NOT NULL DROP TABLE #Dataset; --SELECT * FROM #Dataset
     SELECT ID = IDENTITY(int), * INTO #Dataset FROM @Dataset;
@@ -28,7 +29,7 @@ BEGIN;
     SELECT ID, _SchemaName, _ObjectName, _ObjectType FROM #Dataset;
 
     INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
-    EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
+    EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
 
     DELETE @input;
 
@@ -37,7 +38,7 @@ BEGIN;
     SELECT ID, _ParentSchemaName, _ParentObjectName, _ParentObjectType FROM #Dataset;
 
     INSERT INTO @parent (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
-    EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
+    EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
 
     DELETE @input;
 
@@ -46,19 +47,19 @@ BEGIN;
     SELECT ID, _ReferencedSchemaName, _ReferencedObjectName, _ReferencedObjectType, _ReferencedIndexName FROM #Dataset;
 
     INSERT INTO @reference (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
-    EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
+    EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
     DECLARE @tableName nvarchar(128) = N'dbo._foreign_keys';
 
-    RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     DELETE x FROM dbo._foreign_keys x
     WHERE x._DatabaseID = @DatabaseID
         AND NOT EXISTS (SELECT * FROM @output o WHERE o._ObjectID = x._ObjectID);
-    RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
-    RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     UPDATE x
     SET   x._ParentObjectID                = p._ObjectID
         , x._ReferencedObjectID            = r._ObjectID
@@ -94,9 +95,9 @@ BEGIN;
         JOIN @parent p ON p.ID = y.ID
         JOIN @reference r ON r.ID = y.ID
     WHERE x._RowHash <> d._RowHash;
-    RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
-    RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     INSERT INTO dbo._foreign_keys (_DatabaseID, _ObjectID, _ParentObjectID, _ReferencedObjectID, _ReferencedIndexID, _RowHash
         , [name], [object_id], principal_id, [schema_id], parent_object_id, [type], [type_desc], create_date, modify_date, is_ms_shipped, is_published, is_schema_published
         , referenced_object_id, key_index_id, is_disabled, is_not_for_replication, is_not_trusted, delete_referential_action, delete_referential_action_desc, update_referential_action, update_referential_action_desc, is_system_named)
@@ -112,10 +113,10 @@ BEGIN;
             FROM dbo._foreign_keys x
             WHERE x._ObjectID  = y._ObjectID
         );
-    RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    RAISERROR('[%s] Done',0,1,@ProcName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] Done',0,1,@ProcName) WITH NOWAIT;
 END;
 GO

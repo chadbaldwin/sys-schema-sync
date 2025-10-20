@@ -1,13 +1,14 @@
 CREATE PROCEDURE import.usp_import__missing_indexes (
     @DatabaseID int,
-    @Dataset    import.import__missing_indexes READONLY
+    @Dataset    import.import__missing_indexes READONLY,
+    @Verbose    bit = 0
 )
 AS
 BEGIN;
     SET NOCOUNT ON;
 
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
-    RAISERROR('[%s] Start',0,1,@ProcName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] Start',0,1,@ProcName) WITH NOWAIT;
 
     IF (@DatabaseID IS NULL) BEGIN; RAISERROR('[%s] ERROR: Required parameter @DatabaseID is NULL',16,1,@ProcName) WITH NOWAIT; END;
     ------------------------------------------------------------------------------
@@ -24,14 +25,14 @@ BEGIN;
     SELECT ID, _SchemaName, _ObjectName, _ObjectType FROM #Dataset;
 
     INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
-    EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
+    EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
     DECLARE @tableName nvarchar(128) = N'dbo._missing_indexes';
 
     /* -- Not doing standard delete for now
-    RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     DELETE x FROM dbo._missing_indexes x
     WHERE x._DatabaseID = @DatabaseID
         AND NOT EXISTS (
@@ -41,10 +42,10 @@ BEGIN;
             WHERE o._ObjectID = x._ObjectID
                 AND x.missing_index_hash = d.missing_index_hash
         );
-    RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
     */
 
-    RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     UPDATE x
     SET   x._ModifyDate         = SYSUTCDATETIME()
         , x._RowHash            = d._RowHash
@@ -65,9 +66,9 @@ BEGIN;
         JOIN @output y ON y._ObjectID = x._ObjectID
         JOIN #Dataset d ON d.ID = y.ID AND d.missing_index_hash = x.missing_index_hash
     WHERE x._RowHash <> d._RowHash;
-    RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
-    RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     INSERT dbo._missing_indexes (_DatabaseID, _ObjectID, _RowHash
         , missing_index_hash, unique_compiles, user_seeks, user_scans, last_user_seek_utc, last_user_scan_utc, avg_total_user_cost, avg_user_impact, equality_columns, inequality_columns, included_columns, column_data)
     SELECT @DatabaseID, y._ObjectID, d._RowHash
@@ -80,18 +81,18 @@ BEGIN;
             WHERE x._ObjectID = y._ObjectID
                 AND x.missing_index_hash = d.missing_index_hash
         );
-    RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
     -- Instead of standard deletes, just do simple time based pruning
-    RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     DELETE x
     FROM dbo._missing_indexes x
     WHERE x._DatabaseID = @DatabaseID
         AND x._ModifyDate < DATEADD(DAY, -30, SYSUTCDATETIME());
-    RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    RAISERROR('[%s] Done',0,1,@ProcName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] Done',0,1,@ProcName) WITH NOWAIT;
 END;
 GO

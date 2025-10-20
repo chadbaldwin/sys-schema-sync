@@ -1,13 +1,14 @@
 CREATE PROCEDURE import.usp_import__objects (
     @DatabaseID int,
-    @Dataset    import.import__objects READONLY
+    @Dataset    import.import__objects READONLY,
+    @Verbose    bit = 0
 )
 AS
 BEGIN;
     SET NOCOUNT ON;
 
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
-    RAISERROR('[%s] Start',0,1,@ProcName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] Start',0,1,@ProcName) WITH NOWAIT;
 
     IF (@DatabaseID IS NULL) BEGIN; RAISERROR('[%s] ERROR: Required parameter @DatabaseID is NULL',16,1,@ProcName) WITH NOWAIT; END;
     ------------------------------------------------------------------------------
@@ -24,19 +25,19 @@ BEGIN;
     SELECT ID, _SchemaName, _ObjectName, _ObjectType FROM #Dataset;
 
     INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
-    EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @FullImport_Object = 1;
+    EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @FullImport_Object = 1, @Verbose = @Verbose;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
     DECLARE @tableName nvarchar(128) = N'dbo._objects';
 
-    RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     DELETE x FROM dbo._objects x
     WHERE x._DatabaseID = @DatabaseID
         AND NOT EXISTS (SELECT * FROM @output o WHERE o._ObjectID = x._ObjectID);
-    RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
-    RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     UPDATE x
     SET   x._ModifyDate         = SYSUTCDATETIME()
         , x._RowHash            = d._RowHash
@@ -55,9 +56,9 @@ BEGIN;
         JOIN @output y ON y._ObjectID = x._ObjectID
         JOIN #Dataset d ON d.ID = y.ID
     WHERE x._RowHash <> d._RowHash;
-    RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
-    RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     INSERT INTO dbo._objects (_DatabaseID, _ObjectID, _SchemaName, _RowHash
         , [name], [object_id], principal_id, [schema_id], parent_object_id, [type], [type_desc], create_date, is_ms_shipped, is_published, is_schema_published)
     SELECT @DatabaseID, y._ObjectID, d._SchemaName, d._RowHash
@@ -69,10 +70,10 @@ BEGIN;
             FROM dbo._objects x
             WHERE x._ObjectID = y._ObjectID
         );
-    RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    RAISERROR('[%s] Done',0,1,@ProcName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] Done',0,1,@ProcName) WITH NOWAIT;
 END;
 GO

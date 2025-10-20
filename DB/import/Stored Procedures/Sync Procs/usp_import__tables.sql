@@ -1,13 +1,14 @@
 CREATE PROCEDURE import.usp_import__tables (
     @DatabaseID int,
-    @Dataset    import.import__tables READONLY
+    @Dataset    import.import__tables READONLY,
+    @Verbose    bit = 0
 )
 AS
 BEGIN;
     SET NOCOUNT ON;
 
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
-    RAISERROR('[%s] Start',0,1,@ProcName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] Start',0,1,@ProcName) WITH NOWAIT;
 
     IF (@DatabaseID IS NULL) BEGIN; RAISERROR('[%s] ERROR: Required parameter @DatabaseID is NULL',16,1,@ProcName) WITH NOWAIT; END;
     ------------------------------------------------------------------------------
@@ -24,19 +25,19 @@ BEGIN;
     SELECT ID, _SchemaName, _ObjectName, _ObjectType FROM #Dataset;
 
     INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
-    EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
+    EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
     DECLARE @tableName nvarchar(128) = N'dbo._tables';
 
-    RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     DELETE x FROM dbo._tables x
     WHERE x._DatabaseID = @DatabaseID
         AND NOT EXISTS (SELECT * FROM @output o WHERE o._ObjectID = x._ObjectID);
-    RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
-    RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     UPDATE x
     SET   x._ModifyDate                         = SYSUTCDATETIME()
         , x._RowHash                            = d._RowHash
@@ -92,9 +93,9 @@ BEGIN;
         JOIN @output y ON y._ObjectID = x._ObjectID
         JOIN #Dataset d ON d.ID = y.ID
     WHERE x._RowHash <> d._RowHash;
-    RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
-    RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     INSERT INTO dbo._tables (_DatabaseID, _ObjectID, _RowHash
         , [name], [object_id], principal_id, [schema_id], parent_object_id, [type], [type_desc], create_date, is_ms_shipped, is_published, is_schema_published
         , lob_data_space_id, filestream_data_space_id, max_column_id_used, lock_on_bulk_load, uses_ansi_nulls, is_replicated, has_replication_filter, is_merge_published, is_sync_tran_subscribed, has_unchecked_assembly_data, text_in_row_limit, large_value_types_out_of_row, is_tracked_by_cdc, [lock_escalation], lock_escalation_desc, is_filetable, is_memory_optimized, [durability], durability_desc, temporal_type, temporal_type_desc, history_table_id, is_remote_data_archive_enabled, is_external, history_retention_period, history_retention_period_unit, history_retention_period_unit_desc, is_node, is_edge, data_retention_period, data_retention_period_unit, data_retention_period_unit_desc, ledger_type, ledger_type_desc, ledger_view_id, is_dropped_ledger_table)
@@ -108,10 +109,10 @@ BEGIN;
             FROM dbo._tables x
             WHERE x._ObjectID = y._ObjectID
         );
-    RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    RAISERROR('[%s] Done',0,1,@ProcName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] Done',0,1,@ProcName) WITH NOWAIT;
 END;
 GO

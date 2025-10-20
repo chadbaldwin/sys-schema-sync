@@ -3,20 +3,21 @@ CREATE PROCEDURE import.usp_SetSyncStatus (
     @DatabaseID     int,
     @SyncObjectID   int = NULL,
     @Checksum       int = NULL,
-    @ErrorMessage   nvarchar(MAX) = NULL
+    @ErrorMessage   nvarchar(MAX) = NULL,
+    @Verbose        bit = 0
 )
 AS
 BEGIN
     SET NOCOUNT ON;
 
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
-    RAISERROR('[%s] Start',0,1,@ProcName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] Start',0,1,@ProcName) WITH NOWAIT;
 
     DECLARE @CurrentTime datetime2 = SYSUTCDATETIME();
 
     -- Including the entire exception message in the output is excessive, so reducing it down to just yes/no on IsError
     DECLARE @HasError nvarchar(10) = IIF(@ErrorMessage IS NOT NULL, 'true','false');
-    RAISERROR(N'[%s] Input parameters: @InstanceID = %i, @DatabaseID = %i, @SyncObjectID = %i, @Checksum = %i, @ErrorMessage is populated: %s',0,1
+    IF (@Verbose = 1) RAISERROR(N'[%s] Input parameters: @InstanceID = %i, @DatabaseID = %i, @SyncObjectID = %i, @Checksum = %i, @ErrorMessage is populated: %s',0,1
         , @ProcName, @InstanceID, @DatabaseID, @SyncObjectID, @Checksum, @HasError) WITH NOWAIT;
 
     IF EXISTS (
@@ -37,10 +38,10 @@ BEGIN
 
     IF (@SyncObjectID IS NOT NULL)
     BEGIN;
-        RAISERROR('[%s] Attempting to update status record',0,1,@ProcName) WITH NOWAIT;
+        IF (@Verbose = 1) RAISERROR('[%s] Attempting to update status record',0,1,@ProcName) WITH NOWAIT;
         IF (@ErrorMessage IS NULL)
         BEGIN;
-            RAISERROR('[%s] Attempting to update status record as a successful sync',0,1,@ProcName) WITH NOWAIT;
+            IF (@Verbose = 1) RAISERROR('[%s] Attempting to update status record as a successful sync',0,1,@ProcName) WITH NOWAIT;
             UPDATE x
             SET x.LastSyncChecksum  = @Checksum,
                 /*  '=' logic handles NULL's, be careful changing
@@ -62,7 +63,7 @@ BEGIN
         END;
         ELSE
         BEGIN
-            RAISERROR('[%s] Attempting to update status record as a failed sync with error message',0,1,@ProcName) WITH NOWAIT;
+            IF (@Verbose = 1) RAISERROR('[%s] Attempting to update status record as a failed sync with error message',0,1,@ProcName) WITH NOWAIT;
             UPDATE x
             SET x.LastSyncCheck         = @CurrentTime,
                 x.LastSyncError         = @CurrentTime,
@@ -81,16 +82,16 @@ BEGIN
         ------------------------------------------------------------------------------
         IF (@rc = 0)
         BEGIN;
-            RAISERROR('[%s] Status record doesn''t exist, creating a new one',0,1,@ProcName) WITH NOWAIT;
+            IF (@Verbose = 1) RAISERROR('[%s] Status record doesn''t exist, creating a new one',0,1,@ProcName) WITH NOWAIT;
             IF (@ErrorMessage IS NULL)
             BEGIN;
-                RAISERROR('[%s] Creating new status record as a successful sync',0,1,@ProcName) WITH NOWAIT;
+                IF (@Verbose = 1) RAISERROR('[%s] Creating new status record as a successful sync',0,1,@ProcName) WITH NOWAIT;
                 INSERT INTO import.DatabaseSyncObjectStatus (_InstanceID, _DatabaseID, SyncObjectID, LastSyncChecksum)
                 VALUES (@InstanceID, @DatabaseID, @SyncObjectID, @Checksum);
             END;
             ELSE
             BEGIN;
-                RAISERROR('[%s] Creating new status record with error',0,1,@ProcName) WITH NOWAIT;
+                IF (@Verbose = 1) RAISERROR('[%s] Creating new status record with error',0,1,@ProcName) WITH NOWAIT;
                 INSERT INTO import.DatabaseSyncObjectStatus (_InstanceID, _DatabaseID, SyncObjectID, LastSyncChecksum, LastSyncTime, LastSyncError, LastSyncErrorMessage, LastSyncWasError)
                 VALUES (@InstanceID, @DatabaseID, @SyncObjectID, @Checksum, NULL, @CurrentTime, @ErrorMessage, 1);
             END;
@@ -100,7 +101,7 @@ BEGIN
     BEGIN;
         IF (@ErrorMessage IS NOT NULL)
         BEGIN;
-            RAISERROR('[%s] A database wide error has occured, pushing back all syncs for database',0,1,@ProcName) WITH NOWAIT;
+            IF (@Verbose = 1) RAISERROR('[%s] A database wide error has occured, pushing back all syncs for database',0,1,@ProcName) WITH NOWAIT;
             /*  In this case, a database wide error is being logged which means we want to push all sync object tasks
                 to prevent them from running until their next interval.
                 
@@ -145,12 +146,12 @@ BEGIN
         ELSE
         BEGIN;
             -- Currently, there is no case where @SyncObjectID is null and it's not an exception
-            RAISERROR('[%s] ERROR: Invalid parameters supplied to proc',16,1,@ProcName) WITH NOWAIT;
+            IF (@Verbose = 1) RAISERROR('[%s] ERROR: Invalid parameters supplied to proc',16,1,@ProcName) WITH NOWAIT;
         END;
     END;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    RAISERROR('[%s] Done',0,1,@ProcName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] Done',0,1,@ProcName) WITH NOWAIT;
 END;
 GO

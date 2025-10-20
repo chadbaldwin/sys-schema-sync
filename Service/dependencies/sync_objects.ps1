@@ -47,6 +47,7 @@ try {
                               (New-DbaSqlParameter -ParameterName 'InstanceID'   -SqlDbType Int      -Value $SyncObjects[0]._InstanceID)
                             , (New-DbaSqlParameter -ParameterName 'DatabaseID'   -SqlDbType Int      -Value ($SyncObjects[0]._DatabaseID ?? [DBNull]::Value))
                             , (New-DbaSqlParameter -ParameterName 'ErrorMessage' -SqlDbType NVarChar -Value $errorMsg)
+                            , (New-DbaSqlParameter -ParameterName 'Verbose'      -SqlDbType Bit      -Value 1)
                         ) | Write-Output
         return
     }

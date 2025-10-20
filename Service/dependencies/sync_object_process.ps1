@@ -103,7 +103,12 @@ try {
                 $dt_dst.Merge($dt_src, $false, [System.Data.MissingSchemaAction]::Ignore)
 
                 $sqlParamData = New-DbaSqlParameter -ParameterName 'Dataset' -SqlDbType Structured -Value $dt_dst -TypeName $syncItem.ImportTypeClean
-                Invoke-DbaQuery $TargetSqlConnection -CommandType StoredProcedure -Query $syncItem.ImportProcClean -SqlParameter @((&$sqlParamImportID), $sqlParamData) | Write-Output
+                Invoke-DbaQuery $TargetSqlConnection -CommandType StoredProcedure -Query $syncItem.ImportProcClean `
+                                -SqlParameter @(
+                                      (&$sqlParamImportID)
+                                    , $sqlParamData
+                                    , (New-DbaSqlParameter -ParameterName 'Verbose' -SqlDbType Bit -Value 1)
+                                ) | Write-Output
                 Write-Output "Done: Write [$($sw.Elapsed)]"
             } else {
                 Write-Output 'Skip: Write - No data to import'
@@ -159,9 +164,10 @@ try {
     if ($oldchecksum -ne $newchecksum) { Write-Output "Set new checksum: ${newchecksum}" }
     Invoke-DbaQuery $TargetSqlConnection -CommandType StoredProcedure -Query 'import.usp_SetSyncStatus' `
                     -SqlParameter @((&$sqlParamInstance), (&$sqlParamDatabase)
-                        , (New-DbaSqlParameter -ParameterName 'SyncObjectID' -SqlDbType Int -Value $syncItem.SyncObjectID)
+                        , (New-DbaSqlParameter -ParameterName 'SyncObjectID' -SqlDbType Int      -Value $syncItem.SyncObjectID)
                         , (New-Object 'Microsoft.Data.SqlClient.SqlParameter' @('Checksum', [Data.SqlDbType]::Int) -Property @{Value = $newchecksum}) # Bug in dbatools, falsy values are ignored and parameter is not passed in
                         , (New-DbaSqlParameter -ParameterName 'ErrorMessage' -SqlDbType NVarChar -Value $errorMsg)
+                        , (New-DbaSqlParameter -ParameterName 'Verbose'      -SqlDbType Bit      -Value 1)
                     ) | Write-Output
 }
 Write-Output "Done: Sync [$($sw_syncItem.Elapsed)]"

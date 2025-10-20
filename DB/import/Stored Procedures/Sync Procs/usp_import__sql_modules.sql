@@ -1,13 +1,14 @@
 CREATE PROCEDURE import.usp_import__sql_modules (
     @DatabaseID int,
-    @Dataset    import.import__sql_modules READONLY
+    @Dataset    import.import__sql_modules READONLY,
+    @Verbose    bit = 0
 )
 AS
 BEGIN;
     SET NOCOUNT ON;
 
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
-    RAISERROR('[%s] Start',0,1,@ProcName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] Start',0,1,@ProcName) WITH NOWAIT;
 
     IF (@DatabaseID IS NULL) BEGIN; RAISERROR('[%s] ERROR: Required parameter @DatabaseID is NULL',16,1,@ProcName) WITH NOWAIT; END;
     ------------------------------------------------------------------------------
@@ -24,11 +25,11 @@ BEGIN;
     SELECT ID, _SchemaName, _ObjectName, _ObjectType FROM #Dataset;
 
     INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
-    EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
+    EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    RAISERROR('[%s] Insert into dbo.ObjectDefinition',0,1,@ProcName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] Insert into dbo.ObjectDefinition',0,1,@ProcName) WITH NOWAIT;
     WITH cte AS (
         SELECT rn = ROW_NUMBER() OVER (PARTITION BY d._ObjectDefinitionHash ORDER BY d.[object_id])
             , d._ObjectDefinitionHash, d.[definition]
@@ -52,7 +53,7 @@ BEGIN;
 
         The normal undelete process isn't affected though since they are still created/imported the same way.
     */
-    RAISERROR('[%s] [dbo.Object] Find deleted database level items: Start',0,1,@ProcName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [dbo.Object] Find deleted database level items: Start',0,1,@ProcName) WITH NOWAIT;
     SELECT x._ObjectID
     INTO #del_Object
     FROM dbo.[Object] x
@@ -60,26 +61,26 @@ BEGIN;
         AND x.SchemaName = '<<DB>>' -- Limit to database level items - e.g. database triggers
         AND NOT EXISTS (SELECT * FROM @output d WHERE d._ObjectID = x._ObjectID)
         AND x.IsDeleted = 0;
-    RAISERROR('[%s] [dbo.Object] Find deleted database level items: Done (%i)',0,1,@ProcName,@@ROWCOUNT) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [dbo.Object] Find deleted database level items: Done (%i)',0,1,@ProcName,@@ROWCOUNT) WITH NOWAIT;
 
-    RAISERROR('[%s] [dbo.Object] Mark deleted database level items: Start',0,1,@ProcName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [dbo.Object] Mark deleted database level items: Start',0,1,@ProcName) WITH NOWAIT;
     UPDATE x WITH(ROWLOCK)
     SET x.IsDeleted = 1, x.DeleteDate = SYSUTCDATETIME()
     FROM dbo.[Object] x
     WHERE EXISTS (SELECT * FROM #del_Object do WHERE do._ObjectID = x._ObjectID);
-    RAISERROR('[%s] [dbo.Object] Mark deleted database level items: Done (%i)',0,1,@ProcName,@@ROWCOUNT) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [dbo.Object] Mark deleted database level items: Done (%i)',0,1,@ProcName,@@ROWCOUNT) WITH NOWAIT;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
     DECLARE @tableName nvarchar(128) = N'dbo._sql_modules';
 
-    RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     DELETE x FROM dbo._sql_modules x
     WHERE x._DatabaseID = @DatabaseID
         AND NOT EXISTS (SELECT * FROM @output o WHERE o._ObjectID = x._ObjectID);
-    RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
-    RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     UPDATE x
     SET   x._ModifyDate             = SYSUTCDATETIME()
         , x._RowHash                = d._RowHash
@@ -101,9 +102,9 @@ BEGIN;
         JOIN #Dataset d ON d.ID = o.ID
         JOIN dbo.ObjectDefinition od ON od.ObjectDefinitionHash = d._ObjectDefinitionHash
     WHERE x._RowHash <> d._RowHash OR x._ObjectDefinitionID <> od._ObjectDefinitionID;
-    RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
-    RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     INSERT INTO dbo._sql_modules (_DatabaseID, _ObjectID, _RowHash
         , [object_id], _ObjectDefinitionID, uses_ansi_nulls, uses_quoted_identifier, is_schema_bound, uses_database_collation, is_recompiled, null_on_null_input, execute_as_principal_id, uses_native_compilation, inline_type, is_inlineable)
     SELECT @DatabaseID, y._ObjectID, d._RowHash
@@ -116,10 +117,10 @@ BEGIN;
             FROM dbo._sql_modules x
             WHERE x._ObjectID = y._ObjectID
         );
-    RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    RAISERROR('[%s] Done',0,1,@ProcName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] Done',0,1,@ProcName) WITH NOWAIT;
 END;
 GO
