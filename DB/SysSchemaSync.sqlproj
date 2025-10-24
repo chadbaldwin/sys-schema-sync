@@ -240,6 +240,12 @@
     <Build Include="dbo\Tables\Sync Tables\_missing_indexes.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__missing_indexes.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__missing_indexes.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_index_resumable_operations.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_partition_schemes.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_partition_range_values.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_partition_functions.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_partition_parameters.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_destination_data_spaces.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="StaticCodeAnalysis.SuppressMessages.xml" />
