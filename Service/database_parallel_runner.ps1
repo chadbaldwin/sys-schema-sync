@@ -10,11 +10,11 @@ $ErrorActionPreference = 'Stop'
 $current_path = [string]::IsNullOrWhiteSpace($PSScriptRoot) ? $PWD.Path : $PSScriptRoot
 
 # Get dependencies
-$config        = Get-Content -LiteralPath "${current_path}\appsettings.jsonc" -Raw | ConvertFrom-Json
-$script_to_run = Get-Item -LiteralPath "${current_path}\dependencies\sync_objects.ps1"
+$config = Get-Content -LiteralPath "${current_path}\appsettings.jsonc" -Raw | ConvertFrom-Json -AsHashtable
 
-$InstanceConcurrencyLimit = $config.InstanceConcurrencyLimit ?? 5
-$DatabaseConcurrencyLimit = $config.DatabaseConcurrencyLimit ?? 1
+$config.InstanceConcurrencyLimit = $config.InstanceConcurrencyLimit ?? 5
+$config.DatabaseConcurrencyLimit = $config.DatabaseConcurrencyLimit ?? 1
+$config.ScriptToRun = Get-Item -LiteralPath "${current_path}\dependencies\sync_objects.ps1"
 
 $logdir = mkdir "${current_path}\$($config.LogDirectory)" -Force
 
@@ -60,8 +60,8 @@ Get-ChildItem -Path $logdir -Filter '*.log' -File |
 
 Write-Log '-------------------------------------------------'
 Write-Log 'Starting...'
-Write-Log "Concurrent instance throttle limit: ${InstanceConcurrencyLimit}"
-Write-Log "Concurrent database throttle limit: ${DatabaseConcurrencyLimit}"
+Write-Log "Concurrent instance throttle limit: $($config.InstanceConcurrencyLimit)"
+Write-Log "Concurrent database throttle limit: $($config.DatabaseConcurrencyLimit)"
 $sw = [Diagnostics.Stopwatch]::StartNew()
 
 #################################################
@@ -125,32 +125,33 @@ Write-Log "Total sync tasks: $($targets.Databases.SyncObjects.Count)"
 Write-Log 'Starting concurrent process against instances'
 # Handles running instances in parallel
 $targets | ForEach-Object -Parallel {
+    $config = $using:config
     $sqlInstance = $_.Instance
-    $script_to_run = $using:script_to_run
-    $DatabaseConcurrencyLimit = $using:DatabaseConcurrencyLimit
-
-    Write-Output "[${sqlInstance}] Starting Instance, DB Count: $($_.Databases.Count)"
+    $sw_inst = [Diagnostics.Stopwatch]::StartNew()
+    Write-Output "[${sqlInstance}] Start: Instance [DBCount: $($_.Databases.Count)]"
     # Handles running databases in parallel
     $_.Databases | ForEach-Object -Parallel {
+        $config = $using:config
         $key = "[{0}].[{1}]" -f $using:sqlInstance, $_.Database
         function Write-Msg {
             param ([Parameter(Position=0,ValueFromPipeline)][object]$Message)
             process { Write-Output "${key} ${Message}" }
         }
 
-        Write-Msg "Starting..."
+        Write-Msg "Start: Database"
         $sw_db = [Diagnostics.Stopwatch]::StartNew()
         try {
-            & $using:script_to_run -SqlInstance $using:sqlInstance -SqlDatabase $_.Database -SyncObjects $_.SyncObjects | Write-Msg
+            & $config.ScriptToRun -SqlInstance $using:sqlInstance -SqlDatabase $_.Database -SyncObjects $_.SyncObjects -Config $config | Write-Msg
         } catch {
             Write-Msg "Exception: $(Get-Error $_ | Out-String)"
             # throw # throwing here will cause the parallel loop to stop, so we need to catch, log and continue
         }
         $sw_db.Stop()
 
-        Write-Msg "Done - [$($sw_db.Elapsed)]"
-    } -ThrottleLimit $using:DatabaseConcurrencyLimit
-} -ThrottleLimit $InstanceConcurrencyLimit *>&1 | Write-Log
+        Write-Msg "Done: Database [$($sw_db.Elapsed)]"
+    } -ThrottleLimit $config.DatabaseConcurrencyLimit
+    Write-Output "[${sqlInstance}] Done: Instance [$($sw_inst.Elapsed)]"
+} -ThrottleLimit $config.InstanceConcurrencyLimit *>&1 | Write-Log
 
 Clear-DbaConnectionPool
 

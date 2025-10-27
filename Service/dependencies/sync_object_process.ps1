@@ -2,10 +2,12 @@
 
 [CmdletBinding()]
 param (
-    [Parameter(Mandatory, Position=0)][pscustomobject]$syncItem,
+    [Parameter(Mandatory, Position=0)][pscustomobject]$SyncObject,
     [Parameter(Mandatory, Position=1)][Microsoft.SqlServer.Management.Smo.Server]$SourceSqlConnection,
     [Parameter(Mandatory, Position=2)][Microsoft.SqlServer.Management.Smo.Server]$TargetSqlConnection
 )
+
+$VerboseLog = $VerbosePreference -eq 'Continue'
 
 $ErrorActionPreference = 'Stop'
 $PSDefaultParameterValues= @{
@@ -29,15 +31,11 @@ function ConvertFrom-DBNull {
 
 #################################################
 
+# Write-Output ($SyncObject | ConvertTo-Json)
+
 $sw_syncItem = [Diagnostics.Stopwatch]::StartNew()
 Write-Output 'Start: Sync'
-
-$InstanceID = $syncItem._InstanceID
-$DatabaseID = $syncItem._DatabaseID
-
-# Creating as script blocks due to bug in dbatools (Invoke-DbaAsync), it does not clear the parameters on the SqlCommand after use
-$sqlParamInstance = { New-DbaSqlParameter -ParameterName 'InstanceID' -SqlDbType Int -Value $InstanceID }
-$sqlParamDatabase = { New-DbaSqlParameter -ParameterName 'DatabaseID' -SqlDbType Int -Value ($DatabaseID ?? [DBNull]::Value) }
+#Write-Output "SyncItem:`r`n$($SyncObject | ConvertTo-Json)"
 
 try {
     $sw = [Diagnostics.Stopwatch]::StartNew()
@@ -45,14 +43,14 @@ try {
     # Get the new and old checksums
     [Nullable[int]]$oldchecksum = $null
     [Nullable[int]]$newchecksum = $null
-    if ($syncItem.ChecksumQueryText) {
-        Write-Output 'Start: Get checksum'; $sw.Restart()
-        $oldchecksum = $syncItem.LastSyncChecksum | ConvertFrom-DBNull
-        Write-Output "Old checksum: ${oldchecksum}"
-        $checksumQuery = "SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED; {0}" -f $syncItem.ChecksumQueryText
+    if ($SyncObject.ChecksumQueryText) {
+        Write-Output 'Start: Checksum'; $sw.Restart()
+        $oldchecksum = $SyncObject.LastSyncChecksum | ConvertFrom-DBNull
+        $checksumQuery = "SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED; {0}" -f $SyncObject.ChecksumQueryText
         $newchecksum = Invoke-DbaQuery $SourceSqlConnection -Query $checksumQuery -As SingleValue | ConvertFrom-DBNull
+        Write-Output "Old checksum: ${oldchecksum}"
         Write-Output "New checksum: ${newchecksum}"
-        Write-Output "Done: Get checksum [$($sw.Elapsed)]"
+        Write-Output "Done: Checksum [$($sw.Elapsed)]"
     }
 
     <# If the checksums are different
@@ -60,114 +58,108 @@ try {
         or) there is no ChecksumQueryText (meaning disable checksum usage)
         then run
     #>
-    if (($oldchecksum -ne $newchecksum) -or ($null -eq $oldchecksum) -or ($null -eq $syncItem.ChecksumQueryText)) {
+    if (($oldchecksum -ne $newchecksum) -or ($null -eq $oldchecksum) -or ($null -eq $SyncObject.ChecksumQueryText)) {
         # Use the export query path override otherwise use the default - select *
-        if ($syncItem.ExportQueryPath) {
-            $exportQuery = Get-Content -LiteralPath (Join-Path $current_path 'dependencies\SQL' $syncItem.ExportQueryPath) -Raw
+        $exportQuery = if ($SyncObject.ExportQueryPath) {
+            Get-Content -LiteralPath (Join-Path $current_path 'dependencies\SQL' $SyncObject.ExportQueryPath) -Raw
         } else {
-            $exportQuery = 'SELECT _CollectionDate = SYSUTCDATETIME(), * FROM {0}' -f $syncItem.SyncObjectNameClean
+            'SELECT _CollectionDate = SYSUTCDATETIME(), * FROM {0};' -f $SyncObject.SyncObjectNameClean
         }
-        $exportQuery = "SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED; ${exportQuery}"
+        $exportQuery = "SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED; {0}" -f $exportQuery
 
-        switch ($syncItem.SyncObjectLevelID) {
-            1 {
-                $deleteQuery = 'DELETE {0} WHERE _InstanceID = @InstanceID' -f $syncItem.ImportTableClean
-                $column = [System.Data.DataColumn]::new('_InstanceID', [Int], $InstanceID)
-                $sqlParamImportID = $sqlParamInstance
-            }
-            2 {
-                $deleteQuery = 'DELETE {0} WHERE _DatabaseID = @DatabaseID' -f $syncItem.ImportTableClean
-                $column = [System.Data.DataColumn]::new('_DatabaseID', [Int], $DatabaseID)
-                $sqlParamImportID = $sqlParamDatabase
-            }
-            Default { throw "[$($syncItem.SyncObjectName)] Invalid SyncObjectLevelID" }
+        # Set sync type (simple/complex)
+        $syncType = switch ($true) {
+            {($SyncObject.ImportProcClean) -and ($null -eq $SyncObject.ImportTableClean)} { 'Complex' }
+            {($null -eq $SyncObject.ImportProcClean) -and ($SyncObject.ImportTableClean)} { 'Simple' }
+            Default { throw "[$($SyncObject.SyncObjectName)] Invalid configuration" }
         }
 
-        if (($syncItem.ImportProcClean) -and ($null -eq $syncItem.ImportTableClean)) {
-            Write-Output 'Complex sync - Sync object using proc and table type'
+        <#  For Table Valued Parameters:
+            .NET documentation recommends using a DataTable
 
-            Write-Output 'Start: Export'; $sw.Restart()
-            # Using DataTable here because it is preferred by .NET when populating a table valued parameter
-            $dt_src = Invoke-DbaQuery $SourceSqlConnection -Query $exportQuery -As DataTable
-            Write-Output "Done: Export [$($sw.Elapsed)]"
+            For Write-DbaDbTableData:
+            dbatools documentation recommends using a DataSet
+            > Use DataSet for optimal performance as all records import in a single SqlBulkCopy call.
+            > DataTable also performs well but avoid piping directly as it converts to slower DataRow processing.
+        #>
+        Write-Output 'Start: Export'; $sw.Restart()
+        # using DataSet here because it's easy to pull the DataTable out of it
+        $data_src = Invoke-DbaQuery $SourceSqlConnection -Query $exportQuery -As DataSet
+        Write-Output "Done: Export [$($sw.Elapsed)]"
 
-            # No delete step because the import proc will handle it - deletes, updates, etc
-            if ($dt_src.Rows.Count -gt 0) {
-                Write-Output 'Start: Write'; $sw.Restart()
+        switch ($syncType) {
+            'Complex' {
+                if ($data_src.Tables[0].Rows.Count -gt 0) {
+                    # Create empty datatable in the shape of the target table type, merge the source data into it, then prep the TVP
+                    $data_dst = Invoke-DbaQuery $TargetSqlConnection -Query ('DECLARE @x {0}; SELECT * FROM @x;' -f $SyncObject.ImportTypeClean) -As DataSet
+                    $data_dst.Tables[0].Merge($data_src.Tables[0], $false, [System.Data.MissingSchemaAction]::Ignore)
 
-                # Create empty datatable in the shape of the target table type
-                $empty_dt_query = 'DECLARE @x {0}; SELECT * FROM @x' -f $syncItem.ImportTypeClean
-                $dt_dst = Invoke-DbaQuery $TargetSqlConnection -Query $empty_dt_query -As DataTable
+                    # Prep proc parameters
+                    $sqlParamImportID = switch ($SyncObject.SyncObjectLevelID) {
+                        1 { New-DbaSqlParameter -ParameterName 'InstanceID' -SqlDbType Int -Value $SyncObject._InstanceID }
+                        2 { New-DbaSqlParameter -ParameterName 'DatabaseID' -SqlDbType Int -Value ($SyncObject._DatabaseID ?? [DBNull]::Value) }
+                        Default { throw "[$($SyncObject.SyncObjectName)] Invalid SyncObjectLevelID" }
+                    }
 
-                # Merge the source data into the destination datatable
-                $dt_dst.Merge($dt_src, $false, [System.Data.MissingSchemaAction]::Ignore)
-
-                $sqlParamData = New-DbaSqlParameter -ParameterName 'Dataset' -SqlDbType Structured -Value $dt_dst -TypeName $syncItem.ImportTypeClean
-                Invoke-DbaQuery $TargetSqlConnection -CommandType StoredProcedure -Query $syncItem.ImportProcClean `
-                                -SqlParameter @(
-                                      (&$sqlParamImportID)
-                                    , $sqlParamData
-                                    , (New-DbaSqlParameter -ParameterName 'Verbose' -SqlDbType Bit -Value 1)
-                                ) | Write-Output
-                Write-Output "Done: Write [$($sw.Elapsed)]"
-            } else {
-                Write-Output 'Skip: Write - No data to import'
-            }
-        } elseif (($null -eq $syncItem.ImportProcClean) -and ($syncItem.ImportTableClean)) {
-            Write-Output 'Simple sync - Sync object directly using delete and insert'
-
-            Write-Output 'Start: Export'; $sw.Restart()
-            <#  Note from dbatools documentation for Write-DbaDbTableData:
-                Use DataSet for optimal performance as all records import in a single SqlBulkCopy call.
-                DataTable also performs well but avoid piping directly as it converts to slower DataRow processing.
-            #>
-            $data = Invoke-DbaQuery $SourceSqlConnection -Query $exportQuery -As DataSet
-            Write-Output "Done: Export [$($sw.Elapsed)]"
-
-            # There's no way to know whether the export having zero records is intentional or not
-            # For example, it could be a list of database errors...if their are none, then running the delete is correct
-            Write-Output 'Start: Delete'; $sw.Restart()
-            $null = Invoke-DbaQuery $TargetSqlConnection -Query $deleteQuery -SqlParameter @((&$sqlParamInstance), (&$sqlParamDatabase))
-            Write-Output "Done: Delete [$($sw.Elapsed)]"
-
-            if ($data.Tables[0].Rows.Count -gt 0) {
-                Write-Output 'Start: Write'; $sw.Restart()
-                Write-Output 'Add _InstanceID/_DatabaseID column to DataTable'
-                $data.Tables[0].Columns.Add($column); $column.SetOrdinal(0)
-
-                <# Really odd behavior with sys.dm_os_enumerate_fixed_drives. Kept running into all sorts of
-                issues with using a DataTable vs DataSet. Tried using an exportQueryPath, the filename could
-                not contain `dm_os_enumerate_fixed_drives` or it would throw an exception. The only solution
-                I could find was by pulling a DataTable out of a DataSet object #>
-                if ($syncItem.SyncObjectName -eq 'sys.dm_os_enumerate_fixed_drives') {
-                    Write-Output 'Special case handling: converting DataSet to single DataTable'
-                    $data = $data.Tables[0]
+                    # No delete step because the import proc will handle it - deletes, updates, etc
+                    Write-Output 'Start: Write'; $sw.Restart()
+                    Invoke-DbaQuery $TargetSqlConnection -CommandType StoredProcedure -Query $SyncObject.ImportProcClean -QueryTimeout 30 `
+                                    -SqlParameter @(
+                                        $sqlParamImportID
+                                        , (New-DbaSqlParameter -ParameterName 'Dataset' -SqlDbType Structured -Value $data_dst.Tables[0] -TypeName $SyncObject.ImportTypeClean)
+                                        , (New-DbaSqlParameter -ParameterName 'Verbose' -SqlDbType Bit -Value $VerboseLog)
+                                    )
+                    Write-Output "Done: Write [$($sw.Elapsed)]"
+                } else {
+                    Write-Output 'Skip: Write - No data to import'
                 }
-
-                Write-DbaDbTableData -InputObject $data -SqlInstance $TargetSqlConnection -Table $syncItem.ImportTableClean
-                Write-Output "Done: Write [$($sw.Elapsed)]"
-            } else {
-                Write-Output 'Skip: Write - No data to import'
             }
-        } else {
-            throw "[$($syncItem.SyncObjectName)] Invalid configuration"
+            'Simple' {
+                # There's no way to know whether the export having zero records is intentional or not
+                # For example, it could be a list of database errors...if their are none, then running the delete is correct
+                Write-Output 'Start: Delete'; $sw.Restart()
+                $null = Invoke-DbaQuery $TargetSqlConnection -Query 'import.usp_SyncObject_SimpleDelete' -CommandType StoredProcedure `
+                                        -SqlParameter @{
+                                            SyncObjectID = $SyncObject.SyncObjectID
+                                            InstanceID   = $SyncObject._InstanceID
+                                            DatabaseID   = $SyncObject._DatabaseID
+                                            Verbose      = $VerboseLog
+                                        }
+                Write-Output "Done: Delete [$($sw.Elapsed)]"
+
+                if ($data_src.Tables[0].Rows.Count -gt 0) {
+                    Write-Output 'Start: Write'; $sw.Restart()
+
+                    # Create empty datatable in the shape of the target table, add instance/database id column, then merge ithe source data into it
+                    $data_dst = Invoke-DbaQuery $TargetSqlConnection -Query ('SELECT TOP(0) * FROM {0};' -f $SyncObject.ImportTableClean) -As DataSet
+                    $data_src.Tables[0].Columns.Add([System.Data.DataColumn]::new('_InstanceID', [Int], $SyncObject._InstanceID))
+                    $data_src.Tables[0].Columns.Add([System.Data.DataColumn]::new('_DatabaseID', [Int], $SyncObject._DatabaseID))
+                    $data_dst.Tables[0].Merge($data_src.Tables[0], $false, [System.Data.MissingSchemaAction]::Ignore)
+
+                    Write-DbaDbTableData -InputObject $data_dst -SqlInstance $TargetSqlConnection -Table $SyncObject.ImportTableClean
+                    Write-Output "Done: Write [$($sw.Elapsed)]"
+                } else {
+                    Write-Output 'Skip: Write - No data to import'
+                }
+            }
         }
     } else {
         Write-Output 'Skipping sync: Checksums match'
     }
 } catch {
-    Write-Output 'sync_object_process.ps1 - catch block'
-    Write-Output ($_.Exception.InnerException.Errors.Message -join ' ')
     $errorMsg = Get-Error $_ | Out-String
+    Write-Output "Error: ${errorMsg}"
 } finally {
     Write-Output 'Checking in SyncObjectStatus'
     if ($oldchecksum -ne $newchecksum) { Write-Output "Set new checksum: ${newchecksum}" }
     Invoke-DbaQuery $TargetSqlConnection -CommandType StoredProcedure -Query 'import.usp_SetSyncStatus' `
-                    -SqlParameter @((&$sqlParamInstance), (&$sqlParamDatabase)
-                        , (New-DbaSqlParameter -ParameterName 'SyncObjectID' -SqlDbType Int      -Value $syncItem.SyncObjectID)
-                        , (New-Object 'Microsoft.Data.SqlClient.SqlParameter' @('Checksum', [Data.SqlDbType]::Int) -Property @{Value = $newchecksum}) # Bug in dbatools, falsy values are ignored and parameter is not passed in
-                        , (New-DbaSqlParameter -ParameterName 'ErrorMessage' -SqlDbType NVarChar -Value $errorMsg)
-                        , (New-DbaSqlParameter -ParameterName 'Verbose'      -SqlDbType Bit      -Value 1)
-                    ) | Write-Output
+                    -SqlParameter @{
+                        InstanceID   = $SyncObject._InstanceID
+                        DatabaseID   = $SyncObject._DatabaseID
+                        SyncObjectID = $SyncObject.SyncObjectID
+                        Checksum     = $newchecksum
+                        ErrorMessage = $errorMsg
+                        Verbose      = $true
+                    } | Write-Output
 }
 Write-Output "Done: Sync [$($sw_syncItem.Elapsed)]"

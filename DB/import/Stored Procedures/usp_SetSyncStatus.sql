@@ -1,6 +1,6 @@
 CREATE PROCEDURE import.usp_SetSyncStatus (
     @InstanceID     int,
-    @DatabaseID     int,
+    @DatabaseID     int = NULL,
     @SyncObjectID   int = NULL,
     @Checksum       int = NULL,
     @ErrorMessage   nvarchar(MAX) = NULL,
