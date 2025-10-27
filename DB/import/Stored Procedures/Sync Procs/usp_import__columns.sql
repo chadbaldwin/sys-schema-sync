@@ -7,6 +7,7 @@ AS
 BEGIN;
     SET NOCOUNT ON;
 
+    DECLARE @sw datetime2 = SYSUTCDATETIME();
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
     IF (@Verbose = 1) RAISERROR('[%s] Start',0,1,@ProcName) WITH NOWAIT;
 
@@ -107,6 +108,7 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    IF (@Verbose = 1) RAISERROR('[%s] Done',0,1,@ProcName) WITH NOWAIT;
+    DECLARE @duration varchar(15) = FORMAT(DATEADD(microsecond, DATEDIFF(microsecond, @sw, SYSUTCDATETIME()), CONVERT(datetime2, '0001-01-01')), 'HH:mm:ss.fffffff');
+    IF (@Verbose = 1) RAISERROR('[%s] Done [%s]',0,1,@ProcName, @duration) WITH NOWAIT;
 END;
 GO
