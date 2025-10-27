@@ -1,7 +1,7 @@
 CREATE TABLE dbo._partitions (
-    _DatabaseID             int          NOT NULL CONSTRAINT FK__partitions__DatabaseID  REFERENCES dbo.[Database]   (_DatabaseID),
-    _ObjectID               int          NOT NULL CONSTRAINT FK__partitions__ObjectID    REFERENCES dbo.[Object]     (_ObjectID),
-    _IndexID                int          NOT NULL CONSTRAINT FK__partitions__IndexID     REFERENCES dbo.[Index]      (_IndexID),
+    _DatabaseID             int          NOT NULL CONSTRAINT FK__partitions__DatabaseID  REFERENCES dbo.[Database]   (_DatabaseID) ON DELETE CASCADE,
+    _ObjectID               bigint       NOT NULL CONSTRAINT FK__partitions__ObjectID    REFERENCES dbo.[Object]     (_ObjectID),
+    _IndexID                bigint       NOT NULL CONSTRAINT FK__partitions__IndexID     REFERENCES dbo.[Index]      (_IndexID),
     --
     _InsertDate             datetime2    NOT NULL CONSTRAINT DF__partitions__InsertDate  DEFAULT (SYSUTCDATETIME()),
     _ModifyDate             datetime2    NOT NULL CONSTRAINT DF__partitions__ModifyDate  DEFAULT (SYSUTCDATETIME()),
@@ -20,6 +20,7 @@ CREATE TABLE dbo._partitions (
     xml_compression_desc    varchar(3)       NULL, -- Added: SQL Server 2022
 
     INDEX CIX__partitions__IndexID_partition_number UNIQUE CLUSTERED (_IndexID, partition_number),
+    INDEX IX__partitions__ObjectID NONCLUSTERED (_ObjectID)
 );
 GO
 

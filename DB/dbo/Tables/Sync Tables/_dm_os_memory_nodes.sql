@@ -1,5 +1,5 @@
 CREATE TABLE dbo._dm_os_memory_nodes (
-    _InstanceID                        int       NOT NULL CONSTRAINT FK__dm_os_memory_nodes__InstanceID REFERENCES dbo.[Instance] (_InstanceID),
+    _InstanceID                        int       NOT NULL CONSTRAINT FK__dm_os_memory_nodes__InstanceID REFERENCES dbo.[Instance] (_InstanceID) ON DELETE CASCADE,
     _CollectionDate                    datetime2 NOT NULL,
     --
     memory_node_id                     smallint  NOT NULL,

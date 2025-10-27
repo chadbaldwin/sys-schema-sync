@@ -1,7 +1,7 @@
 CREATE TABLE dbo._indexes_history (
     _DatabaseID                   int           NOT NULL,
-    _ObjectID                     int           NOT NULL,
-    _IndexID                      int           NOT NULL,
+    _ObjectID                     bigint        NOT NULL,
+    _IndexID                      bigint        NOT NULL,
     --
     _InsertDate                   datetime2     NOT NULL,
     _ModifyDate                   datetime2     NOT NULL,

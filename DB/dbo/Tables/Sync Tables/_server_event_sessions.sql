@@ -1,5 +1,5 @@
 CREATE TABLE dbo._server_event_sessions (
-    _InstanceID                int           NOT NULL CONSTRAINT FK__server_event_sessions__InstanceID REFERENCES dbo.[Instance] (_InstanceID),
+    _InstanceID                int           NOT NULL CONSTRAINT FK__server_event_sessions__InstanceID REFERENCES dbo.[Instance] (_InstanceID) ON DELETE CASCADE,
     _CollectionDate            datetime2     NOT NULL,
     --
     event_session_id           int           NOT NULL,

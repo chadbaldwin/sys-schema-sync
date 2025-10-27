@@ -1,10 +1,10 @@
 CREATE TABLE dbo._OBJECTPROPERTYEX (
-    _DatabaseID                          int           NOT NULL CONSTRAINT FK__OBJECTPROPERTYEX__DatabaseID REFERENCES dbo.[Database] (_DatabaseID),
-    _ObjectID                            int           NOT NULL CONSTRAINT FK__OBJECTPROPERTYEX__ObjectID   REFERENCES dbo.[Object]   (_ObjectID),
+    _DatabaseID                          int         NOT NULL CONSTRAINT FK__OBJECTPROPERTYEX__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) ON DELETE CASCADE,
+    _ObjectID                            bigint      NOT NULL CONSTRAINT FK__OBJECTPROPERTYEX__ObjectID   REFERENCES dbo.[Object]   (_ObjectID),
     --
-    _InsertDate                          datetime2     NOT NULL CONSTRAINT DF__OBJECTPROPERTYEX__InsertDate DEFAULT (SYSUTCDATETIME()),
-    _ModifyDate                          datetime2     NOT NULL CONSTRAINT DF__OBJECTPROPERTYEX__ModifyDate DEFAULT (SYSUTCDATETIME()),
-    _RowHash                             binary(32)    NOT NULL,
+    _InsertDate                          datetime2   NOT NULL CONSTRAINT DF__OBJECTPROPERTYEX__InsertDate DEFAULT (SYSUTCDATETIME()),
+    _ModifyDate                          datetime2   NOT NULL CONSTRAINT DF__OBJECTPROPERTYEX__ModifyDate DEFAULT (SYSUTCDATETIME()),
+    _RowHash                             binary(32)  NOT NULL,
     --
     BaseType                             char(2)         NULL,
     CnstIsClustKey                       int             NULL,

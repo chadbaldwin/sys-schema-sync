@@ -2,7 +2,7 @@ CREATE TABLE import.DatabaseSyncObjectStatus (
     DatabaseSyncObjectID int            NOT NULL IDENTITY(1,1)
                                                  CONSTRAINT PK_DatabaseSyncObjectStatus_DatabaseSyncObjectID PRIMARY KEY NONCLUSTERED,
     _InstanceID          int            NOT NULL CONSTRAINT FK_DatabaseSyncObjectStatus__InstanceID          REFERENCES dbo.[Instance] (_InstanceID),
-    _DatabaseID          int                NULL CONSTRAINT FK_DatabaseSyncObjectStatus__DatabaseID          REFERENCES dbo.[Database] (_DatabaseID),
+    _DatabaseID          int                NULL CONSTRAINT FK_DatabaseSyncObjectStatus__DatabaseID          REFERENCES dbo.[Database] (_DatabaseID) ON DELETE CASCADE,
     SyncObjectID         int            NOT NULL CONSTRAINT FK_DatabaseSyncObjectStatus_SyncObjectID         REFERENCES import.SyncObject (SyncObjectID),
     LastSyncChecksum     int                NULL,
     LastSyncTime         datetime2          NULL CONSTRAINT DF_DatabaseSyncObjectStatus_LastSyncTime         DEFAULT (SYSUTCDATETIME()),

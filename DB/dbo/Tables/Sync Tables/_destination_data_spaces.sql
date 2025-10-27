@@ -1,5 +1,5 @@
 CREATE TABLE dbo._destination_data_spaces (
-    _DatabaseID     int           NOT NULL CONSTRAINT FK__destination_data_spaces__DatabaseID REFERENCES dbo.[Database] (_DatabaseID),
+    _DatabaseID     int           NOT NULL CONSTRAINT FK__destination_data_spaces__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) ON DELETE CASCADE,
     _CollectionDate datetime2     NOT NULL,
     --
     partition_scheme_id int NOT NULL,

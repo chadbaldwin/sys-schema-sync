@@ -1,9 +1,9 @@
 CREATE TABLE dbo._foreign_keys (
-    _DatabaseID                    int           NOT NULL CONSTRAINT FK__foreign_keys__DatabaseID         REFERENCES dbo.[Database] (_DatabaseID),
-    _ObjectID                      int           NOT NULL CONSTRAINT FK__foreign_keys__ObjectID           REFERENCES dbo.[Object]   (_ObjectID),
-    _ParentObjectID                int           NOT NULL CONSTRAINT FK__foreign_keys__ParentObjectID     REFERENCES dbo.[Object]   (_ObjectID),
-    _ReferencedObjectID            int           NOT NULL CONSTRAINT FK__foreign_keys__ReferencedObjectID REFERENCES dbo.[Object]   (_ObjectID),
-    _ReferencedIndexID             int           NOT NULL CONSTRAINT FK__foreign_keys__ReferencedIndexID  REFERENCES dbo.[Index]    (_IndexID),
+    _DatabaseID                    int           NOT NULL CONSTRAINT FK__foreign_keys__DatabaseID         REFERENCES dbo.[Database] (_DatabaseID) ON DELETE CASCADE,
+    _ObjectID                      bigint        NOT NULL CONSTRAINT FK__foreign_keys__ObjectID           REFERENCES dbo.[Object]   (_ObjectID),
+    _ParentObjectID                bigint        NOT NULL CONSTRAINT FK__foreign_keys__ParentObjectID     REFERENCES dbo.[Object]   (_ObjectID),
+    _ReferencedObjectID            bigint        NOT NULL CONSTRAINT FK__foreign_keys__ReferencedObjectID REFERENCES dbo.[Object]   (_ObjectID),
+    _ReferencedIndexID             bigint        NOT NULL CONSTRAINT FK__foreign_keys__ReferencedIndexID  REFERENCES dbo.[Index]    (_IndexID),
     --
     _InsertDate                    datetime2     NOT NULL CONSTRAINT DF__foreign_keys__InsertDate         DEFAULT (SYSUTCDATETIME()),
     _ModifyDate                    datetime2     NOT NULL CONSTRAINT DF__foreign_keys__ModifyDate         DEFAULT (SYSUTCDATETIME()),
@@ -37,5 +37,8 @@ CREATE TABLE dbo._foreign_keys (
     PERIOD FOR SYSTEM_TIME (_ValidFrom, _ValidTo),
     CONSTRAINT CPK__foreign_keys__ObjectID PRIMARY KEY CLUSTERED (_ObjectID),
     INDEX IX__foreign_keys__DatabaseID NONCLUSTERED (_DatabaseID),
+    INDEX IX__foreign_keys__ReferencedIndexID NONCLUSTERED (_ReferencedIndexID),
+    INDEX IX__foreign_keys__ParentObjectID NONCLUSTERED (_ParentObjectID),
+    INDEX IX__foreign_keys__ReferencedObjectID NONCLUSTERED (_ReferencedObjectID),
 ) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo._foreign_keys_history, DATA_CONSISTENCY_CHECK = ON, HISTORY_RETENTION_PERIOD = 6 MONTH));
 GO

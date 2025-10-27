@@ -1,8 +1,8 @@
 CREATE TABLE dbo._check_constraints_history (
     _DatabaseID             int           NOT NULL,
-    _ObjectID               int           NOT NULL,
-    _ParentObjectID         int           NOT NULL,
-    _ParentColumnID         int               NULL,
+    _ObjectID               bigint        NOT NULL,
+    _ParentObjectID         bigint        NOT NULL,
+    _ParentColumnID         bigint            NULL,
     --
     _InsertDate             datetime2     NOT NULL,
     _ModifyDate             datetime2     NOT NULL,

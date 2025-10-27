@@ -1,10 +1,10 @@
 CREATE TABLE dbo._foreign_key_columns (
-    _DatabaseID          int        NOT NULL CONSTRAINT FK__foreign_key_columns__DatabaseID         REFERENCES dbo.[Database]   (_DatabaseID),
-    _ObjectID            int        NOT NULL CONSTRAINT FK__foreign_key_columns__ObjectID           REFERENCES dbo.[Object]     (_ObjectID),
-    _ParentObjectID      int        NOT NULL CONSTRAINT FK__foreign_key_columns__ParentObjectID     REFERENCES dbo.[Object]     (_ObjectID),
-    _ParentColumnID      int        NOT NULL CONSTRAINT FK__foreign_key_columns__ParentColumnID     REFERENCES dbo.[Column]     (_ColumnID),
-    _ReferencedObjectID  int        NOT NULL CONSTRAINT FK__foreign_key_columns__ReferencedObjectID REFERENCES dbo.[Object]     (_ObjectID),
-    _ReferencedColumnID  int        NOT NULL CONSTRAINT FK__foreign_key_columns__ReferencedColumnID REFERENCES dbo.[Column]     (_ColumnID),
+    _DatabaseID          int        NOT NULL CONSTRAINT FK__foreign_key_columns__DatabaseID         REFERENCES dbo.[Database]   (_DatabaseID) ON DELETE CASCADE,
+    _ObjectID            bigint     NOT NULL CONSTRAINT FK__foreign_key_columns__ObjectID           REFERENCES dbo.[Object]     (_ObjectID),
+    _ParentObjectID      bigint     NOT NULL CONSTRAINT FK__foreign_key_columns__ParentObjectID     REFERENCES dbo.[Object]     (_ObjectID),
+    _ParentColumnID      bigint     NOT NULL CONSTRAINT FK__foreign_key_columns__ParentColumnID     REFERENCES dbo.[Column]     (_ColumnID),
+    _ReferencedObjectID  bigint     NOT NULL CONSTRAINT FK__foreign_key_columns__ReferencedObjectID REFERENCES dbo.[Object]     (_ObjectID),
+    _ReferencedColumnID  bigint     NOT NULL CONSTRAINT FK__foreign_key_columns__ReferencedColumnID REFERENCES dbo.[Column]     (_ColumnID),
     --
     _InsertDate          datetime2  NOT NULL CONSTRAINT DF__foreign_key_columns__InsertDate         DEFAULT (SYSUTCDATETIME()),
     _ModifyDate          datetime2  NOT NULL CONSTRAINT DF__foreign_key_columns__ModifyDate         DEFAULT (SYSUTCDATETIME()),
@@ -19,5 +19,9 @@ CREATE TABLE dbo._foreign_key_columns (
 
     INDEX CIX__foreign_key_columns__ObjectID__ParentObjectID__ReferencedObjectID CLUSTERED (_ObjectID, _ParentObjectID, _ReferencedObjectID),
     INDEX IX__foreign_key_columns__DatabaseID NONCLUSTERED (_DatabaseID),
+    INDEX IX__foreign_key_columns__ParentColumnID NONCLUSTERED (_ParentColumnID),
+    INDEX IX__foreign_key_columns__ReferencedColumnID NONCLUSTERED (_ReferencedColumnID),
+    INDEX IX__foreign_key_columns__ParentObjectID NONCLUSTERED (_ParentObjectID),
+    INDEX IX__foreign_key_columns__ReferencedObjectID NONCLUSTERED (_ReferencedObjectID),
 );
 GO

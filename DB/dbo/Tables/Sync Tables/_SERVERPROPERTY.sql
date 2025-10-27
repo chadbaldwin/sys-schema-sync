@@ -1,5 +1,5 @@
 CREATE TABLE dbo._SERVERPROPERTY (
-    _InstanceID                         int             NOT NULL CONSTRAINT FK__SERVERPROPERTY__InstanceID REFERENCES dbo.[Instance] (_InstanceID),
+    _InstanceID                         int             NOT NULL CONSTRAINT FK__SERVERPROPERTY__InstanceID REFERENCES dbo.[Instance] (_InstanceID) ON DELETE CASCADE,
     _CollectionDate                     datetime2       NOT NULL,
     --
     BuildClrVersion                     nvarchar(128)       NULL,

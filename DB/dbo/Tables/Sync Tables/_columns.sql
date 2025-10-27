@@ -1,7 +1,7 @@
 CREATE TABLE dbo._columns (
-    _DatabaseID                         int           NOT NULL CONSTRAINT FK__columns__DatabaseID REFERENCES dbo.[Database] (_DatabaseID),
-    _ObjectID                           int           NOT NULL CONSTRAINT FK__columns__ObjectID   REFERENCES dbo.[Object]   (_ObjectID),
-    _ColumnID                           int           NOT NULL CONSTRAINT FK__columns__ColumnID   REFERENCES dbo.[Column]   (_ColumnID),
+    _DatabaseID                         int           NOT NULL CONSTRAINT FK__columns__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) ON DELETE CASCADE,
+    _ObjectID                           bigint        NOT NULL CONSTRAINT FK__columns__ObjectID   REFERENCES dbo.[Object]   (_ObjectID),
+    _ColumnID                           bigint        NOT NULL CONSTRAINT FK__columns__ColumnID   REFERENCES dbo.[Column]   (_ColumnID),
     --
     _InsertDate                         datetime2     NOT NULL CONSTRAINT DF__columns__InsertDate DEFAULT (SYSUTCDATETIME()),
     _ModifyDate                         datetime2     NOT NULL CONSTRAINT DF__columns__ModifyDate DEFAULT (SYSUTCDATETIME()),
@@ -55,8 +55,7 @@ CREATE TABLE dbo._columns (
 
     PERIOD FOR SYSTEM_TIME (_ValidFrom, _ValidTo),
     CONSTRAINT CPK__columns__ColumnID PRIMARY KEY CLUSTERED (_ColumnID) WITH (DATA_COMPRESSION = PAGE),
+    INDEX IX__columns__ObjectID (_ObjectID),
+    INDEX IX__columns__DatabaseID__ObjectID (_DatabaseID, _ObjectID)
 ) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo._columns_history, DATA_CONSISTENCY_CHECK = ON, HISTORY_RETENTION_PERIOD = 6 MONTH));
-GO
-
-CREATE NONCLUSTERED INDEX IX__columns__DatabaseID__ObjectID ON dbo._columns (_DatabaseID, _ObjectID);
 GO

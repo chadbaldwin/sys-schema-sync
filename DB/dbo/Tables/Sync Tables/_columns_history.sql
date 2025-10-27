@@ -1,7 +1,7 @@
 CREATE TABLE dbo._columns_history (
     _DatabaseID                         int           NOT NULL,
-    _ObjectID                           int           NOT NULL,
-    _ColumnID                           int           NOT NULL,
+    _ObjectID                           bigint        NOT NULL,
+    _ColumnID                           bigint        NOT NULL,
     --
     _InsertDate                         datetime2     NOT NULL,
     _ModifyDate                         datetime2     NOT NULL,

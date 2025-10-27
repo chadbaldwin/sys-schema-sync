@@ -1,7 +1,7 @@
 CREATE TABLE dbo._triggers_history (
     _DatabaseID            int           NOT NULL,
-    _ObjectID              int           NOT NULL,
-    _ParentObjectID        int               NULL,
+    _ObjectID              bigint        NOT NULL,
+    _ParentObjectID        bigint            NULL,
     --
     _InsertDate            datetime2     NOT NULL,
     _ModifyDate            datetime2     NOT NULL,

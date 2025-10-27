@@ -1,9 +1,9 @@
 CREATE TABLE dbo._foreign_keys_history (
     _DatabaseID                    int           NOT NULL,
-    _ObjectID                      int           NOT NULL,
-    _ParentObjectID                int           NOT NULL,
-    _ReferencedObjectID            int           NOT NULL,
-    _ReferencedIndexID             int           NOT NULL,
+    _ObjectID                      bigint        NOT NULL,
+    _ParentObjectID                bigint        NOT NULL,
+    _ReferencedObjectID            bigint        NOT NULL,
+    _ReferencedIndexID             bigint        NOT NULL,
     --
     _InsertDate                    datetime2     NOT NULL,
     _ModifyDate                    datetime2     NOT NULL,

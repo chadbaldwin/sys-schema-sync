@@ -1,6 +1,6 @@
 CREATE TABLE dbo._sql_modules (
-    _DatabaseID             int        NOT NULL CONSTRAINT FK__sql_modules__DatabaseID REFERENCES dbo.[Database] (_DatabaseID),
-    _ObjectID               int        NOT NULL CONSTRAINT FK__sql_modules__ObjectID   REFERENCES dbo.[Object]   (_ObjectID),
+    _DatabaseID             int        NOT NULL CONSTRAINT FK__sql_modules__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) ON DELETE CASCADE,
+    _ObjectID               bigint     NOT NULL CONSTRAINT FK__sql_modules__ObjectID   REFERENCES dbo.[Object]   (_ObjectID),
     --
     _InsertDate             datetime2  NOT NULL CONSTRAINT DF__sql_modules__InsertDate DEFAULT (SYSUTCDATETIME()),
     _ModifyDate             datetime2  NOT NULL CONSTRAINT DF__sql_modules__ModifyDate DEFAULT (SYSUTCDATETIME()),

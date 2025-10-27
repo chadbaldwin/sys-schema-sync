@@ -1,5 +1,5 @@
 CREATE TABLE dbo._data_spaces (
-    _DatabaseID     int           NOT NULL CONSTRAINT FK__data_spaces__DatabaseID REFERENCES dbo.[Database] (_DatabaseID),
+    _DatabaseID     int           NOT NULL CONSTRAINT FK__data_spaces__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) ON DELETE CASCADE,
     _CollectionDate datetime2     NOT NULL,
     --
     [name]          nvarchar(128) NOT NULL,

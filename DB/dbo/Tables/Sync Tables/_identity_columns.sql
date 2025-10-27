@@ -1,7 +1,7 @@
 CREATE TABLE dbo._identity_columns (
-    _DatabaseID                         int           NOT NULL CONSTRAINT FK__identity_columns__DatabaseID    REFERENCES dbo.[Database]   (_DatabaseID),
-    _ObjectID                           int           NOT NULL CONSTRAINT FK__identity_columns__ObjectID      REFERENCES dbo.[Object]     (_ObjectID),
-    _ColumnID                           int           NOT NULL CONSTRAINT FK__identity_columns__ColumnID      REFERENCES dbo.[Column]     (_ColumnID),
+    _DatabaseID                         int           NOT NULL CONSTRAINT FK__identity_columns__DatabaseID    REFERENCES dbo.[Database]   (_DatabaseID) ON DELETE CASCADE,
+    _ObjectID                           bigint        NOT NULL CONSTRAINT FK__identity_columns__ObjectID      REFERENCES dbo.[Object]     (_ObjectID),
+    _ColumnID                           bigint        NOT NULL CONSTRAINT FK__identity_columns__ColumnID      REFERENCES dbo.[Column]     (_ColumnID),
     --
     _InsertDate                         datetime2     NOT NULL CONSTRAINT DF__identity_columns__InsertDate    DEFAULT (SYSUTCDATETIME()),
     _ModifyDate                         datetime2     NOT NULL CONSTRAINT DF__identity_columns__ModifyDate    DEFAULT (SYSUTCDATETIME()),
@@ -53,6 +53,7 @@ CREATE TABLE dbo._identity_columns (
     is_dropped_ledger_column            bit               NULL, -- Added: SQL Server 2022
 
     CONSTRAINT CPK__identity_columns__ColumnID PRIMARY KEY CLUSTERED (_ColumnID),
+    INDEX IX__identity_columns__ObjectID NONCLUSTERED (_ObjectID),
 );
 GO
 

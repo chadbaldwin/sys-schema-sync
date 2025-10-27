@@ -1,7 +1,7 @@
 CREATE TABLE dbo._indexes (
-    _DatabaseID                   int           NOT NULL CONSTRAINT FK__indexes__DatabaseID REFERENCES dbo.[Database] (_DatabaseID),
-    _ObjectID                     int           NOT NULL CONSTRAINT FK__indexes__ObjectID   REFERENCES dbo.[Object]   (_ObjectID),
-    _IndexID                      int           NOT NULL CONSTRAINT FK__indexes__IndexID    REFERENCES dbo.[Index]    (_IndexID),
+    _DatabaseID                   int           NOT NULL CONSTRAINT FK__indexes__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) ON DELETE CASCADE,
+    _ObjectID                     bigint        NOT NULL CONSTRAINT FK__indexes__ObjectID   REFERENCES dbo.[Object]   (_ObjectID),
+    _IndexID                      bigint        NOT NULL CONSTRAINT FK__indexes__IndexID    REFERENCES dbo.[Index]    (_IndexID),
     --
     _InsertDate                   datetime2     NOT NULL CONSTRAINT DF__indexes__InsertDate DEFAULT (SYSUTCDATETIME()),
     _ModifyDate                   datetime2     NOT NULL CONSTRAINT DF__indexes__ModifyDate DEFAULT (SYSUTCDATETIME()),
@@ -36,5 +36,6 @@ CREATE TABLE dbo._indexes (
     PERIOD FOR SYSTEM_TIME (_ValidFrom, _ValidTo),
     CONSTRAINT CPK__indexes__IndexID PRIMARY KEY CLUSTERED (_IndexID),
     INDEX IX__indexes__DatabaseID NONCLUSTERED (_DatabaseID),
+    INDEX IX__indexes__ObjectID NONCLUSTERED (_ObjectID),
 ) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo._indexes_history, DATA_CONSISTENCY_CHECK = ON, HISTORY_RETENTION_PERIOD = 6 MONTH));
 GO

@@ -1,5 +1,5 @@
 CREATE TABLE dbo._syspublications (
-    _DatabaseID                     int                 NOT NULL CONSTRAINT FK__syspublications__DatabaseID REFERENCES dbo.[Database] (_DatabaseID),
+    _DatabaseID                     int                 NOT NULL CONSTRAINT FK__syspublications__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) ON DELETE CASCADE,
     _CollectionDate                 datetime2           NOT NULL,
     --
     [description]                   nvarchar(255)       NULL,

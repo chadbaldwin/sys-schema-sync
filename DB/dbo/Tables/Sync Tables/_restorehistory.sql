@@ -1,5 +1,5 @@
 CREATE TABLE dbo._restorehistory (
-    _InstanceID                 int             NOT NULL CONSTRAINT FK__restorehistory__InstanceID REFERENCES dbo.[Instance] (_InstanceID),
+    _InstanceID                 int             NOT NULL CONSTRAINT FK__restorehistory__InstanceID REFERENCES dbo.[Instance] (_InstanceID) ON DELETE CASCADE,
     _CollectionDate             datetime2       NOT NULL,
     --
     restore_history_id          int             NOT NULL,

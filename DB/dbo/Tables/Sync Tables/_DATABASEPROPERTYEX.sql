@@ -1,5 +1,5 @@
 CREATE TABLE dbo._DATABASEPROPERTYEX (
-    _DatabaseID                                 int             NOT NULL CONSTRAINT FK__DATABASEPROPERTYEX__DatabaseID REFERENCES dbo.[Database] (_DatabaseID),
+    _DatabaseID                                 int             NOT NULL CONSTRAINT FK__DATABASEPROPERTYEX__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) ON DELETE CASCADE,
     _CollectionDate                             datetime2       NOT NULL,
     --
     Collation                                   nvarchar(128)       NULL,

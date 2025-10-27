@@ -1,6 +1,6 @@
 CREATE TABLE dbo._missing_indexes (
-    _DatabaseID         int            NOT NULL CONSTRAINT FK__missing_indexes__DatabaseID REFERENCES dbo.[Database] (_DatabaseID),
-    _ObjectID           int            NOT NULL CONSTRAINT FK__missing_indexes__ObjectID   REFERENCES dbo.[Object]   (_ObjectID),
+    _DatabaseID         int            NOT NULL CONSTRAINT FK__missing_indexes__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) ON DELETE CASCADE,
+    _ObjectID           bigint         NOT NULL CONSTRAINT FK__missing_indexes__ObjectID   REFERENCES dbo.[Object]   (_ObjectID),
     --
     _InsertDate         datetime2      NOT NULL CONSTRAINT DF__missing_indexes__InsertDate DEFAULT (SYSUTCDATETIME()),
     _ModifyDate         datetime2      NOT NULL CONSTRAINT DF__missing_indexes__ModifyDate DEFAULT (SYSUTCDATETIME()),

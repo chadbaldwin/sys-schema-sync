@@ -1,5 +1,5 @@
 CREATE TABLE dbo._index_resumable_operations (
-    _DatabaseID          int           NOT NULL CONSTRAINT FK__index_resumable_operations__DatabaseID REFERENCES dbo.[Database] (_DatabaseID),
+    _DatabaseID          int           NOT NULL CONSTRAINT FK__index_resumable_operations__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) ON DELETE CASCADE,
     _CollectionDate      datetime2     NOT NULL,
     --
     [object_id]          int           NOT NULL,

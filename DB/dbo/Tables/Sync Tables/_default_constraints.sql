@@ -1,8 +1,8 @@
 CREATE TABLE dbo._default_constraints (
-    _DatabaseID         int           NOT NULL CONSTRAINT FK__default_constraints__DatabaseID     REFERENCES dbo.[Database] (_DatabaseID),
-    _ObjectID           int           NOT NULL CONSTRAINT FK__default_constraints__ObjectID       REFERENCES dbo.[Object]   (_ObjectID),
-    _ParentObjectID     int           NOT NULL CONSTRAINT FK__default_constraints__ParentObjectID REFERENCES dbo.[Object]   (_ObjectID),
-    _ParentColumnID     int           NOT NULL CONSTRAINT FK__default_constraints__ParentColumnID REFERENCES dbo.[Column]   (_ColumnID),
+    _DatabaseID         int           NOT NULL CONSTRAINT FK__default_constraints__DatabaseID     REFERENCES dbo.[Database] (_DatabaseID) ON DELETE CASCADE,
+    _ObjectID           bigint        NOT NULL CONSTRAINT FK__default_constraints__ObjectID       REFERENCES dbo.[Object]   (_ObjectID),
+    _ParentObjectID     bigint        NOT NULL CONSTRAINT FK__default_constraints__ParentObjectID REFERENCES dbo.[Object]   (_ObjectID),
+    _ParentColumnID     bigint        NOT NULL CONSTRAINT FK__default_constraints__ParentColumnID REFERENCES dbo.[Column]   (_ColumnID),
     --
     _InsertDate         datetime2     NOT NULL CONSTRAINT DF__default_constraints__InsertDate     DEFAULT (SYSUTCDATETIME()),
     _ModifyDate         datetime2     NOT NULL CONSTRAINT DF__default_constraints__ModifyDate     DEFAULT (SYSUTCDATETIME()),
@@ -29,5 +29,7 @@ CREATE TABLE dbo._default_constraints (
     PERIOD FOR SYSTEM_TIME (_ValidFrom, _ValidTo),
     CONSTRAINT CPK__default_constraints__ObjectID PRIMARY KEY CLUSTERED (_ObjectID),
     INDEX IX__default_constraints__DatabaseID NONCLUSTERED (_DatabaseID),
+    INDEX IX__default_constraints__ParentColumnID NONCLUSTERED (_ParentColumnID),
+    INDEX IX__default_constraints__ParentObjectID NONCLUSTERED (_ParentObjectID),
 ) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo._default_constraints_history, DATA_CONSISTENCY_CHECK = ON, HISTORY_RETENTION_PERIOD = 6 MONTH));
 GO

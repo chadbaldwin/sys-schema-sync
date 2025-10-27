@@ -1,5 +1,5 @@
 CREATE TABLE dbo._partition_parameters (
-    _DatabaseID     int           NOT NULL CONSTRAINT FK__partition_parameters__DatabaseID REFERENCES dbo.[Database] (_DatabaseID),
+    _DatabaseID     int           NOT NULL CONSTRAINT FK__partition_parameters__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) ON DELETE CASCADE,
     _CollectionDate datetime2     NOT NULL,
     --
     function_id     int           NOT NULL,
