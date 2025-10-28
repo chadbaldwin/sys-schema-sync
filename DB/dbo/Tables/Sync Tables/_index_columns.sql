@@ -1,8 +1,8 @@
 CREATE TABLE dbo._index_columns (
-    _DatabaseID                int        NOT NULL CONSTRAINT FK__index_columns__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) ON DELETE CASCADE,
-    _ObjectID                  bigint     NOT NULL CONSTRAINT FK__index_columns__ObjectID   REFERENCES dbo.[Object]   (_ObjectID),
-    _IndexID                   bigint     NOT NULL CONSTRAINT FK__index_columns__IndexID    REFERENCES dbo.[Index]    (_IndexID),
-    _ColumnID                  bigint     NOT NULL CONSTRAINT FK__index_columns__ColumnID   REFERENCES dbo.[Column]   (_ColumnID),
+    _DatabaseID                int        NOT NULL CONSTRAINT FK__index_columns__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) INDEX IX__index_columns__DatabaseID,
+    _ObjectID                  bigint     NOT NULL CONSTRAINT FK__index_columns__ObjectID   REFERENCES dbo.[Object]   (_ObjectID)   INDEX IX__index_columns__ObjectID,
+    _IndexID                   bigint     NOT NULL CONSTRAINT FK__index_columns__IndexID    REFERENCES dbo.[Index]    (_IndexID),   -- Covered by CIX
+    _ColumnID                  bigint     NOT NULL CONSTRAINT FK__index_columns__ColumnID   REFERENCES dbo.[Column]   (_ColumnID)   INDEX IX__index_columns__ColumnID,
     --
     _InsertDate                datetime2  NOT NULL CONSTRAINT DF__index_columns__InsertDate DEFAULT (SYSUTCDATETIME()),
     _ModifyDate                datetime2  NOT NULL CONSTRAINT DF__index_columns__ModifyDate DEFAULT (SYSUTCDATETIME()),
@@ -23,10 +23,5 @@ CREATE TABLE dbo._index_columns (
 
     PERIOD FOR SYSTEM_TIME (_ValidFrom, _ValidTo),
     CONSTRAINT CPK__index_columns__IndexID__ColumnID PRIMARY KEY CLUSTERED (_IndexID, _ColumnID),
-    INDEX IX__index_columns__ObjectID NONCLUSTERED (_ObjectID),
-    INDEX IX__index_columns__ColumnID NONCLUSTERED (_ColumnID),
 ) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo._index_columns_history, DATA_CONSISTENCY_CHECK = ON, HISTORY_RETENTION_PERIOD = 6 MONTH));
-GO
-
-CREATE NONCLUSTERED INDEX IX__index_columns__DatabaseID ON dbo._index_columns (_DatabaseID) INCLUDE (_ObjectID, _IndexID);
 GO

@@ -1,5 +1,5 @@
 CREATE TABLE dbo._dm_xe_sessions (
-    _InstanceID                int           NOT NULL CONSTRAINT FK__dm_xe_sessions__InstanceID REFERENCES dbo.[Instance] (_InstanceID) ON DELETE CASCADE,
+    _InstanceID                int           NOT NULL CONSTRAINT FK__dm_xe_sessions__InstanceID REFERENCES dbo.[Instance] (_InstanceID), -- Covered by CIX
     _CollectionDate            datetime2     NOT NULL,
     --
     [address]                  varbinary(8)  NOT NULL,

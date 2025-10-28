@@ -1,6 +1,6 @@
 CREATE TABLE dbo._sysarticles (
-    _DatabaseID               int            NOT NULL CONSTRAINT FK__sysarticles__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) ON DELETE CASCADE,
-    _ObjectID                 bigint         NOT NULL CONSTRAINT FK__sysarticles__ObjectID   REFERENCES dbo.[Object]   (_ObjectID),
+    _DatabaseID               int            NOT NULL CONSTRAINT FK__sysarticles__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) INDEX IX__sysarticles__DatabaseID,
+    _ObjectID                 bigint         NOT NULL CONSTRAINT FK__sysarticles__ObjectID   REFERENCES dbo.[Object]   (_ObjectID),  -- Covered by CIX
     --
     _InsertDate               datetime2      NOT NULL CONSTRAINT DF__sysarticles__InsertDate DEFAULT (SYSUTCDATETIME()),
     _ModifyDate               datetime2      NOT NULL CONSTRAINT DF__sysarticles__ModifyDate DEFAULT (SYSUTCDATETIME()),
@@ -34,6 +34,5 @@ CREATE TABLE dbo._sysarticles (
 
     PERIOD FOR SYSTEM_TIME (_ValidFrom, _ValidTo),
     CONSTRAINT CPK__sysarticles__ObjectID_artid PRIMARY KEY CLUSTERED (_ObjectID, artid),
-    INDEX IX__sysarticles__DatabaseID NONCLUSTERED (_DatabaseID),
 ) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo._sysarticles_history, DATA_CONSISTENCY_CHECK = ON, HISTORY_RETENTION_PERIOD = 6 MONTH));
 GO

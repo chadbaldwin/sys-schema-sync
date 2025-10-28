@@ -1,7 +1,7 @@
 CREATE TABLE dbo._computed_columns (
-    _DatabaseID                         int           NOT NULL CONSTRAINT FK__computed_columns__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) ON DELETE CASCADE,
-    _ObjectID                           bigint        NOT NULL CONSTRAINT FK__computed_columns__ObjectID   REFERENCES dbo.[Object]   (_ObjectID),
-    _ColumnID                           bigint        NOT NULL CONSTRAINT FK__computed_columns__ColumnID   REFERENCES dbo.[Column]   (_ColumnID),
+    _DatabaseID                         int           NOT NULL CONSTRAINT FK__computed_columns__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) INDEX IX__computed_columns__DatabaseID,
+    _ObjectID                           bigint        NOT NULL CONSTRAINT FK__computed_columns__ObjectID   REFERENCES dbo.[Object]   (_ObjectID)   INDEX IX__computed_columns__ObjectID,
+    _ColumnID                           bigint        NOT NULL CONSTRAINT FK__computed_columns__ColumnID   REFERENCES dbo.[Column]   (_ColumnID),  -- Covered by CIX
     --
     _InsertDate                         datetime2     NOT NULL CONSTRAINT DF__computed_columns__InsertDate DEFAULT (SYSUTCDATETIME()),
     _ModifyDate                         datetime2     NOT NULL CONSTRAINT DF__computed_columns__ModifyDate DEFAULT (SYSUTCDATETIME()),
@@ -56,7 +56,5 @@ CREATE TABLE dbo._computed_columns (
 
     PERIOD FOR SYSTEM_TIME (_ValidFrom, _ValidTo),
     CONSTRAINT CPK__computed_columns__ColumnID PRIMARY KEY CLUSTERED (_ColumnID),
-    INDEX IX__computed_columns__DatabaseID NONCLUSTERED (_DatabaseID),
-    INDEX IX__computed_columns__ObjectID NONCLUSTERED (_ObjectID),
 ) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo._computed_columns_history, DATA_CONSISTENCY_CHECK = ON, HISTORY_RETENTION_PERIOD = 6 MONTH));
 GO

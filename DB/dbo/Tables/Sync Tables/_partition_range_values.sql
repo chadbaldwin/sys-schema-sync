@@ -1,11 +1,11 @@
 CREATE TABLE dbo._partition_range_values (
-    _DatabaseID     int           NOT NULL CONSTRAINT FK__partition_range_values__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) ON DELETE CASCADE,
-    _CollectionDate datetime2     NOT NULL,
+    _DatabaseID     int         NOT NULL CONSTRAINT FK__partition_range_values__DatabaseID REFERENCES dbo.[Database] (_DatabaseID), -- Covered by CIX
+    _CollectionDate datetime2   NOT NULL,
     --
-    function_id     int           NOT NULL,
-    boundary_id     int           NOT NULL,
-    parameter_id    int           NOT NULL,
-    [value]         sql_variant       NULL,
+    function_id     int         NOT NULL,
+    boundary_id     int         NOT NULL,
+    parameter_id    int         NOT NULL,
+    [value]         sql_variant     NULL,
 
     INDEX CIX__partition_range_values__DatabaseID_function_id_boundary_id_parameter_id UNIQUE CLUSTERED (_DatabaseID, function_id, boundary_id, parameter_id),
 );

@@ -1,5 +1,5 @@
 CREATE TABLE dbo._database_automatic_tuning_options (
-    _DatabaseID        int           NOT NULL CONSTRAINT FK__database_automatic_tuning_options__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) ON DELETE CASCADE,
+    _DatabaseID        int           NOT NULL CONSTRAINT FK__database_automatic_tuning_options__DatabaseID REFERENCES dbo.[Database] (_DatabaseID), -- Covered by CIX
     --
     _InsertDate        datetime2     NOT NULL CONSTRAINT DF__database_automatic_tuning_options__InsertDate DEFAULT (SYSUTCDATETIME()),
     _ModifyDate        datetime2     NOT NULL CONSTRAINT DF__database_automatic_tuning_options__ModifyDate DEFAULT (SYSUTCDATETIME()),

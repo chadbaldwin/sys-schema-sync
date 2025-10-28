@@ -1,6 +1,6 @@
 CREATE TABLE dbo._databases (
-    _InstanceID                                int              NOT NULL CONSTRAINT FK__databases__InstanceID REFERENCES dbo.Instance   (_InstanceID) ON DELETE CASCADE,
-    _DatabaseID                                int                  NULL CONSTRAINT FK__databases__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) ON DELETE CASCADE,
+    _InstanceID                                int              NOT NULL CONSTRAINT FK__databases__InstanceID REFERENCES dbo.Instance   (_InstanceID), -- Covered by CIX
+    _DatabaseID                                int                  NULL CONSTRAINT FK__databases__DatabaseID REFERENCES dbo.[Database] (_DatabaseID)  INDEX IX__databases__DatabaseID,
     --
     _InsertDate                                datetime2        NOT NULL CONSTRAINT DF__databases__InsertDate DEFAULT (SYSUTCDATETIME()),
     _ModifyDate                                datetime2        NOT NULL CONSTRAINT DF__databases__ModifyDate DEFAULT (SYSUTCDATETIME()),
@@ -109,6 +109,5 @@ CREATE TABLE dbo._databases (
 
     PERIOD FOR SYSTEM_TIME (_ValidFrom, _ValidTo),
     CONSTRAINT CPK__databases__InstanceID_name PRIMARY KEY CLUSTERED (_InstanceID, [name]),
-    INDEX IX__databases__DatabaseID NONCLUSTERED (_DatabaseID),
 ) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo._databases_history, DATA_CONSISTENCY_CHECK = ON, HISTORY_RETENTION_PERIOD = 6 MONTH));
 GO

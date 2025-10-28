@@ -1,8 +1,8 @@
 CREATE TABLE dbo._check_constraints (
-    _DatabaseID             int           NOT NULL CONSTRAINT FK__check_constraints__DatabaseID     REFERENCES dbo.[Database] (_DatabaseID) ON DELETE CASCADE,
-    _ObjectID               bigint        NOT NULL CONSTRAINT FK__check_constraints__ObjectID       REFERENCES dbo.[Object]   (_ObjectID),
-    _ParentObjectID         bigint        NOT NULL CONSTRAINT FK__check_constraints__ParentObjectID REFERENCES dbo.[Object]   (_ObjectID),
-    _ParentColumnID         bigint            NULL CONSTRAINT FK__check_constraints__ParentColumnID REFERENCES dbo.[Column]   (_ColumnID),
+    _DatabaseID             int           NOT NULL CONSTRAINT FK__check_constraints__DatabaseID     REFERENCES dbo.[Database] (_DatabaseID) INDEX IX__check_constraints__DatabaseID,
+    _ObjectID               bigint        NOT NULL CONSTRAINT FK__check_constraints__ObjectID       REFERENCES dbo.[Object]   (_ObjectID),  -- Covered by CIX
+    _ParentObjectID         bigint        NOT NULL CONSTRAINT FK__check_constraints__ParentObjectID REFERENCES dbo.[Object]   (_ObjectID)   INDEX IX__check_constraints__ParentObjectID,
+    _ParentColumnID         bigint            NULL CONSTRAINT FK__check_constraints__ParentColumnID REFERENCES dbo.[Column]   (_ColumnID)   INDEX IX__check_constraints__ParentColumnID,
     --
     _InsertDate             datetime2     NOT NULL CONSTRAINT DF__check_constraints__InsertDate     DEFAULT (SYSUTCDATETIME()),
     _ModifyDate             datetime2     NOT NULL CONSTRAINT DF__check_constraints__ModifyDate     DEFAULT (SYSUTCDATETIME()),
@@ -32,8 +32,5 @@ CREATE TABLE dbo._check_constraints (
 
     PERIOD FOR SYSTEM_TIME (_ValidFrom, _ValidTo),
     CONSTRAINT CPK__check_constraints__ObjectID PRIMARY KEY CLUSTERED (_ObjectID),
-    INDEX IX__check_constraints__DatabaseID NONCLUSTERED (_DatabaseID),
-    INDEX IX__check_constraints__ParentObjectID NONCLUSTERED (_ParentObjectID),
-    INDEX IX__check_constraints__ParentColumnID NONCLUSTERED (_ParentColumnID),
 ) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo._check_constraints_history, DATA_CONSISTENCY_CHECK = ON, HISTORY_RETENTION_PERIOD = 6 MONTH));
 GO

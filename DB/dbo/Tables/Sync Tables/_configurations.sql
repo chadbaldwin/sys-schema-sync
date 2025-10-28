@@ -1,5 +1,5 @@
 CREATE TABLE dbo._configurations (
-    _InstanceID      int           NOT NULL CONSTRAINT FK__configurations__InstanceID REFERENCES dbo.Instance (_InstanceID) ON DELETE CASCADE,
+    _InstanceID      int           NOT NULL CONSTRAINT FK__configurations__InstanceID REFERENCES dbo.Instance (_InstanceID), -- Covered by CIX
     --
     _InsertDate      datetime2     NOT NULL CONSTRAINT DF__configurations__InsertDate DEFAULT (SYSUTCDATETIME()),
     _ModifyDate      datetime2     NOT NULL CONSTRAINT DF__configurations__ModifyDate DEFAULT (SYSUTCDATETIME()),

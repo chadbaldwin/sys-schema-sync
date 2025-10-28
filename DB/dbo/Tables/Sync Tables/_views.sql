@@ -1,6 +1,6 @@
 CREATE TABLE dbo._views (
-    _DatabaseID                 int           NOT NULL CONSTRAINT FK__views__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) ON DELETE CASCADE,
-    _ObjectID                   bigint        NOT NULL CONSTRAINT FK__views__ObjectID   REFERENCES dbo.[Object]   (_ObjectID),
+    _DatabaseID                 int           NOT NULL CONSTRAINT FK__views__DatabaseID REFERENCES dbo.[Database] (_DatabaseID)  INDEX IX__views__DatabaseID,
+    _ObjectID                   bigint        NOT NULL CONSTRAINT FK__views__ObjectID   REFERENCES dbo.[Object]   (_ObjectID),   -- Covered by CIX
     --
     _InsertDate                 datetime2     NOT NULL CONSTRAINT DF__views__InsertDate DEFAULT (SYSUTCDATETIME()),
     _ModifyDate                 datetime2     NOT NULL CONSTRAINT DF__views__ModifyDate DEFAULT (SYSUTCDATETIME()),
@@ -34,6 +34,5 @@ CREATE TABLE dbo._views (
 
     PERIOD FOR SYSTEM_TIME (_ValidFrom, _ValidTo),
     CONSTRAINT CPK__views__ObjectID PRIMARY KEY CLUSTERED (_ObjectID),
-    INDEX IX__views__DatabaseID NONCLUSTERED (_DatabaseID),
 ) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo._views_history, DATA_CONSISTENCY_CHECK = ON, HISTORY_RETENTION_PERIOD = 6 MONTH));
 GO

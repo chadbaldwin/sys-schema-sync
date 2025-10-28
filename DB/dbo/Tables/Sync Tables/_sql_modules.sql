@@ -1,6 +1,6 @@
 CREATE TABLE dbo._sql_modules (
-    _DatabaseID             int        NOT NULL CONSTRAINT FK__sql_modules__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) ON DELETE CASCADE,
-    _ObjectID               bigint     NOT NULL CONSTRAINT FK__sql_modules__ObjectID   REFERENCES dbo.[Object]   (_ObjectID),
+    _DatabaseID             int        NOT NULL CONSTRAINT FK__sql_modules__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) INDEX IX__sql_modules__DatabaseID,
+    _ObjectID               bigint     NOT NULL CONSTRAINT FK__sql_modules__ObjectID   REFERENCES dbo.[Object]   (_ObjectID),  -- Covered by CIX
     --
     _InsertDate             datetime2  NOT NULL CONSTRAINT DF__sql_modules__InsertDate DEFAULT (SYSUTCDATETIME()),
     _ModifyDate             datetime2  NOT NULL CONSTRAINT DF__sql_modules__ModifyDate DEFAULT (SYSUTCDATETIME()),
@@ -9,7 +9,7 @@ CREATE TABLE dbo._sql_modules (
     _ValidTo                datetime2  GENERATED ALWAYS AS ROW END   NOT NULL,
     --
     [object_id]             int        NOT NULL,
-    _ObjectDefinitionID     int        NOT NULL CONSTRAINT FK__sql_modules__ObjectDefinitionID REFERENCES dbo.ObjectDefinition (_ObjectDefinitionID),
+    _ObjectDefinitionID     int        NOT NULL CONSTRAINT FK__sql_modules__ObjectDefinitionID REFERENCES dbo.ObjectDefinition (_ObjectDefinitionID) INDEX IX__sql_modules__ObjectDefinitionID,
     uses_ansi_nulls         bit            NULL,
     uses_quoted_identifier  bit            NULL,
     is_schema_bound         bit            NULL,
@@ -23,7 +23,5 @@ CREATE TABLE dbo._sql_modules (
 
     PERIOD FOR SYSTEM_TIME (_ValidFrom, _ValidTo),
     CONSTRAINT CPK__sql_modules__ObjectID PRIMARY KEY CLUSTERED (_ObjectID),
-    INDEX IX__sql_modules__DatabaseID NONCLUSTERED (_DatabaseID),
-    INDEX IX__sql_modules__ObjectDefinitionID NONCLUSTERED (_ObjectDefinitionID),
 ) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo._sql_modules_history, DATA_CONSISTENCY_CHECK = ON, HISTORY_RETENTION_PERIOD = 6 MONTH));
 GO

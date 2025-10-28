@@ -1,5 +1,5 @@
 CREATE TABLE dbo._database_files (
-    _DatabaseID              int              NOT NULL CONSTRAINT FK__database_files__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) ON DELETE CASCADE,
+    _DatabaseID              int              NOT NULL CONSTRAINT FK__database_files__DatabaseID REFERENCES dbo.[Database] (_DatabaseID), -- Covered by CIX
     _CollectionDate          datetime2        NOT NULL,
     --
     [file_id]                int              NOT NULL,
@@ -33,6 +33,6 @@ CREATE TABLE dbo._database_files (
     redo_target_fork_guid    uniqueidentifier     NULL,
     backup_lsn               numeric(25,0)        NULL,
 
-    INDEX CIX__database_files__DatabaseID CLUSTERED (_DatabaseID),
+    INDEX CIX__database_files__DatabaseID_file_id UNIQUE CLUSTERED (_DatabaseID, [file_id]),
 );
 GO

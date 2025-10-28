@@ -1,6 +1,6 @@
 CREATE TABLE dbo._master_files (
-    _InstanceID              int              NOT NULL CONSTRAINT FK__master_files__InstanceID REFERENCES dbo.[Instance] (_InstanceID) ON DELETE CASCADE,
-    _DatabaseID              int                  NULL CONSTRAINT FK__master_files__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) ON DELETE CASCADE,
+    _InstanceID              int              NOT NULL CONSTRAINT FK__master_files__InstanceID REFERENCES dbo.[Instance] (_InstanceID), -- Covered by CIX
+    _DatabaseID              int                  NULL CONSTRAINT FK__master_files__DatabaseID REFERENCES dbo.[Database] (_DatabaseID)  INDEX IX__master_files__DatabaseID,
     --
     _InsertDate              datetime2        NOT NULL CONSTRAINT DF__master_files__InsertDate DEFAULT (SYSUTCDATETIME()),
     _ModifyDate              datetime2        NOT NULL CONSTRAINT DF__master_files__ModifyDate DEFAULT (SYSUTCDATETIME()),
@@ -40,8 +40,6 @@ CREATE TABLE dbo._master_files (
     backup_lsn               numeric(25,0)        NULL,
     credential_id            int                  NULL,
 
-    INDEX CIX__master_files__InstanceID__DatabaseID__DatabaseName_file_id CLUSTERED (_InstanceID, _DatabaseID, _DatabaseName, [file_id]),
-    INDEX IX__master_files__InstanceID__DatabaseName_file_id NONCLUSTERED (_InstanceID, _DatabaseName, [file_id]),
-    INDEX IX__master_files__DatabaseID NONCLUSTERED (_DatabaseID),
+    INDEX CIX__master_files__InstanceID__DatabaseName_file_id UNIQUE CLUSTERED (_InstanceID, _DatabaseName, [file_id]),
 );
 GO

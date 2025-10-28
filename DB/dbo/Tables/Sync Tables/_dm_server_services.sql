@@ -1,5 +1,5 @@
 CREATE TABLE dbo._dm_server_services (
-    _InstanceID                         int               NOT NULL CONSTRAINT FK__dm_server_services__InstanceID REFERENCES dbo.[Instance] (_InstanceID) ON DELETE CASCADE,
+    _InstanceID                         int               NOT NULL CONSTRAINT FK__dm_server_services__InstanceID REFERENCES dbo.[Instance] (_InstanceID), -- Covered by CIX
     _CollectionDate                     datetime2         NOT NULL,
     --
     servicename                         nvarchar(256)     NOT NULL,
@@ -15,6 +15,6 @@ CREATE TABLE dbo._dm_server_services (
     cluster_nodename                    nvarchar(256)         NULL,
     instant_file_initialization_enabled nvarchar(1)       NOT NULL,
 
-    INDEX CIX__dm_server_services__InstanceID CLUSTERED (_InstanceID),
+    INDEX CIX__dm_server_services__InstanceID_servicename UNIQUE CLUSTERED (_InstanceID, servicename),
 );
 GO

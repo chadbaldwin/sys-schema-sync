@@ -1,5 +1,5 @@
 CREATE TABLE dbo._partition_functions (
-    _DatabaseID             int           NOT NULL CONSTRAINT FK__partition_functions__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) ON DELETE CASCADE,
+    _DatabaseID             int           NOT NULL CONSTRAINT FK__partition_functions__DatabaseID REFERENCES dbo.[Database] (_DatabaseID), -- Covered by CIX
     _CollectionDate         datetime2     NOT NULL,
     --
     [name]                  nvarchar(128) NOT NULL,

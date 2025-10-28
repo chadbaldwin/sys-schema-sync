@@ -1,5 +1,5 @@
 CREATE TABLE dbo._dm_os_memory_nodes (
-    _InstanceID                        int       NOT NULL CONSTRAINT FK__dm_os_memory_nodes__InstanceID REFERENCES dbo.[Instance] (_InstanceID) ON DELETE CASCADE,
+    _InstanceID                        int       NOT NULL CONSTRAINT FK__dm_os_memory_nodes__InstanceID REFERENCES dbo.[Instance] (_InstanceID), -- Covered by CIX
     _CollectionDate                    datetime2 NOT NULL,
     --
     memory_node_id                     smallint  NOT NULL,
@@ -15,6 +15,6 @@ CREATE TABLE dbo._dm_os_memory_nodes (
     foreign_committed_kb               bigint    NOT NULL,
     target_kb                          bigint    NOT NULL,
 
-    INDEX CIX__dm_os_memory_nodes__InstanceID CLUSTERED (_InstanceID),
+    INDEX CIX__dm_os_memory_nodes__InstanceID_memory_node_id UNIQUE CLUSTERED (_InstanceID, memory_node_id),
 );
 GO

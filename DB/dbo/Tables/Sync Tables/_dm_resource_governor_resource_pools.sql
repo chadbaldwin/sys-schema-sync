@@ -1,5 +1,5 @@
 CREATE TABLE dbo._dm_resource_governor_resource_pools (
-    _InstanceID                           int           NOT NULL CONSTRAINT FK__dm_resource_governor_resource_pools__InstanceID REFERENCES dbo.[Instance] (_InstanceID) ON DELETE CASCADE,
+    _InstanceID                           int           NOT NULL CONSTRAINT FK__dm_resource_governor_resource_pools__InstanceID REFERENCES dbo.[Instance] (_InstanceID), -- Covered by CIX
     _CollectionDate                       datetime2     NOT NULL,
     --
     pool_id                               int           NOT NULL,
@@ -51,6 +51,6 @@ CREATE TABLE dbo._dm_resource_governor_resource_pools (
     total_cpu_usage_preemptive_ms         bigint        NOT NULL,
     total_cpu_usage_actual_ms             bigint            NULL, -- Added: SQL Server 2025
 
-    INDEX CIX__dm_resource_governor_resource_pools__InstanceID CLUSTERED (_InstanceID),
+    INDEX CIX__dm_resource_governor_resource_pools__InstanceID_pool_id UNIQUE CLUSTERED (_InstanceID, pool_id),
 );
 GO

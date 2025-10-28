@@ -1,10 +1,10 @@
 CREATE TABLE dbo._stats (
-    _DatabaseID                  int           NOT NULL CONSTRAINT FK__stats__DatabaseID   REFERENCES dbo.[Database]   (_DatabaseID) ON DELETE CASCADE,
-    _ObjectID                    bigint        NOT NULL CONSTRAINT FK__stats__ObjectID     REFERENCES dbo.[Object]     (_ObjectID),
-    _IndexID                     bigint        NOT NULL CONSTRAINT FK__stats__IndexID      REFERENCES dbo.[Index]      (_IndexID),
+    _DatabaseID                  int           NOT NULL CONSTRAINT FK__stats__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) INDEX IX__stats__DatabaseID,
+    _ObjectID                    bigint        NOT NULL CONSTRAINT FK__stats__ObjectID   REFERENCES dbo.[Object]   (_ObjectID),  -- Covered by other IX
+    _IndexID                     bigint        NOT NULL CONSTRAINT FK__stats__IndexID    REFERENCES dbo.[Index]    (_IndexID),   -- Covered by CIX
     --
-    _InsertDate                  datetime2     NOT NULL CONSTRAINT DF__stats__InsertDate   DEFAULT (SYSUTCDATETIME()),
-    _ModifyDate                  datetime2     NOT NULL CONSTRAINT DF__stats__ModifyDate   DEFAULT (SYSUTCDATETIME()),
+    _InsertDate                  datetime2     NOT NULL CONSTRAINT DF__stats__InsertDate DEFAULT (SYSUTCDATETIME()),
+    _ModifyDate                  datetime2     NOT NULL CONSTRAINT DF__stats__ModifyDate DEFAULT (SYSUTCDATETIME()),
     _RowHash                     binary(32)    NOT NULL,
     --
     [object_id]                  int           NOT NULL,
@@ -26,7 +26,6 @@ CREATE TABLE dbo._stats (
     replica_name                 nvarchar(128)     NULL, -- Added: SQL Server 2025
 
     CONSTRAINT CPK__stats__IndexID PRIMARY KEY CLUSTERED (_IndexID),
-    INDEX IX__stats__DatabaseID NONCLUSTERED (_DatabaseID),
-    INDEX IX__stats__ObjectID NONCLUSTERED (_ObjectID),
+    CONSTRAINT UQ__stats__ObjectID_name UNIQUE NONCLUSTERED (_ObjectID, [name]),
 );
 GO

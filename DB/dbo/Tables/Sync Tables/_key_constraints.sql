@@ -1,8 +1,8 @@
 CREATE TABLE dbo._key_constraints (
-    _DatabaseID         int           NOT NULL CONSTRAINT FK__key_constraints__DatabaseID     REFERENCES dbo.[Database] (_DatabaseID) ON DELETE CASCADE,
-    _ObjectID           bigint        NOT NULL CONSTRAINT FK__key_constraints__ObjectID       REFERENCES dbo.[Object]   (_ObjectID),
-    _IndexID            bigint        NOT NULL CONSTRAINT FK__key_constraints__IndexID        REFERENCES dbo.[Index]    (_IndexID),
-    _ParentObjectID     bigint        NOT NULL CONSTRAINT FK__key_constraints__ParentObjectID REFERENCES dbo.[Object]   (_ObjectID),
+    _DatabaseID         int           NOT NULL CONSTRAINT FK__key_constraints__DatabaseID     REFERENCES dbo.[Database] (_DatabaseID)  INDEX IX__key_constraints__DatabaseID,
+    _ObjectID           bigint        NOT NULL CONSTRAINT FK__key_constraints__ObjectID       REFERENCES dbo.[Object]   (_ObjectID),   -- Covered by CIX
+    _IndexID            bigint        NOT NULL CONSTRAINT FK__key_constraints__IndexID        REFERENCES dbo.[Index]    (_IndexID)     INDEX IX__key_constraints__IndexID,
+    _ParentObjectID     bigint        NOT NULL CONSTRAINT FK__key_constraints__ParentObjectID REFERENCES dbo.[Object]   (_ObjectID)    INDEX IX__key_constraints__ParentObjectID,
     --
     _InsertDate         datetime2     NOT NULL CONSTRAINT DF__key_constraints__InsertDate     DEFAULT (SYSUTCDATETIME()),
     _ModifyDate         datetime2     NOT NULL CONSTRAINT DF__key_constraints__ModifyDate     DEFAULT (SYSUTCDATETIME()),
@@ -28,8 +28,5 @@ CREATE TABLE dbo._key_constraints (
 
     PERIOD FOR SYSTEM_TIME (_ValidFrom, _ValidTo),
     CONSTRAINT CPK__key_constraints__ObjectID PRIMARY KEY CLUSTERED (_ObjectID),
-    INDEX IX__key_constraints__DatabaseID NONCLUSTERED (_DatabaseID),
-    INDEX IX__key_constraints__IndexID NONCLUSTERED (_IndexID),
-    INDEX IX__key_constraints__ParentObjectID NONCLUSTERED (_ParentObjectID),
 ) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo._key_constraints_history, DATA_CONSISTENCY_CHECK = ON, HISTORY_RETENTION_PERIOD = 6 MONTH));
 GO
