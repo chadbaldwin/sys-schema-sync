@@ -39,57 +39,27 @@ For now, because this project is still in the early stages of development, there
 
 ### First things first...Set up the configuration file
 
-The main configuration file controls multiple things. It defines how the sync concurrency level of the service, the connection strings, the name of the new central database, which databases to sync from, etc.
+The main configuration file controls multiple things. It controls settings like concurrency levels for syncing, connection strings, the name of the new central database, etc.
 
 The file can be found here: `/Service/appsettings.jsonc`
 
-Note: The SysSchemaSync Service uses a generic PowerShell utility script that I use in multiple projects, which is why some of the configuration parameters are pre-configured and do not need to be changed.
+EXAMPLE file:
 
 ```jsonc
 {
   // For now, this is simply the NAME of the folder to create within the "Service" folder to use for logs
   "LogDirectory": "Logs",
-
-  // Tells the generic PowerShell script runner what Instances and Databases to run against
-  "TargetDatabaseListScriptPath": "target_databases.sql", // Do not change
-
-  // Connection string pointing to where the SysSchemaSync database was deployed
-  // This connection string is used by the generic script runner to get the list of databases to run against
-  "TargetDatabaseListConnectionString": "Server=MYINSTANCE;Database=SysSchemaSync;MultiSubnetFailover=True;Application Name=SysSchemaSyncService",
-
-  // Tells the generic PowerShell script runner what file we want to execute for each instance/database
-  "PowerShellScriptToRunPath": "sync_objects.ps1", // Do not change
+  "LogRetentionDays": 30,
 
   // How many instances do we want to run syncs against in parallel
-  "InstanceConcurrencyLimit": 10,
+  "InstanceConcurrencyLimit": 5,
   // How many databases PER INSTANCE do we want to run syncs against in parallel?
-  "DatabaseConcurrencyLimit": 3,
-  // If Instance is set to 10 and Database is set to 3, then the highest number of concurrent processes possible is 30
+  "DatabaseConcurrencyLimit": 2,
+  // If Instance is set to 10 and Database is set to 3, then the highest number of concurrent processes possible is 30.
 
-  // This connection string is used for two purposes...
-  // 1) To know what to name the database upon deploying the DACPAC
-  // 2) For the service to know where to push the collected data
-  "RepositoryDatabaseConnectionString": "Server=MYINSTANCE;Database=SysSchemaSync;MultiSubnetFailover=True;Application Name=SysSchemaSyncService",
-
-  // List of Instances and databases to target
-  "TargetDatabases": [
-    {
-      "Instance": "Instance1",
-      "Database": "DBFoo"
-    },
-    {
-      "Instance": "Instance1",
-      "Database": "DBBar"
-    },
-    {
-      "Instance": "Instance2",
-      "Database": "DBFoo"
-    },
-    {
-      "Instance": "Instance3",
-      "Database": "DBQux"
-    }
-  ]
+  // Connection string pointing to where the SysSchemaSync database was deployed
+  // This connection string is used by the SysSchemaSync scripts to know where to push the collected data.
+  "RepositoryDatabaseConnectionString": "Server=MYINSTANCE;Database=SysSchemaSync;MultiSubnetFailover=True;Application Name=SysSchemaSyncService"
 }
 ```
 
@@ -109,7 +79,7 @@ Use as follows:
 
 `.\publish_dacpac.ps1 -DacPacPath 'C:\Path\To\Wherever\You\Downloaded\The\DacPac\SysSchemaSync.dacpac'`
 
-The script will look up the connection string and database name from the service `/Service/appsettings.jsonc` file and publish the database.
+The script will look up the connection string and database name from the `/Service/appsettings.jsonc` and publish to the configured database.
 
 #### Using SSDT
 
@@ -117,9 +87,34 @@ Open the SSDT Solution `/DB/SysSchemaSync.sln`, build and publish the database m
 
 ### Configure the database
 
-Now that the database is published, we need to populate it with the list of instances and databases to want to sync from.
+Now that the database is published, we need to configure the list of instances/databases to sync.
 
-To do this, run the `/Service/update_targets.ps1` script. This will pull the list of instances and databases out of the `/Service/appsettings.jsonc` file and update the SysSchemaSync database.
+Do this by populating the `targets.json` file like so:
+
+```json
+[
+  {
+    "Instance": "Instance1",
+    "Database": "DBFoo"
+  },
+  {
+    "Instance": "Instance1",
+    "Database": "DBBar"
+  },
+  {
+    "Instance": "Instance2",
+    "Database": "DBFoo"
+  },
+  {
+    "Instance": "Instance3",
+    "Database": "DBQux"
+  }
+]
+```
+
+The connection string itself is handled by the syncing service using dbatools. Though this is likely to change in the future, for now, this was the easiest implementation. The service defaults to using Windows authentication.
+
+Once the `targets.json` file has been populated, run `/Service/update_targets.ps1`. This will pull the list of instances and databases out of the `/Service/targets.json` file and update the SysSchemaSync database.
 
 ### Deploy the service
 
@@ -127,7 +122,7 @@ Once that is set up, next you need to set up the sync service. Copy the "Service
 
 ### Schedule the service
 
-Now set up an automated job / Windows Scheduled Task to call `/Service/database_parallel_runner.ps1`. I recommend running it every 5 minutes for larger installations with hundreds of databases. You can run it as often as you like, but the process will only pick up items that are scheduled to run in the queue. If there's nothing to do, it will almost immediately close.
+Now set up an automated job / Windows Scheduled Task to call `/Service/database_parallel_runner.ps1`. I recommend running it every 5 minutes for larger installations with hundreds of databases. You can run it as often as you like, but the process will only pick up items that are scheduled to run in the queue in batches. If there's nothing to do, it will almost immediately close.
 
 > TODO: In the future possibly include a script to set up the scheduled task automatically?
 
@@ -137,6 +132,7 @@ That's it. So to sum it up...
 
 1. Configure `/Service/appsettings.jsonc` file
 1. Publish database
+1. Configure `/Service/targets.json` file
 1. Run `/Service/update_targets.ps1`
 1. Copy service files to host
 1. Set up scheduled job to run (recommended every 5 minutes)
@@ -289,14 +285,14 @@ GROUP BY vo.SchemaName, vo.ObjectName, od.ObjectDefinition
 
 SysSchemaSync consists of two parts, a database where all synced data is stored, and a service (PowerShell script) which is run on an interval to pick up items to sync.
 
-There are two types of syncs that can be configured "simple" and "complex", either of which can have an override export query, otherwise a default query is generated based on the SyncObjectName.
+There are two types of syncs that can be configured "simple" and "complex", either of which can have an override export query, otherwise a default query is generated based on the `SyncObjectName`.
 
 Both sync types require two things 1) a record in `import.SyncObject` and 2) a sync table for the data to go into (e.g. `dbo._dm_os_host_info`).
 
 * `import.SyncObject` configuration types
 * Required columns for all types:
   * `SyncObjectID`
-    * Can by anything as long as it's unique.
+    * Can be anything as long as it's unique.
     * Typically, if it is a `sys` schema object, then the `object_id` is used, but this is not required.
   * `SyncObjectName`
     * If `ExportQueryPath` is not provided, it must be the name of the source table as the name is used to generate the export query
@@ -327,7 +323,7 @@ Both sync types require two things 1) a record in `import.SyncObject` and 2) a s
 * Complex - "Upload and execute"
   * Useful for syncs that require some pre-processing before merging. For example when syncing `sys.columns` where `dbo.[Object]` and `dbo.[Column]` records need to be added and soft deleted/undeleted.
   * `ImportType`
-    * A user-defined table type which matches the query output (including order) and is passed into the configured `ImportProc`.
+    * A user-defined table type which matches the query output and is passed into the configured `ImportProc`.
     * Naming standard: `import.import_{sync table name}` (e.g. `import.import__objects`).
   * `ImportProc`
     * Stored procedure used for pre-processing and merging the result set into its target sync table.
@@ -337,6 +333,17 @@ Both sync types require two things 1) a record in `import.SyncObject` and 2) a s
 
 Once all of these items are created and populated, the system will ensure (upon deployment) that everything is configured correctly. Any errors and the `SyncObject` record will not get created/updated.
 
-The service runs on a regular interval, for example, every 5 minutes. It checks in with `import.vw_SyncObjectQueue` to see if there are any syncs which are now stale and need to be run. Checksum queries are run first to verify whether the sync can stop early otherwise the full sync is run.
+The service runs on a regular interval, for example, every 5 minutes. It checks in with `import.vw_DatabaseSyncObjectQueue` to see if there are any syncs which are now stale and need to be run. Checksum queries are run first to verify whether the sync can stop early otherwise the full sync is run.
 
-Checksums, sync times and caught exceptions are tracked in `import.DatabaseSyncObjectStatus`. To force a sync, records can either be deleted from this table, or by updating the `LastSyncCheck` to an older value, to ensure the sync is not stopped early, also set the `LastSyncChecksum` to `NULL`.
+Checksums, sync times and caught exceptions are tracked in `import.DatabaseSyncObjectStatus`.
+
+----
+
+## Helper procs
+
+There are two helper procs to assist in resetting SyncObjects and trigger them to run at the next sync interval.
+
+* `import.usp_DatabaseSyncObjectStatus_Reset`
+  * Allows you to specify a SyncObjectID, InstanceID and/or DatabaseID to reset all matching SyncObjects for.
+* `import.usp_DatabaseSyncObjectStatus_Reset_Friendly`
+  * Same as `import.usp_DatabaseSyncObjectStatus_Reset` except the parameters accept strings such as SyncObjectName, InstanceName and DatabaseName. This helps make it easier to perform resets without having to constantly look up their IDs.

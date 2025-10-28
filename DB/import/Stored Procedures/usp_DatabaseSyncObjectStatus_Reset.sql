@@ -3,8 +3,8 @@
     @InstanceID int = NULL,
     @DatabaseID int = NULL,
     @ResetChecksum bit = 0, -- Resetting the checksum will force the data to be refreshed from the database rather than doing a checksum compare
-    @ResetErrors bit = 0,
-    @Force bit = 0
+    @ResetErrors bit = 0, -- Does not have any side effects other than clearing error state info
+    @Force bit = 0 -- Allows this proc to be run without any filters, resulting in a database wide reset
 )
 AS
 BEGIN;

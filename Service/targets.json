@@ -1,0 +1,18 @@
+[
+  {
+    "Instance": "Instance1",
+    "Database": "DBFoo"
+  },
+  {
+    "Instance": "Instance1",
+    "Database": "DBBar"
+  },
+  {
+    "Instance": "Instance2",
+    "Database": "DBFoo"
+  },
+  {
+    "Instance": "Instance3",
+    "Database": "DBQux"
+  }
+]
