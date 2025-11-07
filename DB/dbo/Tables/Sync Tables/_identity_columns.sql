@@ -1,7 +1,7 @@
 CREATE TABLE dbo._identity_columns (
     _DatabaseID                         int           NOT NULL CONSTRAINT FK__identity_columns__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) INDEX IX__identity_columns__DatabaseID,
-    _ObjectID                           bigint        NOT NULL CONSTRAINT FK__identity_columns__ObjectID   REFERENCES dbo.[Object]   (_ObjectID),  -- Covered by other IX
-    _ColumnID                           bigint        NOT NULL CONSTRAINT FK__identity_columns__ColumnID   REFERENCES dbo.[Column]   (_ColumnID),  -- Covered by CIX
+    _ObjectID                           bigint        NOT NULL CONSTRAINT FK__identity_columns__ObjectID   REFERENCES dbo.[Object]   (_ObjectID)   INDEX IX__identity_columns__ObjectID,
+    _ColumnID                           bigint        NOT NULL CONSTRAINT FK__identity_columns__ColumnID   REFERENCES dbo.[Column]   (_ColumnID)   INDEX IX__identity_columns__ColumnID,
     --
     _InsertDate                         datetime2     NOT NULL CONSTRAINT DF__identity_columns__InsertDate DEFAULT (SYSUTCDATETIME()),
     _ModifyDate                         datetime2     NOT NULL CONSTRAINT DF__identity_columns__ModifyDate DEFAULT (SYSUTCDATETIME()),
@@ -52,7 +52,7 @@ CREATE TABLE dbo._identity_columns (
     ledger_view_column_type_desc        nvarchar(60)      NULL, -- Added: SQL Server 2022
     is_dropped_ledger_column            bit               NULL, -- Added: SQL Server 2022
 
-    CONSTRAINT CPK__identity_columns__ColumnID PRIMARY KEY CLUSTERED (_ColumnID),
+    CONSTRAINT CPK__identity_columns__DatabaseID__ColumnID PRIMARY KEY CLUSTERED (_DatabaseID, _ColumnID),
     CONSTRAINT UQ__identity_columns__ObjectID_name UNIQUE (_ObjectID, [name]),
 );
 GO

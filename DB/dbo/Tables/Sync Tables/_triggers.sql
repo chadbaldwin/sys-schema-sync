@@ -1,7 +1,7 @@
 CREATE TABLE dbo._triggers (
-    _DatabaseID            int           NOT NULL CONSTRAINT FK__triggers__DatabaseID     REFERENCES dbo.[Database] (_DatabaseID)  INDEX IX__triggers__DatabaseID,
-    _ObjectID              bigint        NOT NULL CONSTRAINT FK__triggers__ObjectID       REFERENCES dbo.[Object]   (_ObjectID),   -- Covered by CIX
-    _ParentObjectID        bigint            NULL CONSTRAINT FK__triggers__ParentObjectID REFERENCES dbo.[Object]   (_ObjectID)    INDEX IX__triggers__ParentObjectID,
+    _DatabaseID            int           NOT NULL CONSTRAINT FK__triggers__DatabaseID     REFERENCES dbo.[Database] (_DatabaseID) INDEX IX__triggers__DatabaseID,
+    _ObjectID              bigint        NOT NULL CONSTRAINT FK__triggers__ObjectID       REFERENCES dbo.[Object]   (_ObjectID)   INDEX IX__triggers__ObjectID,
+    _ParentObjectID        bigint            NULL CONSTRAINT FK__triggers__ParentObjectID REFERENCES dbo.[Object]   (_ObjectID)   INDEX IX__triggers__ParentObjectID,
     --
     _InsertDate            datetime2     NOT NULL CONSTRAINT DF__triggers__InsertDate     DEFAULT (SYSUTCDATETIME()),
     _ModifyDate            datetime2     NOT NULL CONSTRAINT DF__triggers__ModifyDate     DEFAULT (SYSUTCDATETIME()),
@@ -24,6 +24,6 @@ CREATE TABLE dbo._triggers (
     is_instead_of_trigger  bit           NOT NULL,
 
     PERIOD FOR SYSTEM_TIME (_ValidFrom, _ValidTo),
-    CONSTRAINT CPK__triggers__ObjectID PRIMARY KEY CLUSTERED (_ObjectID),
+    CONSTRAINT CPK__triggers__DatabaseID__ObjectID PRIMARY KEY CLUSTERED (_DatabaseID, _ObjectID),
 ) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo._triggers_history, DATA_CONSISTENCY_CHECK = ON, HISTORY_RETENTION_PERIOD = 6 MONTH));
 GO

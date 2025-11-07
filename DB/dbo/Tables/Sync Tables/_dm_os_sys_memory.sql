@@ -13,6 +13,6 @@ CREATE TABLE dbo._dm_os_sys_memory (
     system_low_memory_signal_state  bit           NOT NULL,
     system_memory_state_desc        nvarchar(256) NOT NULL,
 
-    INDEX CIX__dm_os_sys_memory__InstanceID UNIQUE CLUSTERED (_InstanceID),
+    CONSTRAINT CUQ__dm_os_sys_memory__InstanceID UNIQUE CLUSTERED (_InstanceID),
 );
 GO

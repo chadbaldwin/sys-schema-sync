@@ -63,7 +63,8 @@ BEGIN;
     FROM dbo._partitions x
         JOIN @output y ON y._IndexID = x._IndexID
         JOIN #Dataset d ON d.ID = y.ID AND d.partition_number = x.partition_number
-    WHERE x._RowHash <> d._RowHash;
+    WHERE x._DatabaseID = @DatabaseID
+        AND x._RowHash <> d._RowHash;
     IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
     IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
@@ -76,7 +77,8 @@ BEGIN;
     WHERE NOT EXISTS (
             SELECT *
             FROM dbo._partitions x
-            WHERE x._IndexID  = y._IndexID
+            WHERE x._DatabaseID = @DatabaseID
+                AND x._IndexID  = y._IndexID
                 AND x.partition_number = d.partition_number
         );
     IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;

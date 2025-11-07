@@ -1,6 +1,6 @@
 CREATE TABLE dbo._missing_indexes (
-    _DatabaseID         int            NOT NULL CONSTRAINT FK__missing_indexes__DatabaseID REFERENCES dbo.[Database] (_DatabaseID), -- Covered by other IX
-    _ObjectID           bigint         NOT NULL CONSTRAINT FK__missing_indexes__ObjectID   REFERENCES dbo.[Object]   (_ObjectID),   -- Covered by CIX
+    _DatabaseID         int            NOT NULL CONSTRAINT FK__missing_indexes__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) INDEX IX__missing_indexes__DatabaseID,
+    _ObjectID           bigint         NOT NULL CONSTRAINT FK__missing_indexes__ObjectID   REFERENCES dbo.[Object]   (_ObjectID)   INDEX IX__missing_indexes__ObjectID,
     --
     _InsertDate         datetime2      NOT NULL CONSTRAINT DF__missing_indexes__InsertDate DEFAULT (SYSUTCDATETIME()),
     _ModifyDate         datetime2      NOT NULL CONSTRAINT DF__missing_indexes__ModifyDate DEFAULT (SYSUTCDATETIME()),
@@ -19,6 +19,6 @@ CREATE TABLE dbo._missing_indexes (
     included_columns    nvarchar(4000)     NULL,
     column_data         nvarchar(MAX)  NOT NULL,
 
-    INDEX CIX__missing_indexes__ObjectID_missing_index_hash UNIQUE CLUSTERED (_ObjectID, missing_index_hash),
+    CONSTRAINT CUQ__missing_indexes__DatabaseID__ObjectID_missing_index_hash UNIQUE CLUSTERED (_DatabaseID, _ObjectID, missing_index_hash),
     INDEX IX__missing_indexes__DatabaseID__ModifyDate NONCLUSTERED (_DatabaseID, _ModifyDate),
 );

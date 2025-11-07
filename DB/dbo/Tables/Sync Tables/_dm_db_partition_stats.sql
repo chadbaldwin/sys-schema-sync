@@ -1,7 +1,7 @@
 CREATE TABLE dbo._dm_db_partition_stats (
-    _DatabaseID                      int        NOT NULL CONSTRAINT FK__dm_db_partition_stats__DatabaseID REFERENCES dbo.[Database] (_DatabaseID), -- Covered by other IX
+    _DatabaseID                      int        NOT NULL CONSTRAINT FK__dm_db_partition_stats__DatabaseID REFERENCES dbo.[Database] (_DatabaseID), -- Overidden by other index
     _ObjectID                        bigint     NOT NULL CONSTRAINT FK__dm_db_partition_stats__ObjectID   REFERENCES dbo.[Object]   (_ObjectID)    INDEX IX__dm_db_partition_stats__ObjectID,
-    _IndexID                         bigint     NOT NULL CONSTRAINT FK__dm_db_partition_stats__IndexID    REFERENCES dbo.[Index]    (_IndexID),    -- Covered by CIX
+    _IndexID                         bigint     NOT NULL CONSTRAINT FK__dm_db_partition_stats__IndexID    REFERENCES dbo.[Index]    (_IndexID)     INDEX IX__dm_db_partition_stats__IndexID,
     --
     _InsertDate                      datetime2  NOT NULL CONSTRAINT DF__dm_db_partition_stats__InsertDate DEFAULT (SYSUTCDATETIME()),
     _ModifyDate                      datetime2  NOT NULL CONSTRAINT DF__dm_db_partition_stats__ModifyDate DEFAULT (SYSUTCDATETIME()),
@@ -22,7 +22,7 @@ CREATE TABLE dbo._dm_db_partition_stats (
     reserved_page_count              bigint         NULL,
     row_count                        bigint         NULL,
 
-    INDEX CIX__dm_db_partition_stats__IndexID_partition_number UNIQUE CLUSTERED (_IndexID, partition_number)
+    CONSTRAINT CUQ__dm_db_partition_stats__DatabaseID__IndexID_partition_number UNIQUE CLUSTERED (_DatabaseID, _IndexID, partition_number)
 );
 GO
 

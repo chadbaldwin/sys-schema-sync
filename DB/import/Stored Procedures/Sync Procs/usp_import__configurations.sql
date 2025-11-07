@@ -21,11 +21,7 @@ BEGIN;
     DELETE x
     FROM dbo._configurations x
     WHERE x._InstanceID = @InstanceID
-        AND NOT EXISTS (
-            SELECT *
-            FROM @Dataset d
-            WHERE d.configuration_id = x.configuration_id
-        )
+        AND NOT EXISTS (SELECT * FROM @Dataset d WHERE d.configuration_id = x.configuration_id)
     IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
     IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;

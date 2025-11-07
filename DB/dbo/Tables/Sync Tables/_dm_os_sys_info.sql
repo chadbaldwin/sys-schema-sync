@@ -40,6 +40,6 @@ CREATE TABLE dbo._dm_os_sys_info (
     container_type                 int            NOT NULL,
     container_type_desc            nvarchar(60)   NOT NULL,
 
-    INDEX CIX__dm_os_sys_info__InstanceID UNIQUE CLUSTERED (_InstanceID),
+    CONSTRAINT CUQ__dm_os_sys_info__InstanceID UNIQUE CLUSTERED (_InstanceID),
 );
 GO

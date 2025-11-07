@@ -13,6 +13,6 @@ CREATE TABLE dbo._filegroups (
     is_read_only          bit                  NULL,
     is_autogrow_all_files bit                  NULL,
 
-    INDEX CIX__filegroups__DatabaseID_data_space_id UNIQUE CLUSTERED (_DatabaseID, data_space_id),
+    CONSTRAINT CUQ__filegroups__DatabaseID_data_space_id UNIQUE CLUSTERED (_DatabaseID, data_space_id),
 );
 GO

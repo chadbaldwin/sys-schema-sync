@@ -17,6 +17,6 @@ CREATE TABLE dbo._dm_os_volume_stats (
     is_compressed              tinyint           NULL,
     incurs_seek_penalty        tinyint           NULL, -- Added: SQL Server 2019
 
-    INDEX CIX__dm_os_volume_stats__DatabaseID_file_id UNIQUE CLUSTERED (_DatabaseID, [file_id]),
+    CONSTRAINT CUQ__dm_os_volume_stats__DatabaseID_file_id UNIQUE CLUSTERED (_DatabaseID, [file_id]),
 );
 GO

@@ -40,6 +40,6 @@ CREATE TABLE dbo._master_files (
     backup_lsn               numeric(25,0)        NULL,
     credential_id            int                  NULL,
 
-    INDEX CIX__master_files__InstanceID__DatabaseName_file_id UNIQUE CLUSTERED (_InstanceID, _DatabaseName, [file_id]),
+    CONSTRAINT CUQ__master_files__InstanceID__DatabaseName_file_id UNIQUE CLUSTERED (_InstanceID, _DatabaseName, [file_id]),
 );
 GO

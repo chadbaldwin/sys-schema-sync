@@ -15,6 +15,6 @@ CREATE TABLE dbo._dm_server_services (
     cluster_nodename                    nvarchar(256)         NULL,
     instant_file_initialization_enabled nvarchar(1)       NOT NULL,
 
-    INDEX CIX__dm_server_services__InstanceID_servicename UNIQUE CLUSTERED (_InstanceID, servicename),
+    CONSTRAINT CUQ__dm_server_services__InstanceID_servicename UNIQUE CLUSTERED (_InstanceID, servicename),
 );
 GO

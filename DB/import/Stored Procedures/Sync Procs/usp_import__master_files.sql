@@ -21,11 +21,7 @@ BEGIN;
     DELETE x
     FROM dbo._master_files x
     WHERE x._InstanceID = @InstanceID
-        AND NOT EXISTS (
-            SELECT *
-            FROM @Dataset d
-            WHERE d._DatabaseName = x._DatabaseName AND d.[file_id] = x.[file_id]
-        )
+        AND NOT EXISTS (SELECT * FROM @Dataset d WHERE d._DatabaseName = x._DatabaseName AND d.[file_id] = x.[file_id])
     IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
     IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
@@ -85,7 +81,8 @@ BEGIN;
             SELECT *
             FROM dbo._master_files x
             WHERE x._InstanceID = @InstanceID
-                AND x._DatabaseName = d._DatabaseName AND x.[file_id] = d.[file_id]
+                AND x._DatabaseName = d._DatabaseName
+                AND x.[file_id] = d.[file_id]
         );
     IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
     ------------------------------------------------------------------------------

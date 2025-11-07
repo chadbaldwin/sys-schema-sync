@@ -8,6 +8,6 @@ CREATE TABLE dbo._database_scoped_configurations (
     value_for_secondary sql_variant      NULL,
     is_value_default    bit              NULL,
 
-    INDEX CIX__database_scoped_configurations__DatabaseID_configuration_id UNIQUE CLUSTERED (_DatabaseID, configuration_id),
+    CONSTRAINT CUQ__database_scoped_configurations__DatabaseID_configuration_id UNIQUE CLUSTERED (_DatabaseID, configuration_id),
 );
 GO

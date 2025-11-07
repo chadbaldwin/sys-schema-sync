@@ -1,7 +1,7 @@
 CREATE TABLE dbo._indexes (
     _DatabaseID                   int           NOT NULL CONSTRAINT FK__indexes__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) INDEX IX__indexes__DatabaseID,
-    _ObjectID                     bigint        NOT NULL CONSTRAINT FK__indexes__ObjectID   REFERENCES dbo.[Object]   (_ObjectID),  -- Covered by other IX
-    _IndexID                      bigint        NOT NULL CONSTRAINT FK__indexes__IndexID    REFERENCES dbo.[Index]    (_IndexID),   -- Covered by CIX
+    _ObjectID                     bigint        NOT NULL CONSTRAINT FK__indexes__ObjectID   REFERENCES dbo.[Object]   (_ObjectID)   INDEX IX__indexes__ObjectID,
+    _IndexID                      bigint        NOT NULL CONSTRAINT FK__indexes__IndexID    REFERENCES dbo.[Index]    (_IndexID)    INDEX IX__indexes__IndexID,
     --
     _InsertDate                   datetime2     NOT NULL CONSTRAINT DF__indexes__InsertDate DEFAULT (SYSUTCDATETIME()),
     _ModifyDate                   datetime2     NOT NULL CONSTRAINT DF__indexes__ModifyDate DEFAULT (SYSUTCDATETIME()),
@@ -34,7 +34,7 @@ CREATE TABLE dbo._indexes (
     [optimize_for_sequential_key] bit               NULL, -- Added: SQL Server 2019
 
     PERIOD FOR SYSTEM_TIME (_ValidFrom, _ValidTo),
-    CONSTRAINT CPK__indexes__IndexID PRIMARY KEY CLUSTERED (_IndexID),
+    CONSTRAINT CPK__indexes__DatabaseID__IndexID PRIMARY KEY CLUSTERED (_DatabaseID, _IndexID),
     CONSTRAINT UQ__indexes__ObjectID_name UNIQUE (_ObjectID, [name]),
 ) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo._indexes_history, DATA_CONSISTENCY_CHECK = ON, HISTORY_RETENTION_PERIOD = 6 MONTH));
 GO

@@ -15,6 +15,6 @@ CREATE TABLE dbo._dm_os_process_memory (
     process_physical_memory_low        bit       NOT NULL,
     process_virtual_memory_low         bit       NOT NULL,
 
-    INDEX CIX__dm_os_process_memory__InstanceID UNIQUE CLUSTERED (_InstanceID),
+    CONSTRAINT CUQ__dm_os_process_memory__InstanceID UNIQUE CLUSTERED (_InstanceID),
 );
 GO

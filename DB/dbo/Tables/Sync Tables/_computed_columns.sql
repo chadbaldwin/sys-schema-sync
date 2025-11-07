@@ -1,7 +1,7 @@
 CREATE TABLE dbo._computed_columns (
     _DatabaseID                         int           NOT NULL CONSTRAINT FK__computed_columns__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) INDEX IX__computed_columns__DatabaseID,
     _ObjectID                           bigint        NOT NULL CONSTRAINT FK__computed_columns__ObjectID   REFERENCES dbo.[Object]   (_ObjectID)   INDEX IX__computed_columns__ObjectID,
-    _ColumnID                           bigint        NOT NULL CONSTRAINT FK__computed_columns__ColumnID   REFERENCES dbo.[Column]   (_ColumnID),  -- Covered by CIX
+    _ColumnID                           bigint        NOT NULL CONSTRAINT FK__computed_columns__ColumnID   REFERENCES dbo.[Column]   (_ColumnID)   INDEX IX__computed_columns__ColumnID,
     --
     _InsertDate                         datetime2     NOT NULL CONSTRAINT DF__computed_columns__InsertDate DEFAULT (SYSUTCDATETIME()),
     _ModifyDate                         datetime2     NOT NULL CONSTRAINT DF__computed_columns__ModifyDate DEFAULT (SYSUTCDATETIME()),
@@ -55,6 +55,6 @@ CREATE TABLE dbo._computed_columns (
     is_index_column_expression          bit               NULL, -- Added: SQL Server 2025
 
     PERIOD FOR SYSTEM_TIME (_ValidFrom, _ValidTo),
-    CONSTRAINT CPK__computed_columns__ColumnID PRIMARY KEY CLUSTERED (_ColumnID),
+    CONSTRAINT CPK__computed_columns__DatabaseID__ColumnID PRIMARY KEY CLUSTERED (_DatabaseID, _ColumnID),
 ) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo._computed_columns_history, DATA_CONSISTENCY_CHECK = ON, HISTORY_RETENTION_PERIOD = 6 MONTH));
 GO

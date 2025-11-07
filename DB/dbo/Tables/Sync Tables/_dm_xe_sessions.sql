@@ -26,6 +26,6 @@ CREATE TABLE dbo._dm_xe_sessions (
     total_target_memory        bigint            NULL, -- Added: SQL Server 2022
     buffer_processing_count    int               NULL, -- Added: SQL Server 2025
 
-    INDEX CIX__dm_xe_sessions__InstanceID_address UNIQUE CLUSTERED (_InstanceID, [address]),
+    CONSTRAINT CUQ__dm_xe_sessions__InstanceID_address UNIQUE CLUSTERED (_InstanceID, [address]),
 );
 GO

@@ -71,7 +71,8 @@ BEGIN;
         JOIN @output y ON y._ObjectID = x._ObjectID
         JOIN #Dataset d ON d.ID = y.ID
         LEFT JOIN @parent p ON p.ID = y.ID
-    WHERE x._RowHash <> d._RowHash;
+    WHERE x._DatabaseID = @DatabaseID
+        AND x._RowHash <> d._RowHash;
     IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
     IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
@@ -85,7 +86,8 @@ BEGIN;
     WHERE NOT EXISTS (
             SELECT *
             FROM dbo._triggers x
-            WHERE x._ObjectID = y._ObjectID
+            WHERE x._DatabaseID = @DatabaseID
+                AND x._ObjectID = y._ObjectID
         );
     IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
     ------------------------------------------------------------------------------

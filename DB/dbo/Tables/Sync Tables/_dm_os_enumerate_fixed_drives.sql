@@ -7,6 +7,6 @@ CREATE TABLE dbo._dm_os_enumerate_fixed_drives (
     drive_type_desc     nvarchar(256)     NULL,
     free_space_in_bytes bigint        NOT NULL,
 
-    INDEX CIX__dm_os_enumerate_fixed_drives__InstanceID_fixed_drive_path UNIQUE CLUSTERED (_InstanceID, fixed_drive_path),
+    CONSTRAINT CUQ__dm_os_enumerate_fixed_drives__InstanceID_fixed_drive_path UNIQUE CLUSTERED (_InstanceID, fixed_drive_path),
 );
 GO

@@ -10,6 +10,6 @@ CREATE TABLE dbo._partition_schemes (
     is_system       bit               NULL,
     function_id     int           NOT NULL,
 
-    INDEX CIX__partition_schemes__DatabaseID_data_space_id UNIQUE CLUSTERED (_DatabaseID, data_space_id),
+    CONSTRAINT CUQ__partition_schemes__DatabaseID_data_space_id UNIQUE CLUSTERED (_DatabaseID, data_space_id),
 );
 GO

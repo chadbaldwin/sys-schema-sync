@@ -75,7 +75,8 @@ BEGIN;
     FROM dbo._sysarticles x
         JOIN @output y ON y._ObjectID = x._ObjectID
         JOIN #Dataset d ON d.ID = y.ID AND d.artid = x.artid
-    WHERE x._RowHash <> d._RowHash;
+    WHERE x._DatabaseID = @DatabaseID
+        AND x._RowHash <> d._RowHash;
     IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
     IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
@@ -88,7 +89,8 @@ BEGIN;
     WHERE NOT EXISTS (
             SELECT *
             FROM dbo._sysarticles x
-            WHERE x._ObjectID = y._ObjectID
+            WHERE x._DatabaseID = @DatabaseID
+                AND x._ObjectID = y._ObjectID
                 AND x.artid = d.artid
         );
     IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;

@@ -15,6 +15,6 @@ CREATE TABLE dbo._dm_os_memory_nodes (
     foreign_committed_kb               bigint    NOT NULL,
     target_kb                          bigint    NOT NULL,
 
-    INDEX CIX__dm_os_memory_nodes__InstanceID_memory_node_id UNIQUE CLUSTERED (_InstanceID, memory_node_id),
+    CONSTRAINT CUQ__dm_os_memory_nodes__InstanceID_memory_node_id UNIQUE CLUSTERED (_InstanceID, memory_node_id),
 );
 GO

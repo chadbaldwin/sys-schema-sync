@@ -9,6 +9,6 @@ CREATE TABLE dbo._data_spaces (
     is_default      bit           NOT NULL,
     is_system       bit               NULL,
 
-    INDEX CIX__data_spaces__DatabaseID_data_space_id UNIQUE CLUSTERED (_DatabaseID, data_space_id),
+    CONSTRAINT CUQ__data_spaces__DatabaseID_data_space_id UNIQUE CLUSTERED (_DatabaseID, data_space_id),
 );
 GO

@@ -10,6 +10,6 @@ CREATE TABLE dbo._dm_os_host_info (
     os_language_version     int           NOT NULL,
     host_architecture       nvarchar(256)     NULL, -- Added: SQL Server 2019
 
-    INDEX CIX__dm_os_host_info__InstanceID UNIQUE CLUSTERED (_InstanceID),
+    CONSTRAINT CUQ__dm_os_host_info__InstanceID UNIQUE CLUSTERED (_InstanceID),
 );
 GO

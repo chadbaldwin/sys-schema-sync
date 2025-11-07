@@ -1,6 +1,6 @@
 CREATE TABLE dbo._views (
-    _DatabaseID                 int           NOT NULL CONSTRAINT FK__views__DatabaseID REFERENCES dbo.[Database] (_DatabaseID)  INDEX IX__views__DatabaseID,
-    _ObjectID                   bigint        NOT NULL CONSTRAINT FK__views__ObjectID   REFERENCES dbo.[Object]   (_ObjectID),   -- Covered by CIX
+    _DatabaseID                 int           NOT NULL CONSTRAINT FK__views__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) INDEX IX__views__DatabaseID,
+    _ObjectID                   bigint        NOT NULL CONSTRAINT FK__views__ObjectID   REFERENCES dbo.[Object]   (_ObjectID)   INDEX IX__views__ObjectID,
     --
     _InsertDate                 datetime2     NOT NULL CONSTRAINT DF__views__InsertDate DEFAULT (SYSUTCDATETIME()),
     _ModifyDate                 datetime2     NOT NULL CONSTRAINT DF__views__ModifyDate DEFAULT (SYSUTCDATETIME()),
@@ -33,6 +33,6 @@ CREATE TABLE dbo._views (
     is_dropped_ledger_view      bit               NULL, -- Added: SQL Server 2022
 
     PERIOD FOR SYSTEM_TIME (_ValidFrom, _ValidTo),
-    CONSTRAINT CPK__views__ObjectID PRIMARY KEY CLUSTERED (_ObjectID),
+    CONSTRAINT CPK__views__DatabaseID__ObjectID PRIMARY KEY CLUSTERED (_DatabaseID, _ObjectID),
 ) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo._views_history, DATA_CONSISTENCY_CHECK = ON, HISTORY_RETENTION_PERIOD = 6 MONTH));
 GO

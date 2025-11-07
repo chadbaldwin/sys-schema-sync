@@ -64,3 +64,4 @@ BEGIN;
         , DELETED._DatabaseID AS d__DatabaseID, DELETED._InstanceID AS d__InstanceID, DELETED.DatabaseName AS d_DatabaseName, DELETED.InsertDate AS d_InsertDate, DELETED.IsEnabled AS d_IsEnabled
         , INSERTED._DatabaseID AS i__DatabaseID, INSERTED._InstanceID AS i__InstanceID, INSERTED.DatabaseName AS i_DatabaseName, INSERTED.InsertDate AS i_InsertDate, INSERTED.IsEnabled AS i_IsEnabled;
 END;
+GO

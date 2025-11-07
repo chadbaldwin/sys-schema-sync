@@ -68,7 +68,8 @@ BEGIN;
     UPDATE x WITH(ROWLOCK)
     SET x.IsDeleted = 1, x.DeleteDate = SYSUTCDATETIME()
     FROM dbo.[Object] x
-    WHERE EXISTS (SELECT * FROM #del_Object do WHERE do._ObjectID = x._ObjectID);
+    WHERE x._DatabaseID = @DatabaseID
+        AND EXISTS (SELECT * FROM #del_Object do WHERE do._ObjectID = x._ObjectID);
     IF (@Verbose = 1) RAISERROR('[%s] [dbo.Object] Mark deleted database level items: Done (%i)',0,1,@ProcName,@@ROWCOUNT) WITH NOWAIT;
     ------------------------------------------------------------------------------
 
@@ -102,7 +103,8 @@ BEGIN;
         JOIN @output o ON o._ObjectID = x._ObjectID
         JOIN #Dataset d ON d.ID = o.ID
         JOIN dbo.ObjectDefinition od ON od.ObjectDefinitionHash = d._ObjectDefinitionHash
-    WHERE x._RowHash <> d._RowHash OR x._ObjectDefinitionID <> od._ObjectDefinitionID;
+    WHERE x._DatabaseID = @DatabaseID
+        AND (x._RowHash <> d._RowHash OR x._ObjectDefinitionID <> od._ObjectDefinitionID);
     IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
     IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
@@ -116,7 +118,8 @@ BEGIN;
     WHERE NOT EXISTS (
             SELECT *
             FROM dbo._sql_modules x
-            WHERE x._ObjectID = y._ObjectID
+            WHERE x._DatabaseID = @DatabaseID
+                AND x._ObjectID = y._ObjectID
         );
     IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
     ------------------------------------------------------------------------------

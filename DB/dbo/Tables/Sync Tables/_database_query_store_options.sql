@@ -25,6 +25,6 @@ CREATE TABLE dbo._database_query_store_options (
     wait_stats_capture_mode_desc               nvarchar(60)       NULL,
     actual_state_additional_info               nvarchar(4000)     NULL,
 
-    INDEX CIX__database_query_store_options__DatabaseID UNIQUE CLUSTERED (_DatabaseID),
+    CONSTRAINT CUQ__database_query_store_options__DatabaseID UNIQUE CLUSTERED (_DatabaseID),
 );
 GO

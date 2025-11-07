@@ -1,15 +1,15 @@
 CREATE TABLE dbo._dm_db_index_usage_stats (
     _DatabaseID        int        NOT NULL CONSTRAINT FK__dm_db_index_usage_stats__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) INDEX IX__dm_db_index_usage_stats__DatabaseID,
     _ObjectID          bigint     NOT NULL CONSTRAINT FK__dm_db_index_usage_stats__ObjectID   REFERENCES dbo.[Object]   (_ObjectID)   INDEX IX__dm_db_index_usage_stats__ObjectID,
-    _IndexID           bigint     NOT NULL CONSTRAINT FK__dm_db_index_usage_stats__IndexID    REFERENCES dbo.[Index]    (_IndexID),   -- Covered by CIX
+    _IndexID           bigint     NOT NULL CONSTRAINT FK__dm_db_index_usage_stats__IndexID    REFERENCES dbo.[Index]    (_IndexID)    INDEX IX__dm_db_index_usage_stats__IndexID,
     --
     _InsertDate        datetime2  NOT NULL CONSTRAINT DF__dm_db_index_usage_stats__InsertDate DEFAULT (SYSUTCDATETIME()),
     _ModifyDate        datetime2  NOT NULL CONSTRAINT DF__dm_db_index_usage_stats__ModifyDate DEFAULT (SYSUTCDATETIME()),
     _RowHash           binary(32) NOT NULL,
     --
-    database_id        smallint   NOT NULL,
-    [object_id]        int        NOT NULL,
-    index_id           int        NOT NULL,
+    database_id        smallint       NULL,
+    [object_id]        int            NULL,
+    index_id           int            NULL,
     user_seeks         bigint     NOT NULL,
     user_scans         bigint     NOT NULL,
     user_lookups       bigint     NOT NULL,
@@ -27,6 +27,6 @@ CREATE TABLE dbo._dm_db_index_usage_stats (
     last_system_lookup datetime       NULL,
     last_system_update datetime       NULL,
 
-    INDEX CIX__dm_db_index_usage_stats__IndexID UNIQUE CLUSTERED (_IndexID),
+    CONSTRAINT CPK__dm_db_index_usage_stats__DatabaseID__IndexID PRIMARY KEY CLUSTERED (_DatabaseID, _IndexID),
 );
 GO

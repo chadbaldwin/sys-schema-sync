@@ -1,6 +1,6 @@
 CREATE TABLE dbo._check_constraints (
     _DatabaseID             int           NOT NULL CONSTRAINT FK__check_constraints__DatabaseID     REFERENCES dbo.[Database] (_DatabaseID) INDEX IX__check_constraints__DatabaseID,
-    _ObjectID               bigint        NOT NULL CONSTRAINT FK__check_constraints__ObjectID       REFERENCES dbo.[Object]   (_ObjectID),  -- Covered by CIX
+    _ObjectID               bigint        NOT NULL CONSTRAINT FK__check_constraints__ObjectID       REFERENCES dbo.[Object]   (_ObjectID)   INDEX IX__check_constraints__ObjectID,
     _ParentObjectID         bigint        NOT NULL CONSTRAINT FK__check_constraints__ParentObjectID REFERENCES dbo.[Object]   (_ObjectID)   INDEX IX__check_constraints__ParentObjectID,
     _ParentColumnID         bigint            NULL CONSTRAINT FK__check_constraints__ParentColumnID REFERENCES dbo.[Column]   (_ColumnID)   INDEX IX__check_constraints__ParentColumnID,
     --
@@ -31,6 +31,6 @@ CREATE TABLE dbo._check_constraints (
     is_system_named         bit           NOT NULL,
 
     PERIOD FOR SYSTEM_TIME (_ValidFrom, _ValidTo),
-    CONSTRAINT CPK__check_constraints__ObjectID PRIMARY KEY CLUSTERED (_ObjectID),
+    CONSTRAINT CPK__check_constraints__DatabaseID__ObjectID PRIMARY KEY CLUSTERED (_DatabaseID, _ObjectID),
 ) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo._check_constraints_history, DATA_CONSISTENCY_CHECK = ON, HISTORY_RETENTION_PERIOD = 6 MONTH));
 GO

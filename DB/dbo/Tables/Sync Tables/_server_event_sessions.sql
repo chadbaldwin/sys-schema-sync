@@ -16,6 +16,6 @@ CREATE TABLE dbo._server_event_sessions (
     has_long_running_target    bit               NULL, -- Added: SQL Server 2019
     [max_duration]             bigint            NULL, -- Added: SQL Server 2025
 
-    INDEX CIX__server_event_sessions__InstanceID_event_session_id UNIQUE CLUSTERED (_InstanceID, event_session_id),
+    CONSTRAINT CUQ__server_event_sessions__InstanceID_event_session_id UNIQUE CLUSTERED (_InstanceID, event_session_id),
 );
 GO

@@ -16,6 +16,6 @@ CREATE TABLE dbo._restorehistory (
     stop_at_mark_name         nvarchar(128)     NULL,
     stop_before               bit               NULL,
 
-    INDEX CIX__restorehistory__InstanceID_restore_history_id UNIQUE CLUSTERED (_InstanceID, restore_history_id),
+    CONSTRAINT CUQ__restorehistory__InstanceID_restore_history_id UNIQUE CLUSTERED (_InstanceID, restore_history_id),
 );
 GO

@@ -85,6 +85,10 @@ BEGIN;
         JOIN sys.indexes i ON i.[object_id] = o.[object_id]
     WHERE o.is_ms_shipped = 0
         AND i.[type] = 0;
+
+    -- TODO: non-unique clustered indexes
+    -- TODO: nonclustered primary keys
+    -- TODO: missing indexes on foreign keys
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------

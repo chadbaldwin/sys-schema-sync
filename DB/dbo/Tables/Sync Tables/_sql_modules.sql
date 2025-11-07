@@ -1,6 +1,6 @@
 CREATE TABLE dbo._sql_modules (
     _DatabaseID             int        NOT NULL CONSTRAINT FK__sql_modules__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) INDEX IX__sql_modules__DatabaseID,
-    _ObjectID               bigint     NOT NULL CONSTRAINT FK__sql_modules__ObjectID   REFERENCES dbo.[Object]   (_ObjectID),  -- Covered by CIX
+    _ObjectID               bigint     NOT NULL CONSTRAINT FK__sql_modules__ObjectID   REFERENCES dbo.[Object]   (_ObjectID)   INDEX IX__sql_modules__ObjectID,
     --
     _InsertDate             datetime2  NOT NULL CONSTRAINT DF__sql_modules__InsertDate DEFAULT (SYSUTCDATETIME()),
     _ModifyDate             datetime2  NOT NULL CONSTRAINT DF__sql_modules__ModifyDate DEFAULT (SYSUTCDATETIME()),
@@ -22,6 +22,6 @@ CREATE TABLE dbo._sql_modules (
     is_inlineable           bit            NULL, -- Added: SQL Server 2019
 
     PERIOD FOR SYSTEM_TIME (_ValidFrom, _ValidTo),
-    CONSTRAINT CPK__sql_modules__ObjectID PRIMARY KEY CLUSTERED (_ObjectID),
+    CONSTRAINT CPK__sql_modules__DatabaseID__ObjectID PRIMARY KEY CLUSTERED (_DatabaseID, _ObjectID),
 ) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo._sql_modules_history, DATA_CONSISTENCY_CHECK = ON, HISTORY_RETENTION_PERIOD = 6 MONTH));
 GO

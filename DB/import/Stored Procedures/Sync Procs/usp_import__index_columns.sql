@@ -56,7 +56,8 @@ BEGIN;
     FROM dbo._index_columns x
         JOIN @output y ON y._IndexID = x._IndexID AND y._ColumnID = x._ColumnID
         JOIN #Dataset d ON d.ID = y.ID
-    WHERE x._RowHash <> d._RowHash;
+    WHERE x._DatabaseID = @DatabaseID
+        AND x._RowHash <> d._RowHash;
     IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
     IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
@@ -69,7 +70,9 @@ BEGIN;
     WHERE NOT EXISTS (
             SELECT *
             FROM dbo._index_columns x
-            WHERE x._IndexID = y._IndexID AND x._ColumnID  = y._ColumnID
+            WHERE x._DatabaseID = @DatabaseID
+                AND x._IndexID = y._IndexID
+                AND x._ColumnID = y._ColumnID
         );
     IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
     ------------------------------------------------------------------------------

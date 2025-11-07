@@ -56,6 +56,6 @@ CREATE TABLE dbo._SERVERPROPERTY (
     SqlSortOrderName                   nvarchar(128)     NULL,
     SuspendedDatabaseCount             int               NULL,
 
-    INDEX CIX__SERVERPROPERTY__InstanceID UNIQUE CLUSTERED (_InstanceID),
+    CONSTRAINT CUQ__SERVERPROPERTY__InstanceID UNIQUE CLUSTERED (_InstanceID),
 );
 GO

@@ -8,6 +8,6 @@ CREATE TABLE dbo._dm_hadr_cluster (
     quorum_state      tinyint       NOT NULL,
     quorum_state_desc nvarchar(60)  NOT NULL,
 
-    INDEX CIX__dm_hadr_cluster__InstanceID UNIQUE CLUSTERED (_InstanceID),
+    CONSTRAINT CUQ__dm_hadr_cluster__InstanceID UNIQUE CLUSTERED (_InstanceID),
 );
 GO

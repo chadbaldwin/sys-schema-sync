@@ -47,6 +47,6 @@ CREATE TABLE dbo._DATABASEPROPERTYEX (
     [Version]                                 int                 NULL,
     ReplicaID                                 nvarchar(128)       NULL,
 
-    INDEX CIX__DATABASEPROPERTYEX__DatabaseID UNIQUE CLUSTERED (_DatabaseID),
+    CONSTRAINT CUQ__DATABASEPROPERTYEX__DatabaseID UNIQUE CLUSTERED (_DatabaseID),
 );
 GO

@@ -42,6 +42,6 @@ CREATE TABLE dbo._dm_hadr_database_replica_states (
     quorum_commit_time          datetime             NULL, -- Added: SQL Server 2019
     is_internal                 bit                  NULL, -- Added: SQL Server 2025
 
-    INDEX CIX__dm_hadr_database_replica_states__DatabaseID_replica_id UNIQUE CLUSTERED (_DatabaseID, replica_id),
+    CONSTRAINT CUQ__dm_hadr_database_replica_states__DatabaseID_replica_id UNIQUE CLUSTERED (_DatabaseID, replica_id),
 );
 GO

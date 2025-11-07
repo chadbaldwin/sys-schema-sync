@@ -33,6 +33,6 @@ CREATE TABLE dbo._database_files (
     redo_target_fork_guid    uniqueidentifier     NULL,
     backup_lsn               numeric(25,0)        NULL,
 
-    INDEX CIX__database_files__DatabaseID_file_id UNIQUE CLUSTERED (_DatabaseID, [file_id]),
+    CONSTRAINT CUQ__database_files__DatabaseID_file_id UNIQUE CLUSTERED (_DatabaseID, [file_id]),
 );
 GO

@@ -51,6 +51,6 @@ CREATE TABLE dbo._dm_resource_governor_resource_pools (
     total_cpu_usage_preemptive_ms         bigint        NOT NULL,
     total_cpu_usage_actual_ms             bigint            NULL, -- Added: SQL Server 2025
 
-    INDEX CIX__dm_resource_governor_resource_pools__InstanceID_pool_id UNIQUE CLUSTERED (_InstanceID, pool_id),
+    CONSTRAINT CUQ__dm_resource_governor_resource_pools__InstanceID_pool_id UNIQUE CLUSTERED (_InstanceID, pool_id),
 );
 GO

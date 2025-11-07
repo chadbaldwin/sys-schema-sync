@@ -32,6 +32,9 @@ BEGIN;
     ------------------------------------------------------------------------------
     DECLARE @tableName nvarchar(128) = N'dbo._dm_db_index_usage_stats';
 
+    /*  Deletes here are okay because the export query left joins to sys.dm_db_index_usage_stats
+        so it will always return every index. The only time indexes will be deleted is when
+        they have been completely dropped from the database and never re-created. */
     IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
     DELETE x FROM dbo._dm_db_index_usage_stats x
     WHERE x._DatabaseID = @DatabaseID
@@ -65,7 +68,8 @@ BEGIN;
     FROM dbo._dm_db_index_usage_stats x
         JOIN @output y ON y._IndexID = x._IndexID
         JOIN #Dataset d ON d.ID = y.ID
-    WHERE x._RowHash <> d._RowHash;
+    WHERE x._DatabaseID = @DatabaseID
+        AND x._RowHash <> d._RowHash;
     IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
     IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
@@ -78,7 +82,8 @@ BEGIN;
     WHERE NOT EXISTS (
             SELECT *
             FROM dbo._dm_db_index_usage_stats x
-            WHERE x._IndexID  = y._IndexID
+            WHERE x._DatabaseID = @DatabaseID
+                AND x._IndexID  = y._IndexID
         );
     IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
     ------------------------------------------------------------------------------

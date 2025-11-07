@@ -16,6 +16,6 @@ CREATE TABLE dbo._index_resumable_operations (
     percent_complete     float         NOT NULL,
     page_count           bigint        NOT NULL,
 
-    INDEX CIX__index_resumable_operations__DatabaseID_object_id_index_id UNIQUE CLUSTERED (_DatabaseID, [object_id], index_id),
+    CONSTRAINT CUQ__index_resumable_operations__DatabaseID_object_id_index_id UNIQUE CLUSTERED (_DatabaseID, [object_id], index_id),
 );
 GO

@@ -6,6 +6,6 @@ CREATE TABLE dbo._global_variables (
     SERVICENAME     nvarchar(128)     NULL,
     [VERSION]       nvarchar(300)     NULL,
 
-    INDEX CIX__global_variables__InstanceID UNIQUE CLUSTERED (_InstanceID),
+    CONSTRAINT CUQ__global_variables__InstanceID UNIQUE CLUSTERED (_InstanceID),
 );
 GO

@@ -19,6 +19,6 @@ CREATE TABLE dbo._dm_io_virtual_file_stats (
     num_of_pushed_reads          bigint           NULL, -- Added: SQL Server 2022
     num_of_pushed_bytes_returned bigint           NULL, -- Added: SQL Server 2022
 
-    INDEX CIX__dm_io_virtual_file_stats__DatabaseID_file_id UNIQUE CLUSTERED (_DatabaseID, [file_id]),
+    CONSTRAINT CUQ__dm_io_virtual_file_stats__DatabaseID_file_id UNIQUE CLUSTERED (_DatabaseID, [file_id]),
 );
 GO

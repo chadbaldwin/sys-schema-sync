@@ -10,6 +10,6 @@ CREATE TABLE dbo._dm_os_wait_stats (
     max_wait_time_ms    bigint       NOT NULL,
     signal_wait_time_ms bigint       NOT NULL,
 
-    INDEX CIX__dm_os_wait_stats__InstanceID_wait_type UNIQUE CLUSTERED (_InstanceID, wait_type),
+    CONSTRAINT CUQ__dm_os_wait_stats__InstanceID_wait_type UNIQUE CLUSTERED (_InstanceID, wait_type),
 );
 GO

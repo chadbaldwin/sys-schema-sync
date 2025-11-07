@@ -23,6 +23,6 @@ CREATE TABLE dbo._dm_os_nodes (
     cached_tasks_reused          bigint            NULL, -- Added: SQL Server 2022
     cached_tasks_removed         bigint            NULL, -- Added: SQL Server 2022
 
-    INDEX CIX__dm_os_nodes__InstanceID_node_id UNIQUE CLUSTERED (_InstanceID, node_id),
+    CONSTRAINT CUQ__dm_os_nodes__InstanceID_node_id UNIQUE CLUSTERED (_InstanceID, node_id),
 );
 GO

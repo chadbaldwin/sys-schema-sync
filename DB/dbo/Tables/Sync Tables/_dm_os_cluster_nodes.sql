@@ -7,6 +7,6 @@ CREATE TABLE dbo._dm_os_cluster_nodes (
     status_description varchar(7)    NOT NULL,
     is_current_owner   bit               NULL,
 
-    INDEX CIX__dm_os_cluster_nodes__InstanceID_NodeName UNIQUE CLUSTERED (_InstanceID, NodeName),
+    CONSTRAINT CUQ__dm_os_cluster_nodes__InstanceID_NodeName UNIQUE CLUSTERED (_InstanceID, NodeName),
 );
 GO

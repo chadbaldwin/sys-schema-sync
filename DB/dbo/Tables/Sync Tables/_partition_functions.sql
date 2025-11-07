@@ -12,6 +12,6 @@ CREATE TABLE dbo._partition_functions (
     create_date             datetime      NOT NULL,
     modify_date             datetime      NOT NULL,
 
-    INDEX CIX__partition_functions__DatabaseID_function_id UNIQUE CLUSTERED (_DatabaseID, function_id),
+    CONSTRAINT CUQ__partition_functions__DatabaseID_function_id UNIQUE CLUSTERED (_DatabaseID, function_id),
 );
 GO

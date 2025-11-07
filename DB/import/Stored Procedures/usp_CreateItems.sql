@@ -36,10 +36,10 @@ BEGIN;
 
             UPDATE x SET x._ObjectID = o._ObjectID
             FROM @DataSet2 x
-                JOIN dbo.[Object] o ON  o._DatabaseID = @DatabaseID
-                                    AND o.SchemaName = x.SchemaName
-                                    AND o.ObjectName = x.ObjectName
-                                    AND o.ObjectType = x.ObjectType;
+                JOIN dbo.[Object] o ON o._DatabaseID = @DatabaseID
+                                   AND o.SchemaName  = x.SchemaName
+                                   AND o.ObjectName  = x.ObjectName
+                                   AND o.ObjectType  = x.ObjectType;
         END;
         -------------------------------------
 
@@ -60,8 +60,8 @@ BEGIN;
             UPDATE x SET x._IndexID = i._IndexID
             FROM @DataSet2 x
                 JOIN dbo.[Index] i ON i._DatabaseID = @DatabaseID
-                                    AND i._ObjectID = x._ObjectID
-                                    AND i.IndexName = x.IndexName;
+                                  AND i._ObjectID   = x._ObjectID
+                                  AND i.IndexName   = x.IndexName;
         END;
         -------------------------------------
 
@@ -82,8 +82,8 @@ BEGIN;
             UPDATE x SET x._ColumnID = c._ColumnID
             FROM @DataSet2 x
                 JOIN dbo.[Column] c ON c._DatabaseID = @DatabaseID
-                                    AND c._ObjectID = x._ObjectID
-                                    AND c.ColumnName = x.ColumnName;
+                                   AND c._ObjectID   = x._ObjectID
+                                   AND c.ColumnName  = x.ColumnName;
         END;
     END;
     ------------------------------------------------------------------------------

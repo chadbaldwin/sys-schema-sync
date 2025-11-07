@@ -1,6 +1,6 @@
 CREATE TABLE dbo._OBJECTPROPERTYEX (
     _DatabaseID                          int        NOT NULL CONSTRAINT FK__OBJECTPROPERTYEX__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) INDEX IX__OBJECTPROPERTYEX__DatabaseID,
-    _ObjectID                            bigint     NOT NULL CONSTRAINT FK__OBJECTPROPERTYEX__ObjectID   REFERENCES dbo.[Object]   (_ObjectID),  -- Covered by CIX
+    _ObjectID                            bigint     NOT NULL CONSTRAINT FK__OBJECTPROPERTYEX__ObjectID   REFERENCES dbo.[Object]   (_ObjectID)   INDEX IX__OBJECTPROPERTYEX__ObjectID,
     --
     _InsertDate                          datetime2  NOT NULL CONSTRAINT DF__OBJECTPROPERTYEX__InsertDate DEFAULT (SYSUTCDATETIME()),
     _ModifyDate                          datetime2  NOT NULL CONSTRAINT DF__OBJECTPROPERTYEX__ModifyDate DEFAULT (SYSUTCDATETIME()),
@@ -112,6 +112,6 @@ CREATE TABLE dbo._OBJECTPROPERTYEX (
     Cardinality                          bigint         NULL,
     TableTemporalType                    int            NULL,
 
-    CONSTRAINT CPK__OBJECTPROPERTYEX__ObjectID PRIMARY KEY CLUSTERED (_ObjectID) WITH (DATA_COMPRESSION = PAGE),
+    CONSTRAINT CPK__OBJECTPROPERTYEX__DatabaseID__ObjectID PRIMARY KEY CLUSTERED (_DatabaseID, _ObjectID) WITH (DATA_COMPRESSION = PAGE),
 );
 GO

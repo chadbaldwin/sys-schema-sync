@@ -5,9 +5,9 @@ CREATE TYPE import.import__dm_db_index_usage_stats AS TABLE (
     _IndexName         nvarchar(128) NOT NULL,
     _RowHash           binary(32)    NOT NULL,
     --
-    database_id        smallint      NOT NULL,
-    [object_id]        int           NOT NULL,
-    index_id           int           NOT NULL,
+    database_id        smallint          NULL,
+    [object_id]        int               NULL,
+    index_id           int               NULL,
     user_seeks         bigint        NOT NULL,
     user_scans         bigint        NOT NULL,
     user_lookups       bigint        NOT NULL,

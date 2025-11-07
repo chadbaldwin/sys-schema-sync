@@ -1,3 +1,24 @@
+﻿/*------------------------------------------------------------*/
+
+/*------------------------------------------------------------*/
+/*  Get instance time zone
+    2019 (v15) and under, registry is the only way to get it
+    2022 (v16) and up we can use the new CURRENT_TIMEZONE_ID() function
+*/
+DECLARE @tzsql nvarchar(MAX), @LocalTZ nvarchar(128);
+IF (CONVERT(int, SERVERPROPERTY('ProductMajorVersion')) < 16)
+BEGIN;
+    SELECT @tzsql = N'EXEC [master].dbo.xp_regread @rootkey = ''HKEY_LOCAL_MACHINE'', @key = ''SYSTEM\CurrentControlSet\Control\TimeZoneInformation'', @value_name = ''TimeZoneKeyName'', @value = @LocalTZ OUT;'
+END;
+ELSE
+BEGIN;
+    SELECT @tzsql = N'SELECT @LocalTZ = CURRENT_TIMEZONE_ID();'
+END;
+
+EXEC sys.sp_executesql @stmt = @tzsql, @params = N'@LocalTZ nvarchar(128) OUT', @LocalTZ = @LocalTZ OUT;
+/*------------------------------------------------------------*/
+
+/*------------------------------------------------------------*/
 SELECT _SchemaName, _ObjectName, _ObjectType
     , _RowHash = CONVERT(binary(32), HASHBYTES('SHA2_256', (SELECT x.* FROM (SELECT NULL) n(n) FOR JSON AUTO)))
     --
@@ -15,12 +36,12 @@ FROM ( -- Encapsulating in a sub-query to make row-hash calculation easier using
         --
         , missing_index_hash = CONVERT(binary(32), HASHBYTES('SHA2_256', j.column_data))
         , migs.unique_compiles, migs.user_seeks, migs.user_scans
-        , last_user_seek_utc = CONVERT(datetime2, migs.last_user_seek AT TIME ZONE CURRENT_TIMEZONE_ID() AT TIME ZONE 'UTC')
-        , last_user_scan_utc = CONVERT(datetime2, migs.last_user_scan AT TIME ZONE CURRENT_TIMEZONE_ID() AT TIME ZONE 'UTC')
+        , last_user_seek_utc = CONVERT(datetime2, migs.last_user_seek AT TIME ZONE @LocalTZ AT TIME ZONE 'UTC')
+        , last_user_scan_utc = CONVERT(datetime2, migs.last_user_scan AT TIME ZONE @LocalTZ AT TIME ZONE 'UTC')
         , migs.avg_total_user_cost, migs.avg_user_impact
         , mid.equality_columns, mid.inequality_columns, mid.included_columns
         , j.column_data
-        , c.*
+        , c.EQUALITY, c.INEQUALITY, c.[INCLUDE]
     FROM sys.dm_db_missing_index_groups mig
         JOIN sys.dm_db_missing_index_details mid ON mid.index_handle = mig.index_handle
         JOIN sys.dm_db_missing_index_group_stats migs ON migs.group_handle = mig.index_group_handle
@@ -49,3 +70,6 @@ FROM ( -- Encapsulating in a sub-query to make row-hash calculation easier using
         ) j (column_data)
     WHERE database_id = DB_ID()
 ) x;
+/*------------------------------------------------------------*/
+
+/*------------------------------------------------------------*/

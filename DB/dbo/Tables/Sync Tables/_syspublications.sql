@@ -44,6 +44,6 @@ CREATE TABLE dbo._syspublications (
     options                      int           NOT NULL,
     originator_id                int               NULL,
 
-    INDEX CIX__syspublications__DatabaseID_pubid UNIQUE CLUSTERED (_DatabaseID, pubid),
+    CONSTRAINT CUQ__syspublications__DatabaseID_pubid UNIQUE CLUSTERED (_DatabaseID, pubid),
 );
 GO

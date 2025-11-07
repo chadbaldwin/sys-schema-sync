@@ -6,6 +6,6 @@ CREATE TABLE dbo._destination_data_spaces (
     destination_id      int       NOT NULL,
     data_space_id       int       NOT NULL,
 
-    INDEX CIX__destination_data_spaces__DatabaseID_partition_scheme_id_destination_id UNIQUE CLUSTERED (_DatabaseID, partition_scheme_id, destination_id),
+    CONSTRAINT CUQ__destination_data_spaces__DatabaseID_partition_scheme_id_destination_id UNIQUE CLUSTERED (_DatabaseID, partition_scheme_id, destination_id),
 );
 GO

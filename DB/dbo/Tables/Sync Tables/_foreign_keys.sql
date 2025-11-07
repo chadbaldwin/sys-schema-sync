@@ -1,6 +1,6 @@
 CREATE TABLE dbo._foreign_keys (
     _DatabaseID                    int           NOT NULL CONSTRAINT FK__foreign_keys__DatabaseID         REFERENCES dbo.[Database] (_DatabaseID) INDEX IX__foreign_keys__DatabaseID,
-    _ObjectID                      bigint        NOT NULL CONSTRAINT FK__foreign_keys__ObjectID           REFERENCES dbo.[Object]   (_ObjectID),  -- Covered by CIX
+    _ObjectID                      bigint        NOT NULL CONSTRAINT FK__foreign_keys__ObjectID           REFERENCES dbo.[Object]   (_ObjectID)   INDEX IX__foreign_keys__ObjectID,
     _ParentObjectID                bigint        NOT NULL CONSTRAINT FK__foreign_keys__ParentObjectID     REFERENCES dbo.[Object]   (_ObjectID)   INDEX IX__foreign_keys__ParentObjectID,
     _ReferencedObjectID            bigint        NOT NULL CONSTRAINT FK__foreign_keys__ReferencedObjectID REFERENCES dbo.[Object]   (_ObjectID)   INDEX IX__foreign_keys__ReferencedObjectID,
     _ReferencedIndexID             bigint        NOT NULL CONSTRAINT FK__foreign_keys__ReferencedIndexID  REFERENCES dbo.[Index]    (_IndexID)    INDEX IX__foreign_keys__ReferencedIndexID,
@@ -35,6 +35,6 @@ CREATE TABLE dbo._foreign_keys (
     is_system_named                bit           NOT NULL,
 
     PERIOD FOR SYSTEM_TIME (_ValidFrom, _ValidTo),
-    CONSTRAINT CPK__foreign_keys__ObjectID PRIMARY KEY CLUSTERED (_ObjectID),
+    CONSTRAINT CPK__foreign_keys__DatabaseID__ObjectID PRIMARY KEY CLUSTERED (_DatabaseID, _ObjectID),
 ) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo._foreign_keys_history, DATA_CONSISTENCY_CHECK = ON, HISTORY_RETENTION_PERIOD = 6 MONTH));
 GO

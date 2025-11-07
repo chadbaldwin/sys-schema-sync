@@ -11,6 +11,6 @@ CREATE TABLE dbo._partition_parameters (
     collation_name  nvarchar(128)     NULL,
     user_type_id    int           NOT NULL,
 
-    INDEX CIX__partition_parameters__DatabaseID_function_id_parameter_id UNIQUE CLUSTERED (_DatabaseID, function_id, parameter_id),
+    CONSTRAINT CUQ__partition_parameters__DatabaseID_function_id_parameter_id UNIQUE CLUSTERED (_DatabaseID, function_id, parameter_id),
 );
 GO
