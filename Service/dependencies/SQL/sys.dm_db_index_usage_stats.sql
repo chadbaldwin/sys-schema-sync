@@ -41,35 +41,35 @@ FROM msdb.dbo.restorehistory WHERE destination_database_name = DB_NAME();
 /*------------------------------------------------------------*/
 
 /*------------------------------------------------------------*/
-SELECT _SchemaName       = s.[name]
-    , _ObjectName        = o.[name]
-    , _ObjectType        = o.[type]
-    , _IndexName         = IIF(i.[type] = 0, '<<HEAP>>', i.[name])
-    , _RowHash           = CONVERT(binary(32), HASHBYTES('SHA2_256', (SELECT x.* FROM (SELECT NULL) n(n) FOR JSON AUTO)))
-    , EstStatsBeginTime  = r.BeginDate
-    , StatsEndTime       = @CollectionTime
+SELECT _SchemaName           = s.[name]
+    , _ObjectName            = o.[name]
+    , _ObjectType            = o.[type]
+    , _IndexName             = IIF(i.[type] = 0, '<<HEAP>>', i.[name])
+    , _RowHash               = CONVERT(binary(32), HASHBYTES('SHA2_256', (SELECT x.* FROM (SELECT NULL) n(n) FOR JSON AUTO)))
+    , EstStatsBeginTime      = r.BeginDate
+    , StatsEndTime           = @CollectionTime
     /*--*/
-    , database_id        = DB_ID()
-    , [object_id]        = i.[object_id]
-    , index_id           = i.index_id
+    , database_id            = DB_ID()
+    , [object_id]            = i.[object_id]
+    , index_id               = i.index_id
     /*--*/
-    , user_seeks         = COALESCE(x.user_seeks  , 0)
-    , user_scans         = COALESCE(x.user_scans  , 0)
-    , user_lookups       = COALESCE(x.user_lookups, 0)
-    , user_updates       = COALESCE(x.user_updates, 0)
-    , last_user_seek     = tz.last_user_seek
-    , last_user_scan     = tz.last_user_scan
-    , last_user_lookup   = tz.last_user_lookup
-    , last_user_update   = tz.last_user_update
+    , user_seeks             = COALESCE(x.user_seeks  , 0)
+    , user_scans             = COALESCE(x.user_scans  , 0)
+    , user_lookups           = COALESCE(x.user_lookups, 0)
+    , user_updates           = COALESCE(x.user_updates, 0)
+    , last_user_seek_utc     = tz.last_user_seek_utc
+    , last_user_scan_utc     = tz.last_user_scan_utc
+    , last_user_lookup_utc   = tz.last_user_lookup_utc
+    , last_user_update_utc   = tz.last_user_update_utc
     /*--*/
-    , system_seeks       = COALESCE(x.system_seeks  , 0)
-    , system_scans       = COALESCE(x.system_scans  , 0)
-    , system_lookups     = COALESCE(x.system_lookups, 0)
-    , system_updates     = COALESCE(x.system_updates, 0)
-    , last_system_seek   = tz.last_system_seek
-    , last_system_scan   = tz.last_system_scan
-    , last_system_lookup = tz.last_system_lookup
-    , last_system_update = tz.last_system_update
+    , system_seeks           = COALESCE(x.system_seeks  , 0)
+    , system_scans           = COALESCE(x.system_scans  , 0)
+    , system_lookups         = COALESCE(x.system_lookups, 0)
+    , system_updates         = COALESCE(x.system_updates, 0)
+    , last_system_seek_utc   = tz.last_system_seek_utc
+    , last_system_scan_utc   = tz.last_system_scan_utc
+    , last_system_lookup_utc = tz.last_system_lookup_utc
+    , last_system_update_utc = tz.last_system_update_utc
 FROM sys.indexes i
     JOIN sys.objects o ON o.[object_id] = i.[object_id]
     JOIN sys.schemas s ON s.[schema_id] = o.[schema_id]
@@ -79,17 +79,17 @@ FROM sys.indexes i
     CROSS APPLY (
         /*  Unfortunately, SQL Server stores everything using system time, rather than UTC. Need to convert to UTC for historical storage */
         /*  First set the values to the local time zone (no shift), then convert to UTC (with shift) */
-        SELECT object_create_date     = CONVERT(datetime2, o.create_date       AT TIME ZONE @LocalTZ AT TIME ZONE 'UTC')
-            ,  constraint_create_date = CONVERT(datetime2, kc.create_date      AT TIME ZONE @LocalTZ AT TIME ZONE 'UTC')
+        SELECT object_create_date_utc     = CONVERT(datetime2, o.create_date       AT TIME ZONE @LocalTZ AT TIME ZONE 'UTC')
+            ,  constraint_create_date_utc = CONVERT(datetime2, kc.create_date      AT TIME ZONE @LocalTZ AT TIME ZONE 'UTC')
             -- Original datatype is datetime, so we don't gain any precision by using datetime2, might as well retain original types
-            ,  last_user_seek         = CONVERT(datetime, x.last_user_seek     AT TIME ZONE @LocalTZ AT TIME ZONE 'UTC')
-            ,  last_user_scan         = CONVERT(datetime, x.last_user_scan     AT TIME ZONE @LocalTZ AT TIME ZONE 'UTC')
-            ,  last_user_lookup       = CONVERT(datetime, x.last_user_lookup   AT TIME ZONE @LocalTZ AT TIME ZONE 'UTC')
-            ,  last_user_update       = CONVERT(datetime, x.last_user_update   AT TIME ZONE @LocalTZ AT TIME ZONE 'UTC')
-            ,  last_system_seek       = CONVERT(datetime, x.last_system_seek   AT TIME ZONE @LocalTZ AT TIME ZONE 'UTC')
-            ,  last_system_scan       = CONVERT(datetime, x.last_system_scan   AT TIME ZONE @LocalTZ AT TIME ZONE 'UTC')
-            ,  last_system_lookup     = CONVERT(datetime, x.last_system_lookup AT TIME ZONE @LocalTZ AT TIME ZONE 'UTC')
-            ,  last_system_update     = CONVERT(datetime, x.last_system_update AT TIME ZONE @LocalTZ AT TIME ZONE 'UTC')
+            ,  last_user_seek_utc         = CONVERT(datetime, x.last_user_seek     AT TIME ZONE @LocalTZ AT TIME ZONE 'UTC')
+            ,  last_user_scan_utc         = CONVERT(datetime, x.last_user_scan     AT TIME ZONE @LocalTZ AT TIME ZONE 'UTC')
+            ,  last_user_lookup_utc       = CONVERT(datetime, x.last_user_lookup   AT TIME ZONE @LocalTZ AT TIME ZONE 'UTC')
+            ,  last_user_update_utc       = CONVERT(datetime, x.last_user_update   AT TIME ZONE @LocalTZ AT TIME ZONE 'UTC')
+            ,  last_system_seek_utc       = CONVERT(datetime, x.last_system_seek   AT TIME ZONE @LocalTZ AT TIME ZONE 'UTC')
+            ,  last_system_scan_utc       = CONVERT(datetime, x.last_system_scan   AT TIME ZONE @LocalTZ AT TIME ZONE 'UTC')
+            ,  last_system_lookup_utc     = CONVERT(datetime, x.last_system_lookup AT TIME ZONE @LocalTZ AT TIME ZONE 'UTC')
+            ,  last_system_update_utc     = CONVERT(datetime, x.last_system_update AT TIME ZONE @LocalTZ AT TIME ZONE 'UTC')
     ) tz
     /*  This is a best attempt determination of when the stats snapshot we're currently taking likely began.
 
@@ -105,7 +105,7 @@ FROM sys.indexes i
         https://feedback.azure.com/d365community/idea/9fec9e0e-3f25-ec11-b6e6-000d3a4f0da0
         https://feedback.azure.com/d365community/idea/e9e84bf2-64c4-ee11-92bc-000d3a0fb290
     */
-    CROSS APPLY (SELECT BeginDate = MAX(x.BeginDate) FROM (VALUES (@SQLServerStartTime), (@DBLastRestoreTime), (tz.object_create_date), (tz.constraint_create_date)) x(BeginDate)) r
+    CROSS APPLY (SELECT BeginDate = MAX(x.BeginDate) FROM (VALUES (@SQLServerStartTime), (@DBLastRestoreTime), (tz.object_create_date_utc), (tz.constraint_create_date_utc)) x(BeginDate)) r
 WHERE o.is_ms_shipped = 0
 OPTION(RECOMPILE);
 /*------------------------------------------------------------*/
