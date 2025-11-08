@@ -1,4 +1,4 @@
-﻿CREATE PROC import.usp_DatabaseSyncObjectStatus_Reset (
+CREATE PROC import.usp_DatabaseSyncObjectStatus_Reset (
     @SyncObjectID int = NULL,
     @InstanceID int = NULL,
     @DatabaseID int = NULL,

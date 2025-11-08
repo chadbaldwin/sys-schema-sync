@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE import.usp_import__index_columns (
+CREATE PROCEDURE import.usp_import__index_columns (
     @DatabaseID int,
     @Dataset    import.import__index_columns READONLY,
     @Verbose    bit = 0

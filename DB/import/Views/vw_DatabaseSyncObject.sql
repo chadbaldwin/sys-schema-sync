@@ -1,4 +1,4 @@
-﻿CREATE VIEW import.vw_DatabaseSyncObject
+CREATE VIEW import.vw_DatabaseSyncObject
 AS
 -- Database level syncs
 SELECT dso.DatabaseSyncObjectID, d._InstanceID, d._DatabaseID, d.InstanceName, d.DatabaseName

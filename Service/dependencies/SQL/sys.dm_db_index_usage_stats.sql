@@ -1,4 +1,4 @@
-﻿/* 
+/* 
     This export script is a special case due to how the `sys.dm_db_index_usage_stats` DMV works.
 
     This DMV is cleared and reset for various reasons at the instnace, DB, object and index level.
