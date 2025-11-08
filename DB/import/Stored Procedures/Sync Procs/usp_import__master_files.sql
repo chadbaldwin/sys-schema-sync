@@ -73,7 +73,7 @@ BEGIN;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-        INSERT INTO dbo._master_files (_InstanceID, _DatabaseID, _RowHash, _DatabaseName
+        INSERT dbo._master_files (_InstanceID, _DatabaseID, _RowHash, _DatabaseName
             , database_id, [file_id], file_guid, [type], [type_desc], data_space_id, [name], physical_name, [state], state_desc, size, max_size, growth, is_media_read_only, is_read_only, is_sparse, is_percent_growth, is_name_reserved, is_persistent_log_buffer, create_lsn, drop_lsn, read_only_lsn, read_write_lsn, differential_base_lsn, differential_base_guid, differential_base_time, redo_start_lsn, redo_start_fork_guid, redo_target_lsn, redo_target_fork_guid, backup_lsn, credential_id)
         SELECT @InstanceID, sd._DatabaseID, d._RowHash, d._DatabaseName
             , d.database_id, d.[file_id], d.file_guid, d.[type], d.[type_desc], d.data_space_id, d.[name], d.physical_name, d.[state], d.state_desc, d.size, d.max_size, d.growth, d.is_media_read_only, d.is_read_only, d.is_sparse, d.is_percent_growth, d.is_name_reserved, d.is_persistent_log_buffer, d.create_lsn, d.drop_lsn, d.read_only_lsn, d.read_write_lsn, d.differential_base_lsn, d.differential_base_guid, d.differential_base_time, d.redo_start_lsn, d.redo_start_fork_guid, d.redo_target_lsn, d.redo_target_fork_guid, d.backup_lsn, d.credential_id

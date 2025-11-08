@@ -23,10 +23,10 @@ BEGIN;
             @output import.ItemName;
 
     -- object
-    INSERT INTO @input (ID, SchemaName, ObjectName, ObjectType, IndexName)
+    INSERT @input (ID, SchemaName, ObjectName, ObjectType, IndexName)
     SELECT ID, _SchemaName, _ObjectName, _ObjectType, _IndexName FROM #Dataset;
 
-    INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
+    INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
     ------------------------------------------------------------------------------
 
@@ -70,7 +70,7 @@ BEGIN;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-        INSERT INTO dbo._stats (_DatabaseID, _ObjectID, _IndexID, _RowHash
+        INSERT dbo._stats (_DatabaseID, _ObjectID, _IndexID, _RowHash
             , [object_id], [name], stats_id, auto_created, user_created, no_recompute, has_filter, filter_definition, is_temporary, is_incremental, has_persisted_sample, stats_generation_method, stats_generation_method_desc, auto_drop, replica_role_id, replica_role_desc, replica_name)
         SELECT @DatabaseID, y._ObjectID, y._IndexID, d._RowHash
             , d.[object_id], d.[name], d.stats_id, d.auto_created, d.user_created, d.no_recompute, d.has_filter, d.filter_definition, d.is_temporary, d.is_incremental, d.has_persisted_sample, d.stats_generation_method, d.stats_generation_method_desc, d.auto_drop, d.replica_role_id, d.replica_role_desc, d.replica_name

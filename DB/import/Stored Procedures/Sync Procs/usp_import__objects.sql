@@ -23,10 +23,10 @@ BEGIN;
             @output import.ItemName;
 
     -- object
-    INSERT INTO @input (ID, SchemaName, ObjectName, ObjectType)
+    INSERT @input (ID, SchemaName, ObjectName, ObjectType)
     SELECT ID, _SchemaName, _ObjectName, _ObjectType FROM #Dataset;
 
-    INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
+    INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @FullImport_Object = 1, @Verbose = @Verbose;
     ------------------------------------------------------------------------------
 
@@ -63,7 +63,7 @@ BEGIN;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-        INSERT INTO dbo._objects (_DatabaseID, _ObjectID, _SchemaName, _RowHash
+        INSERT dbo._objects (_DatabaseID, _ObjectID, _SchemaName, _RowHash
             , [name], [object_id], principal_id, [schema_id], parent_object_id, [type], [type_desc], create_date, is_ms_shipped, is_published, is_schema_published)
         SELECT @DatabaseID, y._ObjectID, d._SchemaName, d._RowHash
             , d.[name], d.[object_id], d.principal_id, d.[schema_id], d.parent_object_id, d.[type], d.[type_desc], d.create_date, d.is_ms_shipped, d.is_published, d.is_schema_published

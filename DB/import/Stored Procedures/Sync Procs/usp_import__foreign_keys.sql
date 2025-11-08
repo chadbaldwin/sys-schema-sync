@@ -27,28 +27,28 @@ BEGIN;
             @reference import.ItemName;
 
     -- object
-    INSERT INTO @input (ID, SchemaName, ObjectName, ObjectType)
+    INSERT @input (ID, SchemaName, ObjectName, ObjectType)
     SELECT ID, _SchemaName, _ObjectName, _ObjectType FROM #Dataset;
 
-    INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
+    INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
 
     DELETE @input;
 
     -- parent object
-    INSERT INTO @input (ID, SchemaName, ObjectName, ObjectType)
+    INSERT @input (ID, SchemaName, ObjectName, ObjectType)
     SELECT ID, _ParentSchemaName, _ParentObjectName, _ParentObjectType FROM #Dataset;
 
-    INSERT INTO @parent (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
+    INSERT @parent (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
 
     DELETE @input;
 
     -- reference object
-    INSERT INTO @input (ID, SchemaName, ObjectName, ObjectType, IndexName)
+    INSERT @input (ID, SchemaName, ObjectName, ObjectType, IndexName)
     SELECT ID, _ReferencedSchemaName, _ReferencedObjectName, _ReferencedObjectType, _ReferencedIndexName FROM #Dataset;
 
-    INSERT INTO @reference (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
+    INSERT @reference (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
     ------------------------------------------------------------------------------
 
@@ -102,7 +102,7 @@ BEGIN;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-        INSERT INTO dbo._foreign_keys (_DatabaseID, _ObjectID, _ParentObjectID, _ReferencedObjectID, _ReferencedIndexID, _RowHash
+        INSERT dbo._foreign_keys (_DatabaseID, _ObjectID, _ParentObjectID, _ReferencedObjectID, _ReferencedIndexID, _RowHash
             , [name], [object_id], principal_id, [schema_id], parent_object_id, [type], [type_desc], create_date, modify_date, is_ms_shipped, is_published, is_schema_published
             , referenced_object_id, key_index_id, is_disabled, is_not_for_replication, is_not_trusted, delete_referential_action, delete_referential_action_desc, update_referential_action, update_referential_action_desc, is_system_named)
         SELECT @DatabaseID, y._ObjectID, p._ObjectID, r._ObjectID, r._IndexID, d._RowHash

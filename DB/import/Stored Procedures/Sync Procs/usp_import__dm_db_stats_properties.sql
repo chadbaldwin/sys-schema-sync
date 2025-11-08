@@ -23,10 +23,10 @@ BEGIN;
             @output import.ItemName;
 
     -- object
-    INSERT INTO @input (ID, SchemaName, ObjectName, ObjectType, IndexName)
+    INSERT @input (ID, SchemaName, ObjectName, ObjectType, IndexName)
     SELECT ID, _SchemaName, _ObjectName, _ObjectType, _IndexName FROM #Dataset;
 
-    INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
+    INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
     ------------------------------------------------------------------------------
 
@@ -62,7 +62,7 @@ BEGIN;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-        INSERT INTO dbo._dm_db_stats_properties (_DatabaseID, _ObjectID, _IndexID, _RowHash
+        INSERT dbo._dm_db_stats_properties (_DatabaseID, _ObjectID, _IndexID, _RowHash
             , [object_id], stats_id, last_updated, [rows], rows_sampled, steps, unfiltered_rows, modification_counter, persisted_sample_percent)
         SELECT @DatabaseID, y._ObjectID, y._IndexID, d._RowHash
             , d.[object_id], d.stats_id, d.last_updated, d.[rows], d.rows_sampled, d.steps, d.unfiltered_rows, d.modification_counter, d.persisted_sample_percent

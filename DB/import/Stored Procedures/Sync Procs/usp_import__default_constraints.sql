@@ -24,19 +24,19 @@ BEGIN;
             @parent import.ItemName;
 
     -- object
-    INSERT INTO @input (ID, SchemaName, ObjectName, ObjectType)
+    INSERT @input (ID, SchemaName, ObjectName, ObjectType)
     SELECT ID, _SchemaName, _ObjectName, _ObjectType FROM #Dataset;
 
-    INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
+    INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
 
     DELETE @input;
 
     -- parent object
-    INSERT INTO @input (ID, SchemaName, ObjectName, ObjectType, ColumnName)
+    INSERT @input (ID, SchemaName, ObjectName, ObjectType, ColumnName)
     SELECT ID, _SchemaName, _ParentObjectName, _ParentObjectType, _ParentColumnName FROM #Dataset;
 
-    INSERT INTO @parent (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
+    INSERT @parent (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
     ------------------------------------------------------------------------------
 
@@ -81,7 +81,7 @@ BEGIN;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-        INSERT INTO dbo._default_constraints (_DatabaseID, _ObjectID, _ParentObjectID, _ParentColumnID, _RowHash
+        INSERT dbo._default_constraints (_DatabaseID, _ObjectID, _ParentObjectID, _ParentColumnID, _RowHash
             , [name], [object_id], principal_id, [schema_id], parent_object_id, [type], [type_desc], create_date, modify_date, is_ms_shipped, is_published, is_schema_published
             , parent_column_id, [definition], is_system_named)
         SELECT @DatabaseID, y._ObjectID, p._ObjectID, p._ColumnID, d._RowHash

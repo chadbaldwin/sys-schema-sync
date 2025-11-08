@@ -23,10 +23,10 @@ BEGIN;
             @output import.ItemName;
 
     -- object
-    INSERT INTO @input (ID, SchemaName, ObjectName, ObjectType)
+    INSERT @input (ID, SchemaName, ObjectName, ObjectType)
     SELECT ID, _SchemaName, _ObjectName, _ObjectType FROM #Dataset;
 
-    INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
+    INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
     ------------------------------------------------------------------------------
 
@@ -76,7 +76,7 @@ BEGIN;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-        INSERT INTO dbo._views (_DatabaseID, _ObjectID, _RowHash
+        INSERT dbo._views (_DatabaseID, _ObjectID, _RowHash
             , [name], [object_id], principal_id, [schema_id], parent_object_id, [type], [type_desc], create_date, modify_date, is_ms_shipped, is_published, is_schema_published
             , is_replicated, has_replication_filter, has_opaque_metadata, has_unchecked_assembly_data, with_check_option, is_date_correlation_view, is_tracked_by_cdc, has_snapshot, ledger_view_type, ledger_view_type_desc, is_dropped_ledger_view)
         SELECT @DatabaseID, y._ObjectID, d._RowHash

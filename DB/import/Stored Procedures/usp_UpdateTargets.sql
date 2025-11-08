@@ -13,7 +13,7 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    INSERT INTO #tmp_db (InstanceName, DatabaseName)
+    INSERT #tmp_db (InstanceName, DatabaseName)
     SELECT d.Instance, d.[Database]
     FROM OPENJSON(@ServiceConfigJSON)
         WITH (

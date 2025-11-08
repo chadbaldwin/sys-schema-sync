@@ -24,19 +24,19 @@ BEGIN;
             @parent import.ItemName;
 
     -- object
-    INSERT INTO @input (ID, SchemaName, ObjectName, ObjectType)
+    INSERT @input (ID, SchemaName, ObjectName, ObjectType)
     SELECT ID, _SchemaName, _ObjectName, _ObjectType FROM #Dataset;
 
-    INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
+    INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
 
     DELETE @input;
 
     -- parent object
-    INSERT INTO @input (ID, SchemaName, ObjectName, ObjectType)
+    INSERT @input (ID, SchemaName, ObjectName, ObjectType)
     SELECT ID, _SchemaName, _ParentObjectName, _ParentObjectType FROM #Dataset WHERE _ParentObjectName IS NOT NULL;
 
-    INSERT INTO @parent (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
+    INSERT @parent (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
     ------------------------------------------------------------------------------
 
@@ -78,7 +78,7 @@ BEGIN;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-        INSERT INTO dbo._triggers (_DatabaseID, _ObjectID, _ParentObjectID, _RowHash
+        INSERT dbo._triggers (_DatabaseID, _ObjectID, _ParentObjectID, _RowHash
             , [name], [object_id], parent_class, parent_class_desc, parent_id, [type], [type_desc], create_date, modify_date, is_ms_shipped, is_disabled, is_not_for_replication, is_instead_of_trigger)
         SELECT @DatabaseID, y._ObjectID, p._ObjectID, d._RowHash
             , d.[name], d.[object_id], d.parent_class, d.parent_class_desc, d.parent_id, d.[type], d.[type_desc], d.create_date, d.modify_date, d.is_ms_shipped, d.is_disabled, d.is_not_for_replication, d.is_instead_of_trigger

@@ -23,10 +23,10 @@ BEGIN;
             @output import.ItemName;
 
     -- object
-    INSERT INTO @input (ID, SchemaName, ObjectName, ObjectType, IndexName)
+    INSERT @input (ID, SchemaName, ObjectName, ObjectType, IndexName)
     SELECT ID, _SchemaName, _ObjectName, _ObjectType, _IndexName FROM #Dataset;
 
-    INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
+    INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
     ------------------------------------------------------------------------------
 
@@ -75,7 +75,7 @@ BEGIN;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-        INSERT INTO dbo._dm_db_index_usage_stats (_DatabaseID, _ObjectID, _IndexID, _RowHash
+        INSERT dbo._dm_db_index_usage_stats (_DatabaseID, _ObjectID, _IndexID, _RowHash
             , database_id, [object_id], index_id, user_seeks, user_scans, user_lookups, user_updates, last_user_seek_utc, last_user_scan_utc, last_user_lookup_utc, last_user_update_utc, system_seeks, system_scans, system_lookups, system_updates, last_system_seek_utc, last_system_scan_utc, last_system_lookup_utc, last_system_update_utc)
         SELECT @DatabaseID, y._ObjectID, y._IndexID, d._RowHash
             , d.database_id, d.[object_id], d.index_id, d.user_seeks, d.user_scans, d.user_lookups, d.user_updates, d.last_user_seek_utc, d.last_user_scan_utc, d.last_user_lookup_utc, d.last_user_update_utc, d.system_seeks, d.system_scans, d.system_lookups, d.system_updates, d.last_system_seek_utc, d.last_system_scan_utc, d.last_system_lookup_utc, d.last_system_update_utc

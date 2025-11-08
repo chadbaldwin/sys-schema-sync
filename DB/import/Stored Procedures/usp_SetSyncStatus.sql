@@ -86,13 +86,13 @@ BEGIN
             IF (@ErrorMessage IS NULL)
             BEGIN;
                 IF (@Verbose = 1) RAISERROR('[%s] Creating new status record as a successful sync',0,1,@ProcName) WITH NOWAIT;
-                INSERT INTO import.DatabaseSyncObjectStatus (_InstanceID, _DatabaseID, SyncObjectID, LastSyncChecksum)
+                INSERT import.DatabaseSyncObjectStatus (_InstanceID, _DatabaseID, SyncObjectID, LastSyncChecksum)
                 VALUES (@InstanceID, @DatabaseID, @SyncObjectID, @Checksum);
             END;
             ELSE
             BEGIN;
                 IF (@Verbose = 1) RAISERROR('[%s] Creating new status record with error',0,1,@ProcName) WITH NOWAIT;
-                INSERT INTO import.DatabaseSyncObjectStatus (_InstanceID, _DatabaseID, SyncObjectID, LastSyncChecksum, LastSyncTime, LastSyncError, LastSyncErrorMessage, LastSyncWasError)
+                INSERT import.DatabaseSyncObjectStatus (_InstanceID, _DatabaseID, SyncObjectID, LastSyncChecksum, LastSyncTime, LastSyncError, LastSyncErrorMessage, LastSyncWasError)
                 VALUES (@InstanceID, @DatabaseID, @SyncObjectID, @Checksum, NULL, @CurrentTime, @ErrorMessage, 1);
             END;
         END;
@@ -120,7 +120,7 @@ BEGIN
                     SELECT x._InstanceID, x._DatabaseID
                 );
 
-            INSERT INTO import.DatabaseSyncObjectStatus (_InstanceID, _DatabaseID, SyncObjectID, LastSyncError, LastSyncErrorMessage, LastSyncWasError)
+            INSERT import.DatabaseSyncObjectStatus (_InstanceID, _DatabaseID, SyncObjectID, LastSyncError, LastSyncErrorMessage, LastSyncWasError)
             SELECT x._InstanceID, x._DatabaseID, x.SyncObjectID
                 , LastSyncError         = @CurrentTime
                 , LastSyncErrorMessage  = @ErrorMessage

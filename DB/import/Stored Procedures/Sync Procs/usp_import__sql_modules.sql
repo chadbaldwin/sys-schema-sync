@@ -23,21 +23,21 @@ BEGIN;
             @output import.ItemName;
 
     -- object
-    INSERT INTO @input (ID, SchemaName, ObjectName, ObjectType)
+    INSERT @input (ID, SchemaName, ObjectName, ObjectType)
     SELECT ID, _SchemaName, _ObjectName, _ObjectType FROM #Dataset;
 
-    INSERT INTO @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
+    INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    IF (@Verbose = 1) RAISERROR('[%s] Insert into dbo.ObjectDefinition',0,1,@ProcName) WITH NOWAIT;
+    IF (@Verbose = 1) RAISERROR('[%s] Insert dbo.ObjectDefinition',0,1,@ProcName) WITH NOWAIT;
     WITH cte AS (
         SELECT rn = ROW_NUMBER() OVER (PARTITION BY d._ObjectDefinitionHash ORDER BY d.[object_id])
             , d._ObjectDefinitionHash, d.[definition]
         FROM @Dataset d
     )
-    INSERT INTO dbo.ObjectDefinition WITH(TABLOCKX) (ObjectDefinitionHash, ObjectDefinition)
+    INSERT dbo.ObjectDefinition WITH(TABLOCKX) (ObjectDefinitionHash, ObjectDefinition)
     SELECT d._ObjectDefinitionHash, d.[definition]
     FROM cte d
     WHERE d.rn = 1
@@ -110,7 +110,7 @@ BEGIN;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-        INSERT INTO dbo._sql_modules (_DatabaseID, _ObjectID, _RowHash
+        INSERT dbo._sql_modules (_DatabaseID, _ObjectID, _RowHash
             , [object_id], _ObjectDefinitionID, uses_ansi_nulls, uses_quoted_identifier, is_schema_bound, uses_database_collation, is_recompiled, null_on_null_input, execute_as_principal_id, uses_native_compilation, inline_type, is_inlineable)
         SELECT @DatabaseID, y._ObjectID, d._RowHash
             , d.[object_id], od._ObjectDefinitionID, d.uses_ansi_nulls, d.uses_quoted_identifier, d.is_schema_bound, d.uses_database_collation, d.is_recompiled, d.null_on_null_input, d.execute_as_principal_id, d.uses_native_compilation, d.inline_type, d.is_inlineable

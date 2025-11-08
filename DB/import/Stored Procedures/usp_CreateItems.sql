@@ -15,7 +15,7 @@ BEGIN;
 
     DECLARE @DataSet2 import.ItemName;
 
-    INSERT INTO @DataSet2 (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
+    INSERT @DataSet2 (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     SELECT ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID
     FROM @Dataset;
     ------------------------------------------------------------------------------
@@ -28,7 +28,7 @@ BEGIN;
         IF EXISTS (SELECT * FROM @DataSet2 WHERE ObjectName IS NOT NULL)
         BEGIN;
             IF (@Verbose = 1) RAISERROR('[%s] [dbo.Object] Insert: Start',0,1,@ProcName) WITH NOWAIT;
-            INSERT INTO dbo.[Object] (_DatabaseID, SchemaName, ObjectName, ObjectType)
+            INSERT dbo.[Object] (_DatabaseID, SchemaName, ObjectName, ObjectType)
             SELECT @DatabaseID, SchemaName, ObjectName, ObjectType FROM @DataSet2
             EXCEPT
             SELECT _DatabaseID, SchemaName, ObjectName, ObjectType FROM dbo.[Object] WHERE _DatabaseID = @DatabaseID;
@@ -47,7 +47,7 @@ BEGIN;
         IF EXISTS (SELECT * FROM @DataSet2 WHERE IndexName IS NOT NULL)
         BEGIN;
             IF (@Verbose = 1) RAISERROR('[%s] [dbo.Index] Insert: Start',0,1,@ProcName) WITH NOWAIT;
-            INSERT INTO dbo.[Index] (_DatabaseID, _ObjectID, IndexName)
+            INSERT dbo.[Index] (_DatabaseID, _ObjectID, IndexName)
             SELECT o._DatabaseID, o._ObjectID, d.IndexName
             FROM dbo.[Object] o
                 JOIN @DataSet2 d ON d._ObjectID = o._ObjectID
@@ -69,7 +69,7 @@ BEGIN;
         IF EXISTS (SELECT * FROM @DataSet2 WHERE ColumnName IS NOT NULL)
         BEGIN;
             IF (@Verbose = 1) RAISERROR('[%s] [dbo.Column] Insert: Start',0,1,@ProcName) WITH NOWAIT;
-            INSERT INTO dbo.[Column] (_DatabaseID, _ObjectID, ColumnName)
+            INSERT dbo.[Column] (_DatabaseID, _ObjectID, ColumnName)
             SELECT o._DatabaseID, o._ObjectID, d.ColumnName
             FROM dbo.[Object] o
                 JOIN @DataSet2 d ON d._ObjectID = o._ObjectID
