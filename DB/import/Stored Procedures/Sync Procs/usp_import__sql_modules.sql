@@ -6,6 +6,7 @@ CREATE PROCEDURE import.usp_import__sql_modules (
 AS
 BEGIN;
     SET NOCOUNT ON;
+    SET XACT_ABORT ON;
 
     DECLARE @sw datetime2 = SYSUTCDATETIME();
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
@@ -74,54 +75,56 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    DECLARE @tableName nvarchar(128) = N'dbo._sql_modules';
+    BEGIN TRAN;
+        DECLARE @tableName nvarchar(128) = N'dbo._sql_modules';
 
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-    DELETE x FROM dbo._sql_modules x
-    WHERE x._DatabaseID = @DatabaseID
-        AND NOT EXISTS (SELECT * FROM @output o WHERE o._ObjectID = x._ObjectID);
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        DELETE x FROM dbo._sql_modules x
+        WHERE x._DatabaseID = @DatabaseID
+            AND NOT EXISTS (SELECT * FROM @output o WHERE o._ObjectID = x._ObjectID);
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-    UPDATE x
-    SET   x._ModifyDate             = SYSUTCDATETIME()
-        , x._RowHash                = d._RowHash
-        --
-        , x.[object_id]             = d.[object_id]
-        , x._ObjectDefinitionID     = od._ObjectDefinitionID
-        , x.uses_ansi_nulls         = d.uses_ansi_nulls
-        , x.uses_quoted_identifier  = d.uses_quoted_identifier
-        , x.is_schema_bound         = d.is_schema_bound
-        , x.uses_database_collation = d.uses_database_collation
-        , x.is_recompiled           = d.is_recompiled
-        , x.null_on_null_input      = d.null_on_null_input
-        , x.execute_as_principal_id = d.execute_as_principal_id
-        , x.uses_native_compilation = d.uses_native_compilation
-        , x.inline_type             = d.inline_type
-        , x.is_inlineable           = d.is_inlineable
-    FROM dbo._sql_modules x
-        JOIN @output o ON o._ObjectID = x._ObjectID
-        JOIN #Dataset d ON d.ID = o.ID
-        JOIN dbo.ObjectDefinition od ON od.ObjectDefinitionHash = d._ObjectDefinitionHash
-    WHERE x._DatabaseID = @DatabaseID
-        AND (x._RowHash <> d._RowHash OR x._ObjectDefinitionID <> od._ObjectDefinitionID);
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        UPDATE x
+        SET   x._ModifyDate             = SYSUTCDATETIME()
+            , x._RowHash                = d._RowHash
+            --
+            , x.[object_id]             = d.[object_id]
+            , x._ObjectDefinitionID     = od._ObjectDefinitionID
+            , x.uses_ansi_nulls         = d.uses_ansi_nulls
+            , x.uses_quoted_identifier  = d.uses_quoted_identifier
+            , x.is_schema_bound         = d.is_schema_bound
+            , x.uses_database_collation = d.uses_database_collation
+            , x.is_recompiled           = d.is_recompiled
+            , x.null_on_null_input      = d.null_on_null_input
+            , x.execute_as_principal_id = d.execute_as_principal_id
+            , x.uses_native_compilation = d.uses_native_compilation
+            , x.inline_type             = d.inline_type
+            , x.is_inlineable           = d.is_inlineable
+        FROM dbo._sql_modules x
+            JOIN @output o ON o._ObjectID = x._ObjectID
+            JOIN #Dataset d ON d.ID = o.ID
+            JOIN dbo.ObjectDefinition od ON od.ObjectDefinitionHash = d._ObjectDefinitionHash
+        WHERE x._DatabaseID = @DatabaseID
+            AND (x._RowHash <> d._RowHash OR x._ObjectDefinitionID <> od._ObjectDefinitionID);
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-    INSERT INTO dbo._sql_modules (_DatabaseID, _ObjectID, _RowHash
-        , [object_id], _ObjectDefinitionID, uses_ansi_nulls, uses_quoted_identifier, is_schema_bound, uses_database_collation, is_recompiled, null_on_null_input, execute_as_principal_id, uses_native_compilation, inline_type, is_inlineable)
-    SELECT @DatabaseID, y._ObjectID, d._RowHash
-        , d.[object_id], od._ObjectDefinitionID, d.uses_ansi_nulls, d.uses_quoted_identifier, d.is_schema_bound, d.uses_database_collation, d.is_recompiled, d.null_on_null_input, d.execute_as_principal_id, d.uses_native_compilation, d.inline_type, d.is_inlineable
-    FROM #Dataset d
-        JOIN @output y ON y.ID = d.ID
-        JOIN dbo.ObjectDefinition od ON od.ObjectDefinitionHash = d._ObjectDefinitionHash
-    WHERE NOT EXISTS (
-            SELECT *
-            FROM dbo._sql_modules x
-            WHERE x._DatabaseID = @DatabaseID
-                AND x._ObjectID = y._ObjectID
-        );
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        INSERT INTO dbo._sql_modules (_DatabaseID, _ObjectID, _RowHash
+            , [object_id], _ObjectDefinitionID, uses_ansi_nulls, uses_quoted_identifier, is_schema_bound, uses_database_collation, is_recompiled, null_on_null_input, execute_as_principal_id, uses_native_compilation, inline_type, is_inlineable)
+        SELECT @DatabaseID, y._ObjectID, d._RowHash
+            , d.[object_id], od._ObjectDefinitionID, d.uses_ansi_nulls, d.uses_quoted_identifier, d.is_schema_bound, d.uses_database_collation, d.is_recompiled, d.null_on_null_input, d.execute_as_principal_id, d.uses_native_compilation, d.inline_type, d.is_inlineable
+        FROM #Dataset d
+            JOIN @output y ON y.ID = d.ID
+            JOIN dbo.ObjectDefinition od ON od.ObjectDefinitionHash = d._ObjectDefinitionHash
+        WHERE NOT EXISTS (
+                SELECT *
+                FROM dbo._sql_modules x
+                WHERE x._DatabaseID = @DatabaseID
+                    AND x._ObjectID = y._ObjectID
+            );
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+    COMMIT;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------

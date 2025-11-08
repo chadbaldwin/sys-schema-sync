@@ -6,6 +6,7 @@ CREATE PROCEDURE import.usp_import__foreign_key_columns (
 AS
 BEGIN;
     SET NOCOUNT ON;
+    SET XACT_ABORT ON;
 
     DECLARE @sw datetime2 = SYSUTCDATETIME();
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
@@ -50,55 +51,57 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    DECLARE @tableName nvarchar(128) = N'dbo._foreign_key_columns';
+    BEGIN TRAN;
+        DECLARE @tableName nvarchar(128) = N'dbo._foreign_key_columns';
 
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-    DELETE x FROM dbo._foreign_keys x
-    WHERE x._DatabaseID = @DatabaseID
-        AND NOT EXISTS (SELECT * FROM @output o WHERE o._ObjectID = x._ObjectID);
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        DELETE x FROM dbo._foreign_keys x
+        WHERE x._DatabaseID = @DatabaseID
+            AND NOT EXISTS (SELECT * FROM @output o WHERE o._ObjectID = x._ObjectID);
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-    UPDATE x
-    SET   x._ParentObjectID      = p._ObjectID
-        , x._ParentColumnID      = p._ColumnID
-        , x._ReferencedObjectID  = r._ObjectID
-        , x._ReferencedColumnID  = r._ColumnID
-        , x._ModifyDate          = SYSUTCDATETIME()
-        , x._RowHash             = d._RowHash
-        --
-        , x.constraint_object_id = d.constraint_object_id
-        , x.constraint_column_id = d.constraint_column_id
-        , x.parent_object_id     = d.parent_object_id
-        , x.parent_column_id     = d.parent_column_id
-        , x.referenced_object_id = d.referenced_object_id
-        , x.referenced_column_id = d.referenced_column_id
-    FROM dbo._foreign_key_columns x
-        JOIN @output y ON y._ObjectID = x._ObjectID
-        JOIN #Dataset d ON d.ID = y.ID AND d.constraint_column_id = x.constraint_column_id
-        JOIN @parent p ON p.ID = y.ID
-        JOIN @reference r ON r.ID = y.ID
-    WHERE x._DatabaseID = @DatabaseID
-        AND x._RowHash <> d._RowHash;
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        UPDATE x
+        SET   x._ParentObjectID      = p._ObjectID
+            , x._ParentColumnID      = p._ColumnID
+            , x._ReferencedObjectID  = r._ObjectID
+            , x._ReferencedColumnID  = r._ColumnID
+            , x._ModifyDate          = SYSUTCDATETIME()
+            , x._RowHash             = d._RowHash
+            --
+            , x.constraint_object_id = d.constraint_object_id
+            , x.constraint_column_id = d.constraint_column_id
+            , x.parent_object_id     = d.parent_object_id
+            , x.parent_column_id     = d.parent_column_id
+            , x.referenced_object_id = d.referenced_object_id
+            , x.referenced_column_id = d.referenced_column_id
+        FROM dbo._foreign_key_columns x
+            JOIN @output y ON y._ObjectID = x._ObjectID
+            JOIN #Dataset d ON d.ID = y.ID AND d.constraint_column_id = x.constraint_column_id
+            JOIN @parent p ON p.ID = y.ID
+            JOIN @reference r ON r.ID = y.ID
+        WHERE x._DatabaseID = @DatabaseID
+            AND x._RowHash <> d._RowHash;
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-    INSERT INTO dbo._foreign_key_columns (_DatabaseID, _ObjectID, _ParentObjectID, _ParentColumnID, _ReferencedObjectID, _ReferencedColumnID, _RowHash
-        , constraint_object_id, constraint_column_id, parent_object_id, parent_column_id, referenced_object_id, referenced_column_id)
-    SELECT @DatabaseID, y._ObjectID, p._ObjectID, p._ColumnID, r._ObjectID, r._ColumnID, d._RowHash
-        , d.constraint_object_id, d.constraint_column_id, d.parent_object_id, d.parent_column_id, d.referenced_object_id, d.referenced_column_id
-    FROM #Dataset d
-        JOIN @output y ON y.ID = d.ID
-        JOIN @parent p ON p.ID = d.ID
-        JOIN @reference r ON r.ID = d.ID
-    WHERE NOT EXISTS (
-            SELECT *
-            FROM dbo._foreign_key_columns x
-            WHERE x._DatabaseID = @DatabaseID
-                AND x._ObjectID  = y._ObjectID
-                AND x.constraint_column_id = d.constraint_column_id
-        );
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        INSERT INTO dbo._foreign_key_columns (_DatabaseID, _ObjectID, _ParentObjectID, _ParentColumnID, _ReferencedObjectID, _ReferencedColumnID, _RowHash
+            , constraint_object_id, constraint_column_id, parent_object_id, parent_column_id, referenced_object_id, referenced_column_id)
+        SELECT @DatabaseID, y._ObjectID, p._ObjectID, p._ColumnID, r._ObjectID, r._ColumnID, d._RowHash
+            , d.constraint_object_id, d.constraint_column_id, d.parent_object_id, d.parent_column_id, d.referenced_object_id, d.referenced_column_id
+        FROM #Dataset d
+            JOIN @output y ON y.ID = d.ID
+            JOIN @parent p ON p.ID = d.ID
+            JOIN @reference r ON r.ID = d.ID
+        WHERE NOT EXISTS (
+                SELECT *
+                FROM dbo._foreign_key_columns x
+                WHERE x._DatabaseID = @DatabaseID
+                    AND x._ObjectID  = y._ObjectID
+                    AND x.constraint_column_id = d.constraint_column_id
+            );
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+    COMMIT;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------

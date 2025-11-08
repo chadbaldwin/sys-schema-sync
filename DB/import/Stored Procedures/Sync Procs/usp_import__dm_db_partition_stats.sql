@@ -6,6 +6,7 @@ CREATE PROCEDURE import.usp_import__dm_db_partition_stats (
 AS
 BEGIN;
     SET NOCOUNT ON;
+    SET XACT_ABORT ON;
 
     DECLARE @sw datetime2 = SYSUTCDATETIME();
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
@@ -30,61 +31,63 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    DECLARE @tableName nvarchar(128) = N'dbo._dm_db_partition_stats';
+    BEGIN TRAN;
+        DECLARE @tableName nvarchar(128) = N'dbo._dm_db_partition_stats';
 
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-    DELETE x FROM dbo._dm_db_partition_stats x
-    WHERE x._DatabaseID = @DatabaseID
-        AND NOT EXISTS (
-            SELECT *
-            FROM #Dataset d
-                JOIN @output o ON o.ID = d.ID
-            WHERE o._IndexID = x._IndexID
-                AND x.partition_number = d.partition_number
-        );
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        DELETE x FROM dbo._dm_db_partition_stats x
+        WHERE x._DatabaseID = @DatabaseID
+            AND NOT EXISTS (
+                SELECT *
+                FROM #Dataset d
+                    JOIN @output o ON o.ID = d.ID
+                WHERE o._IndexID = x._IndexID
+                    AND x.partition_number = d.partition_number
+            );
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-    UPDATE x
-    SET   x._ModifyDate                      = SYSUTCDATETIME()
-        , x._RowHash                         = d._RowHash
-        --
-        , x.[partition_id]                   = d.[partition_id]
-        , x.[object_id]                      = d.[object_id]
-        , x.index_id                         = d.index_id
-        , x.partition_number                 = d.partition_number
-        , x.in_row_data_page_count           = d.in_row_data_page_count
-        , x.in_row_used_page_count           = d.in_row_used_page_count
-        , x.in_row_reserved_page_count       = d.in_row_reserved_page_count
-        , x.lob_used_page_count              = d.lob_used_page_count
-        , x.lob_reserved_page_count          = d.lob_reserved_page_count
-        , x.row_overflow_used_page_count     = d.row_overflow_used_page_count
-        , x.row_overflow_reserved_page_count = d.row_overflow_reserved_page_count
-        , x.used_page_count                  = d.used_page_count
-        , x.reserved_page_count              = d.reserved_page_count
-        , x.row_count                        = d.row_count
-    FROM dbo._dm_db_partition_stats x
-        JOIN @output y ON y._IndexID = x._IndexID
-        JOIN #Dataset d ON d.ID = y.ID AND d.partition_number = x.partition_number
-    WHERE x._DatabaseID = @DatabaseID
-        AND x._RowHash <> d._RowHash;
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        UPDATE x
+        SET   x._ModifyDate                      = SYSUTCDATETIME()
+            , x._RowHash                         = d._RowHash
+            --
+            , x.[partition_id]                   = d.[partition_id]
+            , x.[object_id]                      = d.[object_id]
+            , x.index_id                         = d.index_id
+            , x.partition_number                 = d.partition_number
+            , x.in_row_data_page_count           = d.in_row_data_page_count
+            , x.in_row_used_page_count           = d.in_row_used_page_count
+            , x.in_row_reserved_page_count       = d.in_row_reserved_page_count
+            , x.lob_used_page_count              = d.lob_used_page_count
+            , x.lob_reserved_page_count          = d.lob_reserved_page_count
+            , x.row_overflow_used_page_count     = d.row_overflow_used_page_count
+            , x.row_overflow_reserved_page_count = d.row_overflow_reserved_page_count
+            , x.used_page_count                  = d.used_page_count
+            , x.reserved_page_count              = d.reserved_page_count
+            , x.row_count                        = d.row_count
+        FROM dbo._dm_db_partition_stats x
+            JOIN @output y ON y._IndexID = x._IndexID
+            JOIN #Dataset d ON d.ID = y.ID AND d.partition_number = x.partition_number
+        WHERE x._DatabaseID = @DatabaseID
+            AND x._RowHash <> d._RowHash;
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-    INSERT INTO dbo._dm_db_partition_stats (_DatabaseID, _ObjectID, _IndexID, _RowHash
-        , [partition_id], [object_id], index_id, partition_number, in_row_data_page_count, in_row_used_page_count, in_row_reserved_page_count, lob_used_page_count, lob_reserved_page_count, row_overflow_used_page_count, row_overflow_reserved_page_count, used_page_count, reserved_page_count, row_count)
-    SELECT @DatabaseID, y._ObjectID, y._IndexID, d._RowHash
-        , d.[partition_id], d.[object_id], d.index_id, d.partition_number, d.in_row_data_page_count, d.in_row_used_page_count, d.in_row_reserved_page_count, d.lob_used_page_count, d.lob_reserved_page_count, d.row_overflow_used_page_count, d.row_overflow_reserved_page_count, d.used_page_count, d.reserved_page_count, d.row_count
-    FROM #Dataset d
-        JOIN @output y ON y.ID = d.ID
-    WHERE NOT EXISTS (
-            SELECT *
-            FROM dbo._dm_db_partition_stats x
-            WHERE x._DatabaseID = @DatabaseID
-                AND x._IndexID  = y._IndexID
-                AND x.partition_number = d.partition_number
-        );
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        INSERT INTO dbo._dm_db_partition_stats (_DatabaseID, _ObjectID, _IndexID, _RowHash
+            , [partition_id], [object_id], index_id, partition_number, in_row_data_page_count, in_row_used_page_count, in_row_reserved_page_count, lob_used_page_count, lob_reserved_page_count, row_overflow_used_page_count, row_overflow_reserved_page_count, used_page_count, reserved_page_count, row_count)
+        SELECT @DatabaseID, y._ObjectID, y._IndexID, d._RowHash
+            , d.[partition_id], d.[object_id], d.index_id, d.partition_number, d.in_row_data_page_count, d.in_row_used_page_count, d.in_row_reserved_page_count, d.lob_used_page_count, d.lob_reserved_page_count, d.row_overflow_used_page_count, d.row_overflow_reserved_page_count, d.used_page_count, d.reserved_page_count, d.row_count
+        FROM #Dataset d
+            JOIN @output y ON y.ID = d.ID
+        WHERE NOT EXISTS (
+                SELECT *
+                FROM dbo._dm_db_partition_stats x
+                WHERE x._DatabaseID = @DatabaseID
+                    AND x._IndexID  = y._IndexID
+                    AND x.partition_number = d.partition_number
+            );
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+    COMMIT;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------

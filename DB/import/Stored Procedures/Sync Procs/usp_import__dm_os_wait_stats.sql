@@ -6,6 +6,7 @@ CREATE PROCEDURE import.usp_import__dm_os_wait_stats (
 AS
 BEGIN;
     SET NOCOUNT ON;
+    SET XACT_ABORT ON;
 
     DECLARE @sw datetime2 = SYSUTCDATETIME();
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
@@ -15,32 +16,34 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    DECLARE @tableName nvarchar(128) = N'dbo._dm_os_wait_stats';
+    BEGIN TRAN;
+        DECLARE @tableName nvarchar(128) = N'dbo._dm_os_wait_stats';
 
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-    UPDATE x
-    SET   x._ModifyDate         = SYSUTCDATETIME()
-        --
-        , x.waiting_tasks_count = COALESCE(d.waiting_tasks_count, 0)
-        , x.wait_time_ms        = COALESCE(d.wait_time_ms, 0)
-        , x.max_wait_time_ms    = COALESCE(d.max_wait_time_ms, 0)
-        , x.signal_wait_time_ms = COALESCE(d.signal_wait_time_ms, 0)
-    FROM dbo._dm_os_wait_stats x
-        LEFT JOIN @Dataset d ON d.wait_type = x.wait_type
-    WHERE x._InstanceID = @InstanceID;
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        UPDATE x
+        SET   x._ModifyDate         = SYSUTCDATETIME()
+            --
+            , x.waiting_tasks_count = COALESCE(d.waiting_tasks_count, 0)
+            , x.wait_time_ms        = COALESCE(d.wait_time_ms, 0)
+            , x.max_wait_time_ms    = COALESCE(d.max_wait_time_ms, 0)
+            , x.signal_wait_time_ms = COALESCE(d.signal_wait_time_ms, 0)
+        FROM dbo._dm_os_wait_stats x
+            LEFT JOIN @Dataset d ON d.wait_type = x.wait_type
+        WHERE x._InstanceID = @InstanceID;
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-    INSERT INTO dbo._dm_os_wait_stats (_InstanceID, wait_type, waiting_tasks_count, wait_time_ms, max_wait_time_ms, signal_wait_time_ms)
-    SELECT @InstanceID, wait_type, waiting_tasks_count, wait_time_ms, max_wait_time_ms, signal_wait_time_ms
-    FROM @Dataset d
-    WHERE NOT EXISTS (
-            SELECT *
-            FROM dbo._dm_os_wait_stats x
-            WHERE x._InstanceID = @InstanceID
-                AND x.wait_type = d.wait_type
-        );
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        INSERT INTO dbo._dm_os_wait_stats (_InstanceID, wait_type, waiting_tasks_count, wait_time_ms, max_wait_time_ms, signal_wait_time_ms)
+        SELECT @InstanceID, wait_type, waiting_tasks_count, wait_time_ms, max_wait_time_ms, signal_wait_time_ms
+        FROM @Dataset d
+        WHERE NOT EXISTS (
+                SELECT *
+                FROM dbo._dm_os_wait_stats x
+                WHERE x._InstanceID = @InstanceID
+                    AND x.wait_type = d.wait_type
+            );
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+    COMMIT;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------

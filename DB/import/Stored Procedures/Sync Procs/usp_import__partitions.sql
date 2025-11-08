@@ -6,6 +6,7 @@ CREATE PROCEDURE import.usp_import__partitions (
 AS
 BEGIN;
     SET NOCOUNT ON;
+    SET XACT_ABORT ON;
 
     DECLARE @sw datetime2 = SYSUTCDATETIME();
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
@@ -30,58 +31,60 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    DECLARE @tableName nvarchar(128) = N'dbo._partitions';
+    BEGIN TRAN;
+        DECLARE @tableName nvarchar(128) = N'dbo._partitions';
 
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-    DELETE x FROM dbo._partitions x
-    WHERE x._DatabaseID = @DatabaseID
-        AND NOT EXISTS (
-            SELECT *
-            FROM #Dataset d
-                JOIN @output o ON o.ID = d.ID
-            WHERE o._IndexID = x._IndexID
-                AND x.partition_number = d.partition_number
-        );
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        DELETE x FROM dbo._partitions x
+        WHERE x._DatabaseID = @DatabaseID
+            AND NOT EXISTS (
+                SELECT *
+                FROM #Dataset d
+                    JOIN @output o ON o.ID = d.ID
+                WHERE o._IndexID = x._IndexID
+                    AND x.partition_number = d.partition_number
+            );
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-    UPDATE x
-    SET   x._ModifyDate             = SYSUTCDATETIME()
-        , x._RowHash                = d._RowHash
-        --
-        , x.[partition_id]          = d.[partition_id]
-        , x.[object_id]             = d.[object_id]
-        , x.index_id                = d.index_id
-        , x.partition_number        = d.partition_number
-        , x.hobt_id                 = d.hobt_id
-        , x.[rows]                  = d.[rows]
-        , x.filestream_filegroup_id = d.filestream_filegroup_id
-        , x.[data_compression]      = d.[data_compression]
-        , x.data_compression_desc   = d.data_compression_desc
-        , x.xml_compression         = d.xml_compression
-        , x.xml_compression_desc    = d.xml_compression_desc
-    FROM dbo._partitions x
-        JOIN @output y ON y._IndexID = x._IndexID
-        JOIN #Dataset d ON d.ID = y.ID AND d.partition_number = x.partition_number
-    WHERE x._DatabaseID = @DatabaseID
-        AND x._RowHash <> d._RowHash;
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        UPDATE x
+        SET   x._ModifyDate             = SYSUTCDATETIME()
+            , x._RowHash                = d._RowHash
+            --
+            , x.[partition_id]          = d.[partition_id]
+            , x.[object_id]             = d.[object_id]
+            , x.index_id                = d.index_id
+            , x.partition_number        = d.partition_number
+            , x.hobt_id                 = d.hobt_id
+            , x.[rows]                  = d.[rows]
+            , x.filestream_filegroup_id = d.filestream_filegroup_id
+            , x.[data_compression]      = d.[data_compression]
+            , x.data_compression_desc   = d.data_compression_desc
+            , x.xml_compression         = d.xml_compression
+            , x.xml_compression_desc    = d.xml_compression_desc
+        FROM dbo._partitions x
+            JOIN @output y ON y._IndexID = x._IndexID
+            JOIN #Dataset d ON d.ID = y.ID AND d.partition_number = x.partition_number
+        WHERE x._DatabaseID = @DatabaseID
+            AND x._RowHash <> d._RowHash;
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-    INSERT INTO dbo._partitions (_DatabaseID, _ObjectID, _IndexID, _RowHash
-        , [partition_id], [object_id], index_id, partition_number, hobt_id, [rows], filestream_filegroup_id, [data_compression], data_compression_desc, xml_compression, xml_compression_desc)
-    SELECT @DatabaseID, y._ObjectID, y._IndexID, d._RowHash
-        , d.[partition_id], d.[object_id], d.index_id, d.partition_number, d.hobt_id, d.[rows], d.filestream_filegroup_id, d.[data_compression], d.data_compression_desc, d.xml_compression, d.xml_compression_desc
-    FROM #Dataset d
-        JOIN @output y ON y.ID = d.ID
-    WHERE NOT EXISTS (
-            SELECT *
-            FROM dbo._partitions x
-            WHERE x._DatabaseID = @DatabaseID
-                AND x._IndexID  = y._IndexID
-                AND x.partition_number = d.partition_number
-        );
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        INSERT INTO dbo._partitions (_DatabaseID, _ObjectID, _IndexID, _RowHash
+            , [partition_id], [object_id], index_id, partition_number, hobt_id, [rows], filestream_filegroup_id, [data_compression], data_compression_desc, xml_compression, xml_compression_desc)
+        SELECT @DatabaseID, y._ObjectID, y._IndexID, d._RowHash
+            , d.[partition_id], d.[object_id], d.index_id, d.partition_number, d.hobt_id, d.[rows], d.filestream_filegroup_id, d.[data_compression], d.data_compression_desc, d.xml_compression, d.xml_compression_desc
+        FROM #Dataset d
+            JOIN @output y ON y.ID = d.ID
+        WHERE NOT EXISTS (
+                SELECT *
+                FROM dbo._partitions x
+                WHERE x._DatabaseID = @DatabaseID
+                    AND x._IndexID  = y._IndexID
+                    AND x.partition_number = d.partition_number
+            );
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+    COMMIT;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------

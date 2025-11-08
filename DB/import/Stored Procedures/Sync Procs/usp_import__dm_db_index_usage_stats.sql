@@ -6,6 +6,7 @@ CREATE PROCEDURE import.usp_import__dm_db_index_usage_stats (
 AS
 BEGIN;
     SET NOCOUNT ON;
+    SET XACT_ABORT ON;
 
     DECLARE @sw datetime2 = SYSUTCDATETIME();
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
@@ -30,62 +31,64 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    DECLARE @tableName nvarchar(128) = N'dbo._dm_db_index_usage_stats';
+    BEGIN TRAN;
+        DECLARE @tableName nvarchar(128) = N'dbo._dm_db_index_usage_stats';
 
-    /*  Deletes here are okay because the export query left joins to sys.dm_db_index_usage_stats
-        so it will always return every index. The only time indexes will be deleted is when
-        they have been completely dropped from the database and never re-created. */
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-    DELETE x FROM dbo._dm_db_index_usage_stats x
-    WHERE x._DatabaseID = @DatabaseID
-        AND NOT EXISTS (SELECT * FROM @output o WHERE o._IndexID = x._IndexID);
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        /*  Deletes here are okay because the export query left joins to sys.dm_db_index_usage_stats
+            so it will always return every index. The only time indexes will be deleted is when
+            they have been completely dropped from the database and never re-created. */
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        DELETE x FROM dbo._dm_db_index_usage_stats x
+        WHERE x._DatabaseID = @DatabaseID
+            AND NOT EXISTS (SELECT * FROM @output o WHERE o._IndexID = x._IndexID);
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-    UPDATE x
-    SET   x._ModifyDate         = SYSUTCDATETIME()
-        , x._RowHash            = d._RowHash
-        --
-        , x.database_id         = d.database_id
-        , x.[object_id]         = d.[object_id]
-        , x.index_id            = d.index_id
-        , x.user_seeks          = d.user_seeks
-        , x.user_scans          = d.user_scans
-        , x.user_lookups        = d.user_lookups
-        , x.user_updates        = d.user_updates
-        , x.last_user_seek      = COALESCE(d.last_user_seek, x.last_user_seek)
-        , x.last_user_scan      = COALESCE(d.last_user_scan, x.last_user_scan)
-        , x.last_user_lookup    = COALESCE(d.last_user_lookup, x.last_user_lookup)
-        , x.last_user_update    = COALESCE(d.last_user_update, x.last_user_update)
-        , x.system_seeks        = d.system_seeks
-        , x.system_scans        = d.system_scans
-        , x.system_lookups      = d.system_lookups
-        , x.system_updates      = d.system_updates
-        , x.last_system_seek    = COALESCE(d.last_system_seek, x.last_system_seek)
-        , x.last_system_scan    = COALESCE(d.last_system_scan, x.last_system_scan)
-        , x.last_system_lookup  = COALESCE(d.last_system_lookup, x.last_system_lookup)
-        , x.last_system_update  = COALESCE(d.last_system_update, x.last_system_update)
-    FROM dbo._dm_db_index_usage_stats x
-        JOIN @output y ON y._IndexID = x._IndexID
-        JOIN #Dataset d ON d.ID = y.ID
-    WHERE x._DatabaseID = @DatabaseID
-        AND x._RowHash <> d._RowHash;
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        UPDATE x
+        SET   x._ModifyDate         = SYSUTCDATETIME()
+            , x._RowHash            = d._RowHash
+            --
+            , x.database_id         = d.database_id
+            , x.[object_id]         = d.[object_id]
+            , x.index_id            = d.index_id
+            , x.user_seeks          = d.user_seeks
+            , x.user_scans          = d.user_scans
+            , x.user_lookups        = d.user_lookups
+            , x.user_updates        = d.user_updates
+            , x.last_user_seek      = COALESCE(d.last_user_seek, x.last_user_seek)
+            , x.last_user_scan      = COALESCE(d.last_user_scan, x.last_user_scan)
+            , x.last_user_lookup    = COALESCE(d.last_user_lookup, x.last_user_lookup)
+            , x.last_user_update    = COALESCE(d.last_user_update, x.last_user_update)
+            , x.system_seeks        = d.system_seeks
+            , x.system_scans        = d.system_scans
+            , x.system_lookups      = d.system_lookups
+            , x.system_updates      = d.system_updates
+            , x.last_system_seek    = COALESCE(d.last_system_seek, x.last_system_seek)
+            , x.last_system_scan    = COALESCE(d.last_system_scan, x.last_system_scan)
+            , x.last_system_lookup  = COALESCE(d.last_system_lookup, x.last_system_lookup)
+            , x.last_system_update  = COALESCE(d.last_system_update, x.last_system_update)
+        FROM dbo._dm_db_index_usage_stats x
+            JOIN @output y ON y._IndexID = x._IndexID
+            JOIN #Dataset d ON d.ID = y.ID
+        WHERE x._DatabaseID = @DatabaseID
+            AND x._RowHash <> d._RowHash;
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-    INSERT INTO dbo._dm_db_index_usage_stats (_DatabaseID, _ObjectID, _IndexID, _RowHash
-        , database_id, [object_id], index_id, user_seeks, user_scans, user_lookups, user_updates, last_user_seek, last_user_scan, last_user_lookup, last_user_update, system_seeks, system_scans, system_lookups, system_updates, last_system_seek, last_system_scan, last_system_lookup, last_system_update)
-    SELECT @DatabaseID, y._ObjectID, y._IndexID, d._RowHash
-        , d.database_id, d.[object_id], d.index_id, d.user_seeks, d.user_scans, d.user_lookups, d.user_updates, d.last_user_seek, d.last_user_scan, d.last_user_lookup, d.last_user_update, d.system_seeks, d.system_scans, d.system_lookups, d.system_updates, d.last_system_seek, d.last_system_scan, d.last_system_lookup, d.last_system_update
-    FROM #Dataset d
-        JOIN @output y ON y.ID = d.ID
-    WHERE NOT EXISTS (
-            SELECT *
-            FROM dbo._dm_db_index_usage_stats x
-            WHERE x._DatabaseID = @DatabaseID
-                AND x._IndexID  = y._IndexID
-        );
-    IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        INSERT INTO dbo._dm_db_index_usage_stats (_DatabaseID, _ObjectID, _IndexID, _RowHash
+            , database_id, [object_id], index_id, user_seeks, user_scans, user_lookups, user_updates, last_user_seek, last_user_scan, last_user_lookup, last_user_update, system_seeks, system_scans, system_lookups, system_updates, last_system_seek, last_system_scan, last_system_lookup, last_system_update)
+        SELECT @DatabaseID, y._ObjectID, y._IndexID, d._RowHash
+            , d.database_id, d.[object_id], d.index_id, d.user_seeks, d.user_scans, d.user_lookups, d.user_updates, d.last_user_seek, d.last_user_scan, d.last_user_lookup, d.last_user_update, d.system_seeks, d.system_scans, d.system_lookups, d.system_updates, d.last_system_seek, d.last_system_scan, d.last_system_lookup, d.last_system_update
+        FROM #Dataset d
+            JOIN @output y ON y.ID = d.ID
+        WHERE NOT EXISTS (
+                SELECT *
+                FROM dbo._dm_db_index_usage_stats x
+                WHERE x._DatabaseID = @DatabaseID
+                    AND x._IndexID  = y._IndexID
+            );
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+    COMMIT;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
