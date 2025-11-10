@@ -13,7 +13,6 @@ $ErrorActionPreference = 'Stop'
 $PSDefaultParameterValues= @{
     'Write-DbaDbTableData:EnableException' = $true
     'Invoke-DbaQuery:EnableException' = $true
-    'Invoke-DbaQuery:QueryTimeout' = 30
     'Invoke-DbaQuery:MessagesToOutput' = $true
 }
 
@@ -47,7 +46,7 @@ try {
         Write-Output 'Start: Checksum'; $sw.Restart()
         $oldchecksum = $SyncObject.LastSyncChecksum | ConvertFrom-DBNull
         $checksumQuery = "SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED; {0}" -f $SyncObject.ChecksumQueryText
-        $newchecksum = Invoke-DbaQuery $SourceSqlConnection -Query $checksumQuery -As SingleValue | ConvertFrom-DBNull
+        $newchecksum = Invoke-DbaQuery $SourceSqlConnection -Query $checksumQuery -As SingleValue -QueryTimeout 30 | ConvertFrom-DBNull
         Write-Output "Old checksum: ${oldchecksum}"
         Write-Output "New checksum: ${newchecksum}"
         Write-Output "Done: Checksum [$($sw.Elapsed)]"
@@ -84,7 +83,7 @@ try {
         #>
         Write-Output 'Start: Export'; $sw.Restart()
         # using DataSet here because it's easy to pull the DataTable out of it
-        $data_src = Invoke-DbaQuery $SourceSqlConnection -Query $exportQuery -As DataSet
+        $data_src = Invoke-DbaQuery $SourceSqlConnection -Query $exportQuery -As DataSet -QueryTimeout 30
         Write-Output "Done: Export [$($sw.Elapsed)]"
 
         switch ($syncType) {
@@ -109,7 +108,7 @@ try {
 
                     # No delete step because the import proc will handle it - deletes, updates, etc
                     Write-Output 'Start: Write'; $sw.Restart()
-                    Invoke-DbaQuery $TargetSqlConnection -CommandType StoredProcedure -Query $SyncObject.ImportProcClean -QueryTimeout 30 `
+                    Invoke-DbaQuery $TargetSqlConnection -CommandType StoredProcedure -Query $SyncObject.ImportProcClean `
                                     -SqlParameter @(
                                         $sqlParamImportID
                                         , (New-DbaSqlParameter -ParameterName 'Dataset' -SqlDbType Structured -Value $data_dst.Tables[0] -TypeName $SyncObject.ImportTypeClean)
