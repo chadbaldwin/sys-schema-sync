@@ -45,7 +45,6 @@ SELECT _SchemaName           = s.[name]
     , _ObjectName            = o.[name]
     , _ObjectType            = o.[type]
     , _IndexName             = IIF(i.[type] = 0, '<<HEAP>>', i.[name])
-    , _RowHash               = CONVERT(binary(32), HASHBYTES('SHA2_256', (SELECT x.* FROM (SELECT NULL) n(n) FOR JSON AUTO)))
     , EstStatsBeginTime      = r.BeginDate
     , StatsEndTime           = @CollectionTime
     /*--*/

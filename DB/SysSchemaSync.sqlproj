@@ -84,6 +84,9 @@
     <Folder Include="import\Views" />
     <Folder Include="Properties" />
     <Folder Include="Security" />
+    <Folder Include="dw" />
+    <Folder Include="dw\Tables" />
+    <Folder Include="dw\Stored Procedures" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Tables\Column.sql" />
@@ -251,6 +254,9 @@
     <Build Include="dbo\Tables\Sync Tables\_partition_parameters.sql" />
     <Build Include="dbo\Tables\Sync Tables\_destination_data_spaces.sql" />
     <Build Include="import\Stored Procedures\usp_DatabaseSyncObjectStatus_Reset_Friendly.sql" />
+    <Build Include="Security\dw.sql" />
+    <Build Include="dw\Tables\_dm_db_index_usage_stats_delta_history.sql" />
+    <Build Include="dw\Stored Procedures\usp_import__dm_db_index_usage_stats_delta_history.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="StaticCodeAnalysis.SuppressMessages.xml" />

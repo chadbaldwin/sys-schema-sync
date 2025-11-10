@@ -29,6 +29,13 @@ BEGIN;
 
     ------------------------------------------------------------------------------
     BEGIN TRAN;
+        -- Kick off pre-merge tasks - tasks that need to be able to compare the old data with the new data before the merge occurs
+
+        -- Record delta history before updating table
+        EXEC dw.usp_import__dm_db_index_usage_stats_delta_history @DatabaseID = @DatabaseID, @Dataset = @Dataset, @ItemName = @output, @Verbose = @Verbose;
+        ------------------------------------------------------------------------------
+
+        ------------------------------------------------------------------------------
         DECLARE @tableName nvarchar(128) = N'dbo._dm_db_index_usage_stats';
 
         /*  Deletes here are okay because the export query left joins to sys.dm_db_index_usage_stats
@@ -42,12 +49,13 @@ BEGIN;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
         UPDATE x
-        SET   x._ModifyDate            = SYSUTCDATETIME()
-            , x._RowHash               = d._RowHash
+        SET   x.EstimatedStatsBeginTime = d.EstStatsBeginTime
+            , x.StatsEndTime            = d.StatsEndTime
             --
             , x.database_id             = d.database_id
             , x.[object_id]             = d.[object_id]
             , x.index_id                = d.index_id
+            --
             , x.user_seeks              = d.user_seeks
             , x.user_scans              = d.user_scans
             , x.user_lookups            = d.user_lookups
@@ -56,6 +64,7 @@ BEGIN;
             , x.last_user_scan_utc      = COALESCE(d.last_user_scan_utc, x.last_user_scan_utc)
             , x.last_user_lookup_utc    = COALESCE(d.last_user_lookup_utc, x.last_user_lookup_utc)
             , x.last_user_update_utc    = COALESCE(d.last_user_update_utc, x.last_user_update_utc)
+            --
             , x.system_seeks            = d.system_seeks
             , x.system_scans            = d.system_scans
             , x.system_lookups          = d.system_lookups
@@ -66,15 +75,16 @@ BEGIN;
             , x.last_system_update_utc  = COALESCE(d.last_system_update_utc, x.last_system_update_utc)
         FROM dbo._dm_db_index_usage_stats x
             JOIN @output y ON y._IndexID = x._IndexID
-        WHERE x._DatabaseID = @DatabaseID
-            AND x._RowHash <> d._RowHash;
             JOIN @Dataset d ON d.__ID = y.ID
+        WHERE x._DatabaseID = @DatabaseID;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-        INSERT dbo._dm_db_index_usage_stats (_DatabaseID, _ObjectID, _IndexID, _RowHash
+        INSERT dbo._dm_db_index_usage_stats (_DatabaseID, _ObjectID, _IndexID
+            , EstimatedStatsBeginTime, StatsEndTime
             , database_id, [object_id], index_id, user_seeks, user_scans, user_lookups, user_updates, last_user_seek_utc, last_user_scan_utc, last_user_lookup_utc, last_user_update_utc, system_seeks, system_scans, system_lookups, system_updates, last_system_seek_utc, last_system_scan_utc, last_system_lookup_utc, last_system_update_utc)
-        SELECT @DatabaseID, y._ObjectID, y._IndexID, d._RowHash
+        SELECT @DatabaseID, y._ObjectID, y._IndexID
+            , d.EstStatsBeginTime, d.StatsEndTime
             , d.database_id, d.[object_id], d.index_id, d.user_seeks, d.user_scans, d.user_lookups, d.user_updates, d.last_user_seek_utc, d.last_user_scan_utc, d.last_user_lookup_utc, d.last_user_update_utc, d.system_seeks, d.system_scans, d.system_lookups, d.system_updates, d.last_system_seek_utc, d.last_system_scan_utc, d.last_system_lookup_utc, d.last_system_update_utc
         FROM @Dataset d
             JOIN @output y ON y.ID = d.__ID
