@@ -1,4 +1,5 @@
 CREATE TYPE import.import__check_constraints AS TABLE (
+    __ID                    int           NOT NULL,
     _SchemaName             nvarchar(128) NOT NULL,
     _ObjectName             nvarchar(128) NOT NULL,
     _ObjectType             char(2)       NOT NULL,

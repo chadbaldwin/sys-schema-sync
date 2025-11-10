@@ -16,15 +16,12 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    IF OBJECT_ID('tempdb..#Dataset','U') IS NOT NULL DROP TABLE #Dataset; --SELECT * FROM #Dataset
-    SELECT ID = IDENTITY(int), * INTO #Dataset FROM @Dataset;
-
     DECLARE @input  import.ItemName,
             @output import.ItemName;
 
     -- object
     INSERT @input (ID, SchemaName, ObjectName, ObjectType)
-    SELECT ID, _SchemaName, _ObjectName, _ObjectType FROM #Dataset;
+    SELECT __ID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
 
     INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
@@ -40,7 +37,7 @@ BEGIN;
             AND NOT EXISTS (
                 SELECT *
                 FROM @output o
-                    JOIN #Dataset d ON d.ID = o.ID
+                    JOIN @Dataset d ON d.__ID = o.ID
                 WHERE o._ObjectID = x._ObjectID
                     AND d.artid = x.artid
             );
@@ -76,7 +73,7 @@ BEGIN;
             , x.fire_triggers_on_snapshot   = d.fire_triggers_on_snapshot
         FROM dbo._sysarticles x
             JOIN @output y ON y._ObjectID = x._ObjectID
-            JOIN #Dataset d ON d.ID = y.ID AND d.artid = x.artid
+            JOIN @Dataset d ON d.__ID = y.ID AND d.artid = x.artid
         WHERE x._DatabaseID = @DatabaseID
             AND x._RowHash <> d._RowHash;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
@@ -86,8 +83,8 @@ BEGIN;
             , artid, creation_script, del_cmd, [description], dest_table, [filter], filter_clause, ins_cmd, [name], [objid], pubid, pre_creation_cmd, [status], sync_objid, [type], upd_cmd, schema_option, dest_owner, ins_scripting_proc, del_scripting_proc, upd_scripting_proc, custom_script, fire_triggers_on_snapshot)
         SELECT @DatabaseID, y._ObjectID, d._RowHash
             , d.artid, d.creation_script, d.del_cmd, d.[description], d.dest_table, d.[filter], d.filter_clause, d.ins_cmd, d.[name], d.[objid], d.pubid, d.pre_creation_cmd, d.[status], d.sync_objid, d.[type], d.upd_cmd, d.schema_option, d.dest_owner, d.ins_scripting_proc, d.del_scripting_proc, d.upd_scripting_proc, d.custom_script, d.fire_triggers_on_snapshot
-        FROM #Dataset d
-            JOIN @output y ON y.ID = d.ID
+        FROM @Dataset d
+            JOIN @output y ON y.ID = d.__ID
         WHERE NOT EXISTS (
                 SELECT *
                 FROM dbo._sysarticles x

@@ -16,15 +16,12 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    IF OBJECT_ID('tempdb..#Dataset','U') IS NOT NULL DROP TABLE #Dataset; --SELECT * FROM #Dataset
-    SELECT ID = IDENTITY(int), * INTO #Dataset FROM @Dataset;
-
     DECLARE @input  import.ItemName,
             @output import.ItemName;
 
     -- object
     INSERT @input (ID, SchemaName, ObjectName, ObjectType, IndexName)
-    SELECT ID, _SchemaName, _ObjectName, _ObjectType, _IndexName FROM #Dataset;
+    SELECT __ID, _SchemaName, _ObjectName, _ObjectType, _IndexName FROM @Dataset;
 
     INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
@@ -64,7 +61,7 @@ BEGIN;
             , x.replica_name                 = d.replica_name
         FROM dbo._stats x
             JOIN @output y ON y._IndexID = x._IndexID
-            JOIN #Dataset d ON d.ID = y.ID
+            JOIN @Dataset d ON d.__ID = y.ID
         WHERE x._DatabaseID = @DatabaseID
             AND x._RowHash <> d._RowHash;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
@@ -74,8 +71,8 @@ BEGIN;
             , [object_id], [name], stats_id, auto_created, user_created, no_recompute, has_filter, filter_definition, is_temporary, is_incremental, has_persisted_sample, stats_generation_method, stats_generation_method_desc, auto_drop, replica_role_id, replica_role_desc, replica_name)
         SELECT @DatabaseID, y._ObjectID, y._IndexID, d._RowHash
             , d.[object_id], d.[name], d.stats_id, d.auto_created, d.user_created, d.no_recompute, d.has_filter, d.filter_definition, d.is_temporary, d.is_incremental, d.has_persisted_sample, d.stats_generation_method, d.stats_generation_method_desc, d.auto_drop, d.replica_role_id, d.replica_role_desc, d.replica_name
-        FROM #Dataset d
-            JOIN @output y ON y.ID = d.ID
+        FROM @Dataset d
+            JOIN @output y ON y.ID = d.__ID
         WHERE NOT EXISTS (
                 SELECT *
                 FROM dbo._stats x

@@ -16,15 +16,12 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    IF OBJECT_ID('tempdb..#Dataset','U') IS NOT NULL DROP TABLE #Dataset; --SELECT * FROM #Dataset
-    SELECT ID = IDENTITY(int), * INTO #Dataset FROM @Dataset;
-
     DECLARE @input  import.ItemName,
             @output import.ItemName;
 
     -- object
     INSERT @input (ID, SchemaName, ObjectName, ObjectType, IndexName)
-    SELECT ID, _SchemaName, _ObjectName, _ObjectType, _IndexName FROM #Dataset;
+    SELECT __ID, _SchemaName, _ObjectName, _ObjectType, _IndexName FROM @Dataset;
 
     INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
@@ -56,7 +53,7 @@ BEGIN;
             , x.persisted_sample_percent = d.persisted_sample_percent
         FROM dbo._dm_db_stats_properties x
             JOIN @output y ON y._IndexID = x._IndexID
-            JOIN #Dataset d ON d.ID = y.ID
+            JOIN @Dataset d ON d.__ID = y.ID
         WHERE x._DatabaseID = @DatabaseID
             AND x._RowHash <> d._RowHash;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
@@ -66,8 +63,8 @@ BEGIN;
             , [object_id], stats_id, last_updated, [rows], rows_sampled, steps, unfiltered_rows, modification_counter, persisted_sample_percent)
         SELECT @DatabaseID, y._ObjectID, y._IndexID, d._RowHash
             , d.[object_id], d.stats_id, d.last_updated, d.[rows], d.rows_sampled, d.steps, d.unfiltered_rows, d.modification_counter, d.persisted_sample_percent
-        FROM #Dataset d
-            JOIN @output y ON y.ID = d.ID
+        FROM @Dataset d
+            JOIN @output y ON y.ID = d.__ID
         WHERE NOT EXISTS (
                 SELECT *
                 FROM dbo._dm_db_stats_properties x

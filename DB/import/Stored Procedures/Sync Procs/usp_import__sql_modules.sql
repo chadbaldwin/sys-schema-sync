@@ -16,15 +16,12 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    IF OBJECT_ID('tempdb..#Dataset','U') IS NOT NULL DROP TABLE #Dataset; --SELECT * FROM #Dataset
-    SELECT ID = IDENTITY(int), * INTO #Dataset FROM @Dataset;
-
     DECLARE @input  import.ItemName,
             @output import.ItemName;
 
     -- object
     INSERT @input (ID, SchemaName, ObjectName, ObjectType)
-    SELECT ID, _SchemaName, _ObjectName, _ObjectType FROM #Dataset;
+    SELECT __ID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
 
     INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
@@ -103,7 +100,7 @@ BEGIN;
             , x.is_inlineable           = d.is_inlineable
         FROM dbo._sql_modules x
             JOIN @output o ON o._ObjectID = x._ObjectID
-            JOIN #Dataset d ON d.ID = o.ID
+            JOIN @Dataset d ON d.__ID = o.ID
             JOIN dbo.ObjectDefinition od ON od.ObjectDefinitionHash = d._ObjectDefinitionHash
         WHERE x._DatabaseID = @DatabaseID
             AND (x._RowHash <> d._RowHash OR x._ObjectDefinitionID <> od._ObjectDefinitionID);
@@ -114,8 +111,8 @@ BEGIN;
             , [object_id], _ObjectDefinitionID, uses_ansi_nulls, uses_quoted_identifier, is_schema_bound, uses_database_collation, is_recompiled, null_on_null_input, execute_as_principal_id, uses_native_compilation, inline_type, is_inlineable)
         SELECT @DatabaseID, y._ObjectID, d._RowHash
             , d.[object_id], od._ObjectDefinitionID, d.uses_ansi_nulls, d.uses_quoted_identifier, d.is_schema_bound, d.uses_database_collation, d.is_recompiled, d.null_on_null_input, d.execute_as_principal_id, d.uses_native_compilation, d.inline_type, d.is_inlineable
-        FROM #Dataset d
-            JOIN @output y ON y.ID = d.ID
+        FROM @Dataset d
+            JOIN @output y ON y.ID = d.__ID
             JOIN dbo.ObjectDefinition od ON od.ObjectDefinitionHash = d._ObjectDefinitionHash
         WHERE NOT EXISTS (
                 SELECT *

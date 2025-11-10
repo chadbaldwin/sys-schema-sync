@@ -16,9 +16,6 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    IF OBJECT_ID('tempdb..#Dataset','U') IS NOT NULL DROP TABLE #Dataset; --SELECT * FROM #Dataset
-    SELECT ID = IDENTITY(int), * INTO #Dataset FROM @Dataset;
-
     DECLARE @input     import.ItemName,
             @output    import.ItemName,
             @parent    import.ItemName,
@@ -26,7 +23,7 @@ BEGIN;
 
     -- object
     INSERT @input (ID, SchemaName, ObjectName, ObjectType)
-    SELECT ID, _SchemaName, _ObjectName, _ObjectType FROM #Dataset;
+    SELECT __ID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
 
     INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
@@ -35,7 +32,7 @@ BEGIN;
 
     -- parent object
     INSERT @input (ID, SchemaName, ObjectName, ObjectType, ColumnName)
-    SELECT ID, _ParentSchemaName, _ParentObjectName, _ParentObjectType, _ParentColumnName FROM #Dataset;
+    SELECT __ID, _ParentSchemaName, _ParentObjectName, _ParentObjectType, _ParentColumnName FROM @Dataset;
 
     INSERT @parent (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
@@ -44,7 +41,7 @@ BEGIN;
 
     -- reference object
     INSERT @input (ID, SchemaName, ObjectName, ObjectType, ColumnName)
-    SELECT ID, _ReferencedSchemaName, _ReferencedObjectName, _ReferencedObjectType, _ReferencedColumnName FROM #Dataset;
+    SELECT __ID, _ReferencedSchemaName, _ReferencedObjectName, _ReferencedObjectType, _ReferencedColumnName FROM @Dataset;
 
     INSERT @reference (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
@@ -77,7 +74,7 @@ BEGIN;
             , x.referenced_column_id = d.referenced_column_id
         FROM dbo._foreign_key_columns x
             JOIN @output y ON y._ObjectID = x._ObjectID
-            JOIN #Dataset d ON d.ID = y.ID AND d.constraint_column_id = x.constraint_column_id
+            JOIN @Dataset d ON d.__ID = y.ID AND d.constraint_column_id = x.constraint_column_id
             JOIN @parent p ON p.ID = y.ID
             JOIN @reference r ON r.ID = y.ID
         WHERE x._DatabaseID = @DatabaseID
@@ -89,10 +86,10 @@ BEGIN;
             , constraint_object_id, constraint_column_id, parent_object_id, parent_column_id, referenced_object_id, referenced_column_id)
         SELECT @DatabaseID, y._ObjectID, p._ObjectID, p._ColumnID, r._ObjectID, r._ColumnID, d._RowHash
             , d.constraint_object_id, d.constraint_column_id, d.parent_object_id, d.parent_column_id, d.referenced_object_id, d.referenced_column_id
-        FROM #Dataset d
-            JOIN @output y ON y.ID = d.ID
-            JOIN @parent p ON p.ID = d.ID
-            JOIN @reference r ON r.ID = d.ID
+        FROM @Dataset d
+            JOIN @output y ON y.ID = d.__ID
+            JOIN @parent p ON p.ID = d.__ID
+            JOIN @reference r ON r.ID = d.__ID
         WHERE NOT EXISTS (
                 SELECT *
                 FROM dbo._foreign_key_columns x

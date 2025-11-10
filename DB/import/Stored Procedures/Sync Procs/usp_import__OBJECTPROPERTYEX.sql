@@ -16,15 +16,12 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    IF OBJECT_ID('tempdb..#Dataset','U') IS NOT NULL DROP TABLE #Dataset; --SELECT * FROM #Dataset
-    SELECT ID = IDENTITY(int), * INTO #Dataset FROM @Dataset;
-
     DECLARE @input  import.ItemName,
             @output import.ItemName;
 
     -- object
     INSERT @input (ID, SchemaName, ObjectName, ObjectType)
-    SELECT ID, _SchemaName, _ObjectName, _ObjectType FROM #Dataset;
+    SELECT __ID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
 
     INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose, @Verbose = @Verbose;
@@ -152,7 +149,7 @@ BEGIN;
             , x.TableTemporalType                    = d.TableTemporalType
         FROM dbo._OBJECTPROPERTYEX x
             JOIN @output y ON y._ObjectID = x._ObjectID
-            JOIN #Dataset d ON d.ID = y.ID
+            JOIN @Dataset d ON d.__ID = y.ID
         WHERE x._DatabaseID = @DatabaseID
             AND x._RowHash <> d._RowHash;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
@@ -162,8 +159,8 @@ BEGIN;
             , BaseType, CnstIsClustKey, CnstIsColumn, CnstIsDeleteCascade, CnstIsDisabled, CnstIsNonclustKey, CnstIsNotRepl, CnstIsNotTrusted, CnstIsUpdateCascade, ExecIsAfterTrigger, ExecIsAnsiNullsOn, ExecIsDeleteTrigger, ExecIsFirstDeleteTrigger, ExecIsFirstInsertTrigger, ExecIsFirstUpdateTrigger, ExecIsInsertTrigger, ExecIsInsteadOfTrigger, ExecIsLastDeleteTrigger, ExecIsLastInsertTrigger, ExecIsLastUpdateTrigger, ExecIsQuotedIdentOn, ExecIsStartup, ExecIsTriggerDisabled, ExecIsTriggerNotForRepl, ExecIsUpdateTrigger, ExecIsWithNativeCompilation, HasAfterTrigger, HasDeleteTrigger, HasInsertTrigger, HasInsteadOfTrigger, HasUpdateTrigger, IsAnsiNullsOn, IsCheckCnst, IsConstraint, IsDefault, IsDefaultCnst, IsDeterministic, IsEncrypted, IsExecuted, IsExtendedProc, IsForeignKey, IsIndexed, IsIndexable, IsInlineFunction, IsMSShipped, IsPrecise, IsPrimaryKey, IsProcedure, IsQuotedIdentOn, IsQueue, IsReplProc, IsRule, IsScalarFunction, IsSchemaBound, IsSystemTable, IsSystemVerified, IsTable, IsTableFunction, IsTrigger, IsUniqueCnst, IsUserTable, IsView, OwnerId, SchemaId, SystemDataAccess, TableDeleteTrigger, TableDeleteTriggerCount, TableFullTextMergeStatus, TableFullTextBackgroundUpdateIndexOn, TableFulltextCatalogId, TableFullTextChangeTrackingOn, TableFulltextKeyColumn, TableFulltextPopulateStatus, TableFullTextSemanticExtraction, TableHasActiveFulltextIndex, TableHasCheckCnst, TableHasClustIndex, TableHasDefaultCnst, TableHasDeleteTrigger, TableHasForeignKey, TableHasForeignRef, TableHasIdentity, TableHasIndex, TableHasInsertTrigger, TableHasNonclustIndex, TableHasPrimaryKey, TableHasRowGuidCol, TableHasTextImage, TableHasTimestamp, TableHasUniqueCnst, TableHasUpdateTrigger, TableHasVarDecimalStorageFormat, TableInsertTrigger, TableInsertTriggerCount, TableIsFake, TableIsLockedOnBulkLoad, TableIsMemoryOptimized, TableIsPinned, TableTextInRowLimit, TableUpdateTrigger, TableUpdateTriggerCount, UserDataAccess, TableHasColumnSet, Cardinality, TableTemporalType)
         SELECT @DatabaseID, y._ObjectID, d._RowHash
             , d.BaseType, d.CnstIsClustKey, d.CnstIsColumn, d.CnstIsDeleteCascade, d.CnstIsDisabled, d.CnstIsNonclustKey, d.CnstIsNotRepl, d.CnstIsNotTrusted, d.CnstIsUpdateCascade, d.ExecIsAfterTrigger, d.ExecIsAnsiNullsOn, d.ExecIsDeleteTrigger, d.ExecIsFirstDeleteTrigger, d.ExecIsFirstInsertTrigger, d.ExecIsFirstUpdateTrigger, d.ExecIsInsertTrigger, d.ExecIsInsteadOfTrigger, d.ExecIsLastDeleteTrigger, d.ExecIsLastInsertTrigger, d.ExecIsLastUpdateTrigger, d.ExecIsQuotedIdentOn, d.ExecIsStartup, d.ExecIsTriggerDisabled, d.ExecIsTriggerNotForRepl, d.ExecIsUpdateTrigger, d.ExecIsWithNativeCompilation, d.HasAfterTrigger, d.HasDeleteTrigger, d.HasInsertTrigger, d.HasInsteadOfTrigger, d.HasUpdateTrigger, d.IsAnsiNullsOn, d.IsCheckCnst, d.IsConstraint, d.IsDefault, d.IsDefaultCnst, d.IsDeterministic, d.IsEncrypted, d.IsExecuted, d.IsExtendedProc, d.IsForeignKey, d.IsIndexed, d.IsIndexable, d.IsInlineFunction, d.IsMSShipped, d.IsPrecise, d.IsPrimaryKey, d.IsProcedure, d.IsQuotedIdentOn, d.IsQueue, d.IsReplProc, d.IsRule, d.IsScalarFunction, d.IsSchemaBound, d.IsSystemTable, d.IsSystemVerified, d.IsTable, d.IsTableFunction, d.IsTrigger, d.IsUniqueCnst, d.IsUserTable, d.IsView, d.OwnerId, d.SchemaId, d.SystemDataAccess, d.TableDeleteTrigger, d.TableDeleteTriggerCount, d.TableFullTextMergeStatus, d.TableFullTextBackgroundUpdateIndexOn, d.TableFulltextCatalogId, d.TableFullTextChangeTrackingOn, d.TableFulltextKeyColumn, d.TableFulltextPopulateStatus, d.TableFullTextSemanticExtraction, d.TableHasActiveFulltextIndex, d.TableHasCheckCnst, d.TableHasClustIndex, d.TableHasDefaultCnst, d.TableHasDeleteTrigger, d.TableHasForeignKey, d.TableHasForeignRef, d.TableHasIdentity, d.TableHasIndex, d.TableHasInsertTrigger, d.TableHasNonclustIndex, d.TableHasPrimaryKey, d.TableHasRowGuidCol, d.TableHasTextImage, d.TableHasTimestamp, d.TableHasUniqueCnst, d.TableHasUpdateTrigger, d.TableHasVarDecimalStorageFormat, d.TableInsertTrigger, d.TableInsertTriggerCount, d.TableIsFake, d.TableIsLockedOnBulkLoad, d.TableIsMemoryOptimized, d.TableIsPinned, d.TableTextInRowLimit, d.TableUpdateTrigger, d.TableUpdateTriggerCount, d.UserDataAccess, d.TableHasColumnSet, d.Cardinality, d.TableTemporalType
-        FROM #Dataset d
-            JOIN @output y ON y.ID = d.ID
+        FROM @Dataset d
+            JOIN @output y ON y.ID = d.__ID
         WHERE NOT EXISTS (
                 SELECT *
                 FROM dbo._OBJECTPROPERTYEX x

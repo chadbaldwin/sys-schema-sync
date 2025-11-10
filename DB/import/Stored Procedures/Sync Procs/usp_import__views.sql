@@ -16,15 +16,12 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    IF OBJECT_ID('tempdb..#Dataset','U') IS NOT NULL DROP TABLE #Dataset; --SELECT * FROM #Dataset
-    SELECT ID = IDENTITY(int), * INTO #Dataset FROM @Dataset;
-
     DECLARE @input  import.ItemName,
             @output import.ItemName;
 
     -- object
     INSERT @input (ID, SchemaName, ObjectName, ObjectType)
-    SELECT ID, _SchemaName, _ObjectName, _ObjectType FROM #Dataset;
+    SELECT __ID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
 
     INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
@@ -70,7 +67,7 @@ BEGIN;
             , x.is_dropped_ledger_view      = d.is_dropped_ledger_view
         FROM dbo._views x
             JOIN @output y ON y._ObjectID = x._ObjectID
-            JOIN #Dataset d ON d.ID = y.ID
+            JOIN @Dataset d ON d.__ID = y.ID
         WHERE x._DatabaseID = @DatabaseID
             AND x._RowHash <> d._RowHash;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
@@ -82,8 +79,8 @@ BEGIN;
         SELECT @DatabaseID, y._ObjectID, d._RowHash
             , d.[name], d.[object_id], d.principal_id, d.[schema_id], d.parent_object_id, d.[type], d.[type_desc], d.create_date, d.modify_date, d.is_ms_shipped, d.is_published, d.is_schema_published
             , d.is_replicated, d.has_replication_filter, d.has_opaque_metadata, d.has_unchecked_assembly_data, d.with_check_option, d.is_date_correlation_view, d.is_tracked_by_cdc, d.has_snapshot, d.ledger_view_type, d.ledger_view_type_desc, d.is_dropped_ledger_view
-        FROM #Dataset d
-            JOIN @output y ON y.ID = d.ID
+        FROM @Dataset d
+            JOIN @output y ON y.ID = d.__ID
         WHERE NOT EXISTS (
                 SELECT *
                 FROM dbo._views x

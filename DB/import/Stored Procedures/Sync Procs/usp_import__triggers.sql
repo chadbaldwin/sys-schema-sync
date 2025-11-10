@@ -16,16 +16,13 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    IF OBJECT_ID('tempdb..#Dataset','U') IS NOT NULL DROP TABLE #Dataset; --SELECT * FROM #Dataset
-    SELECT ID = IDENTITY(int), * INTO #Dataset FROM @Dataset;
-
     DECLARE @input  import.ItemName,
             @output import.ItemName,
             @parent import.ItemName;
 
     -- object
     INSERT @input (ID, SchemaName, ObjectName, ObjectType)
-    SELECT ID, _SchemaName, _ObjectName, _ObjectType FROM #Dataset;
+    SELECT __ID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
 
     INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
@@ -34,7 +31,7 @@ BEGIN;
 
     -- parent object
     INSERT @input (ID, SchemaName, ObjectName, ObjectType)
-    SELECT ID, _SchemaName, _ParentObjectName, _ParentObjectType FROM #Dataset WHERE _ParentObjectName IS NOT NULL;
+    SELECT __ID, _SchemaName, _ParentObjectName, _ParentObjectType FROM @Dataset WHERE _ParentObjectName IS NOT NULL;
 
     INSERT @parent (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
@@ -71,7 +68,7 @@ BEGIN;
             , x.is_instead_of_trigger  = d.is_instead_of_trigger
         FROM dbo._triggers x
             JOIN @output y ON y._ObjectID = x._ObjectID
-            JOIN #Dataset d ON d.ID = y.ID
+            JOIN @Dataset d ON d.__ID = y.ID
             LEFT JOIN @parent p ON p.ID = y.ID
         WHERE x._DatabaseID = @DatabaseID
             AND x._RowHash <> d._RowHash;
@@ -82,9 +79,9 @@ BEGIN;
             , [name], [object_id], parent_class, parent_class_desc, parent_id, [type], [type_desc], create_date, modify_date, is_ms_shipped, is_disabled, is_not_for_replication, is_instead_of_trigger)
         SELECT @DatabaseID, y._ObjectID, p._ObjectID, d._RowHash
             , d.[name], d.[object_id], d.parent_class, d.parent_class_desc, d.parent_id, d.[type], d.[type_desc], d.create_date, d.modify_date, d.is_ms_shipped, d.is_disabled, d.is_not_for_replication, d.is_instead_of_trigger
-        FROM #Dataset d
-            JOIN @output y ON y.ID = d.ID
-            LEFT JOIN @parent p ON p.ID = d.ID
+        FROM @Dataset d
+            JOIN @output y ON y.ID = d.__ID
+            LEFT JOIN @parent p ON p.ID = d.__ID
         WHERE NOT EXISTS (
                 SELECT *
                 FROM dbo._triggers x

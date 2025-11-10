@@ -92,6 +92,12 @@ try {
                 if ($data_src.Tables[0].Rows.Count -gt 0) {
                     # Create empty datatable in the shape of the target table type, merge the source data into it, then prep the TVP
                     $data_dst = Invoke-DbaQuery $TargetSqlConnection -Query ('DECLARE @x {0}; SELECT * FROM @x;' -f $SyncObject.ImportTypeClean) -As DataSet
+                    # If the table type contains a magic __ID column, set it to auto-increment. This way we don't have to handle it in every export query
+                    # Export queries should not have an __ID column, when the merge occurs, it will fill in row numbers automatically
+                    if ($data_dst.Tables[0].Columns['__ID']) {
+                        $data_dst.Tables[0].Columns['__ID'].AutoIncrement = $true
+                        $data_dst.Tables[0].Columns['__ID'].AutoIncrementSeed = 1
+                    }
                     $data_dst.Tables[0].Merge($data_src.Tables[0], $false, [System.Data.MissingSchemaAction]::Ignore)
 
                     # Prep proc parameters

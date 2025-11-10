@@ -16,16 +16,13 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    IF OBJECT_ID('tempdb..#Dataset','U') IS NOT NULL DROP TABLE #Dataset; --SELECT * FROM #Dataset
-    SELECT ID = IDENTITY(int), * INTO #Dataset FROM @Dataset;
-
     DECLARE @input  import.ItemName,
             @output import.ItemName,
             @parent import.ItemName;
 
     -- object
     INSERT @input (ID, SchemaName, ObjectName, ObjectType)
-    SELECT ID, _SchemaName, _ObjectName, _ObjectType FROM #Dataset;
+    SELECT __ID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
 
     INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
@@ -34,7 +31,7 @@ BEGIN;
 
     -- parent object
     INSERT @input (ID, SchemaName, ObjectName, ObjectType, IndexName)
-    SELECT ID, _SchemaName, _ParentObjectName, _ParentObjectType, _UniqueIndexName FROM #Dataset;
+    SELECT __ID, _SchemaName, _ParentObjectName, _ParentObjectType, _UniqueIndexName FROM @Dataset;
 
     INSERT @parent (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
@@ -74,7 +71,7 @@ BEGIN;
             , x.is_enforced         = d.is_enforced
         FROM dbo._key_constraints x
             JOIN @output y ON y._ObjectID = x._ObjectID
-            JOIN #Dataset d ON d.ID = y.ID
+            JOIN @Dataset d ON d.__ID = y.ID
             JOIN @parent p ON p.ID = y.ID
         WHERE x._DatabaseID = @DatabaseID
             AND x._RowHash <> d._RowHash;
@@ -85,9 +82,9 @@ BEGIN;
             , [name], [object_id], principal_id, [schema_id], parent_object_id, [type], [type_desc], create_date, modify_date, is_ms_shipped, is_published, is_schema_published, unique_index_id, is_system_named, is_enforced)
         SELECT @DatabaseID, y._ObjectID, p._IndexID, p._ObjectID, d._RowHash
             , d.[name], d.[object_id], d.principal_id, d.[schema_id], d.parent_object_id, d.[type], d.[type_desc], d.create_date, d.modify_date, d.is_ms_shipped, d.is_published, d.is_schema_published, d.unique_index_id, d.is_system_named, d.is_enforced
-        FROM #Dataset d
-            JOIN @output y ON y.ID = d.ID
-            JOIN @parent p ON p.ID = d.ID
+        FROM @Dataset d
+            JOIN @output y ON y.ID = d.__ID
+            JOIN @parent p ON p.ID = d.__ID
         WHERE NOT EXISTS (
                 SELECT *
                 FROM dbo._key_constraints x

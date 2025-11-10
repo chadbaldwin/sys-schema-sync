@@ -16,15 +16,12 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    IF OBJECT_ID('tempdb..#Dataset','U') IS NOT NULL DROP TABLE #Dataset; --SELECT * FROM #Dataset
-    SELECT ID = IDENTITY(int), * INTO #Dataset FROM @Dataset;
-
     DECLARE @input  import.ItemName,
             @output import.ItemName;
 
     -- object
     INSERT @input (ID, SchemaName, ObjectName, ObjectType, IndexName)
-    SELECT ID, _SchemaName, _ObjectName, _ObjectType, _IndexName FROM #Dataset;
+    SELECT __ID, _SchemaName, _ObjectName, _ObjectType, _IndexName FROM @Dataset;
 
     INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
@@ -39,8 +36,8 @@ BEGIN;
         WHERE x._DatabaseID = @DatabaseID
             AND NOT EXISTS (
                 SELECT *
-                FROM #Dataset d
-                    JOIN @output o ON o.ID = d.ID
+                FROM @Dataset d
+                    JOIN @output o ON o.ID = d.__ID
                 WHERE o._IndexID = x._IndexID
                     AND x.partition_number = d.partition_number
             );
@@ -67,7 +64,7 @@ BEGIN;
             , x.row_count                        = d.row_count
         FROM dbo._dm_db_partition_stats x
             JOIN @output y ON y._IndexID = x._IndexID
-            JOIN #Dataset d ON d.ID = y.ID AND d.partition_number = x.partition_number
+            JOIN @Dataset d ON d.__ID = y.ID AND d.partition_number = x.partition_number
         WHERE x._DatabaseID = @DatabaseID
             AND x._RowHash <> d._RowHash;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
@@ -77,8 +74,8 @@ BEGIN;
             , [partition_id], [object_id], index_id, partition_number, in_row_data_page_count, in_row_used_page_count, in_row_reserved_page_count, lob_used_page_count, lob_reserved_page_count, row_overflow_used_page_count, row_overflow_reserved_page_count, used_page_count, reserved_page_count, row_count)
         SELECT @DatabaseID, y._ObjectID, y._IndexID, d._RowHash
             , d.[partition_id], d.[object_id], d.index_id, d.partition_number, d.in_row_data_page_count, d.in_row_used_page_count, d.in_row_reserved_page_count, d.lob_used_page_count, d.lob_reserved_page_count, d.row_overflow_used_page_count, d.row_overflow_reserved_page_count, d.used_page_count, d.reserved_page_count, d.row_count
-        FROM #Dataset d
-            JOIN @output y ON y.ID = d.ID
+        FROM @Dataset d
+            JOIN @output y ON y.ID = d.__ID
         WHERE NOT EXISTS (
                 SELECT *
                 FROM dbo._dm_db_partition_stats x

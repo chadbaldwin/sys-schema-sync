@@ -16,15 +16,12 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    IF OBJECT_ID('tempdb..#Dataset','U') IS NOT NULL DROP TABLE #Dataset; --SELECT * FROM #Dataset
-    SELECT ID = IDENTITY(int), * INTO #Dataset FROM @Dataset;
-
     DECLARE @input  import.ItemName,
             @output import.ItemName;
 
     -- object
     INSERT @input (ID, SchemaName, ObjectName, ObjectType)
-    SELECT ID, _SchemaName, _ObjectName, _ObjectType FROM #Dataset;
+    SELECT __ID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
 
     INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
@@ -94,7 +91,7 @@ BEGIN;
             , x.is_dropped_ledger_table            = d.is_dropped_ledger_table
         FROM dbo._tables x
             JOIN @output y ON y._ObjectID = x._ObjectID
-            JOIN #Dataset d ON d.ID = y.ID
+            JOIN @Dataset d ON d.__ID = y.ID
         WHERE x._DatabaseID = @DatabaseID
             AND x._RowHash <> d._RowHash;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
@@ -106,8 +103,8 @@ BEGIN;
         SELECT @DatabaseID, y._ObjectID, d._RowHash
             , d.[name], d.[object_id], d.principal_id, d.[schema_id], d.parent_object_id, d.[type], d.[type_desc], d.create_date, d.is_ms_shipped, d.is_published, d.is_schema_published
             , d.lob_data_space_id, d.filestream_data_space_id, d.max_column_id_used, d.lock_on_bulk_load, d.uses_ansi_nulls, d.is_replicated, d.has_replication_filter, d.is_merge_published, d.is_sync_tran_subscribed, d.has_unchecked_assembly_data, d.text_in_row_limit, d.large_value_types_out_of_row, d.is_tracked_by_cdc, d.[lock_escalation], d.lock_escalation_desc, d.is_filetable, d.is_memory_optimized, d.[durability], d.durability_desc, d.temporal_type, d.temporal_type_desc, d.history_table_id, d.is_remote_data_archive_enabled, d.is_external, d.history_retention_period, d.history_retention_period_unit, d.history_retention_period_unit_desc, d.is_node, d.is_edge, d.data_retention_period, d.data_retention_period_unit, d.data_retention_period_unit_desc, d.ledger_type, d.ledger_type_desc, d.ledger_view_id, d.is_dropped_ledger_table
-        FROM #Dataset d
-            JOIN @output y ON y.ID = d.ID
+        FROM @Dataset d
+            JOIN @output y ON y.ID = d.__ID
         WHERE NOT EXISTS (
                 SELECT *
                 FROM dbo._tables x

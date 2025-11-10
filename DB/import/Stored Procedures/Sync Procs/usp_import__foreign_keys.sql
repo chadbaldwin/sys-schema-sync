@@ -16,11 +16,6 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    IF (@Verbose = 1) RAISERROR('[%s] Create missing object and get IDs',0,1,@ProcName) WITH NOWAIT;
-
-    IF OBJECT_ID('tempdb..#Dataset','U') IS NOT NULL DROP TABLE #Dataset; --SELECT * FROM #Dataset
-    SELECT ID = IDENTITY(int), * INTO #Dataset FROM @Dataset;
-
     DECLARE @input     import.ItemName,
             @output    import.ItemName,
             @parent    import.ItemName,
@@ -28,7 +23,7 @@ BEGIN;
 
     -- object
     INSERT @input (ID, SchemaName, ObjectName, ObjectType)
-    SELECT ID, _SchemaName, _ObjectName, _ObjectType FROM #Dataset;
+    SELECT __ID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
 
     INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
@@ -37,7 +32,7 @@ BEGIN;
 
     -- parent object
     INSERT @input (ID, SchemaName, ObjectName, ObjectType)
-    SELECT ID, _ParentSchemaName, _ParentObjectName, _ParentObjectType FROM #Dataset;
+    SELECT __ID, _ParentSchemaName, _ParentObjectName, _ParentObjectType FROM @Dataset;
 
     INSERT @parent (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
@@ -46,7 +41,7 @@ BEGIN;
 
     -- reference object
     INSERT @input (ID, SchemaName, ObjectName, ObjectType, IndexName)
-    SELECT ID, _ReferencedSchemaName, _ReferencedObjectName, _ReferencedObjectType, _ReferencedIndexName FROM #Dataset;
+    SELECT __ID, _ReferencedSchemaName, _ReferencedObjectName, _ReferencedObjectType, _ReferencedIndexName FROM @Dataset;
 
     INSERT @reference (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
@@ -94,7 +89,7 @@ BEGIN;
             , x.is_system_named                = d.is_system_named
         FROM dbo._foreign_keys x
             JOIN @output y ON y._ObjectID = x._ObjectID
-            JOIN #Dataset d ON d.ID = y.ID
+            JOIN @Dataset d ON d.__ID = y.ID
             JOIN @parent p ON p.ID = y.ID
             JOIN @reference r ON r.ID = y.ID
         WHERE x._DatabaseID = @DatabaseID
@@ -108,10 +103,10 @@ BEGIN;
         SELECT @DatabaseID, y._ObjectID, p._ObjectID, r._ObjectID, r._IndexID, d._RowHash
             , d.[name], d.[object_id], d.principal_id, d.[schema_id], d.parent_object_id, d.[type], d.[type_desc], d.create_date, d.modify_date, d.is_ms_shipped, d.is_published, d.is_schema_published
             , d.referenced_object_id, d.key_index_id, d.is_disabled, d.is_not_for_replication, d.is_not_trusted, d.delete_referential_action, d.delete_referential_action_desc, d.update_referential_action, d.update_referential_action_desc, d.is_system_named
-        FROM #Dataset d
-            JOIN @output y ON y.ID = d.ID
-            JOIN @parent p ON p.ID = d.ID
-            JOIN @reference r ON r.ID = d.ID
+        FROM @Dataset d
+            JOIN @output y ON y.ID = d.__ID
+            JOIN @parent p ON p.ID = d.__ID
+            JOIN @reference r ON r.ID = d.__ID
         WHERE NOT EXISTS (
                 SELECT *
                 FROM dbo._foreign_keys x
