@@ -81,7 +81,7 @@ BEGIN;
                         /*  If the new EstimatedStatsBeginTime is higher than the last snapshot time (StatsEndTime), then we know something was reset.
                             e.g. SQL Server was restarted, database restored, table dropped and recreated, index dropped and recreated, etc.
                             Unfortunately, this isn't a perfect solution. There may be other reasons for a stats record to be reset that we are not detecting. */
-                           WereStatsReset    = CONVERT(bit, IIF(s.EstStatsBeginTime > t.StatsEndTime, 1, 0))
+                           WereStatsReset    = CONVERT(bit, IIF(s.EstimatedStatsBeginTime > t.StatsEndTime, 1, 0))
                         /*  If the new value is lower than the previous value for counter based stats, then we know it has been reset.
                             This is a safety measure to prevent negative values from being produced due to undetected counter resets. */
                         ,  WereIdxStatsReset = CONVERT(bit, CASE
@@ -98,7 +98,7 @@ BEGIN;
                                                             END)
                 ) x
                 /* If it appears that the stats were not reset, then we want to use the StatsEndTime value from the previous snapshot */
-                CROSS APPLY (SELECT EstimatedStatsBeginTime = IIF(x.WereStatsReset = 1 OR x.WereIdxStatsReset = 1, s.EstStatsBeginTime, t.StatsEndTime)) y
+                CROSS APPLY (SELECT EstimatedStatsBeginTime = IIF(x.WereStatsReset = 1 OR x.WereIdxStatsReset = 1, s.EstimatedStatsBeginTime, t.StatsEndTime)) y
             WHERE t._DatabaseID = @DatabaseID
                 AND s.StatsEndTime > t.StatsEndTime
         ) x;

@@ -1,4 +1,4 @@
-/* 
+﻿/* 
     This export script is a special case due to how the `sys.dm_db_index_usage_stats` DMV works.
 
     This DMV is cleared and reset for various reasons at the instnace, DB, object and index level.
@@ -41,38 +41,44 @@ FROM msdb.dbo.restorehistory WHERE destination_database_name = DB_NAME();
 /*------------------------------------------------------------*/
 
 /*------------------------------------------------------------*/
-SELECT _SchemaName           = s.[name]
-    , _ObjectName            = o.[name]
-    , _ObjectType            = o.[type]
-    , _IndexName             = IIF(i.[type] = 0, '<<HEAP>>', i.[name])
-    , EstStatsBeginTime      = r.BeginDate
-    , StatsEndTime           = @CollectionTime
+--DROP TABLE IF EXISTS #ius;
+SELECT *
+INTO #ius
+FROM sys.dm_db_index_usage_stats
+WHERE database_id = DB_ID();
+
+SELECT _SchemaName            = s.[name]
+    , _ObjectName             = o.[name]
+    , _ObjectType             = o.[type]
+    , _IndexName              = IIF(i.[type] = 0, '<<HEAP>>', i.[name])
+    , EstimatedStatsBeginTime = r.BeginDate
+    , StatsEndTime            = @CollectionTime
     /*--*/
-    , database_id            = DB_ID()
-    , [object_id]            = i.[object_id]
-    , index_id               = i.index_id
+    , database_id             = DB_ID()
+    , [object_id]             = i.[object_id]
+    , index_id                = i.index_id
     /*--*/
-    , user_seeks             = COALESCE(x.user_seeks  , 0)
-    , user_scans             = COALESCE(x.user_scans  , 0)
-    , user_lookups           = COALESCE(x.user_lookups, 0)
-    , user_updates           = COALESCE(x.user_updates, 0)
-    , last_user_seek_utc     = tz.last_user_seek_utc
-    , last_user_scan_utc     = tz.last_user_scan_utc
-    , last_user_lookup_utc   = tz.last_user_lookup_utc
-    , last_user_update_utc   = tz.last_user_update_utc
+    , user_seeks              = COALESCE(x.user_seeks  , 0)
+    , user_scans              = COALESCE(x.user_scans  , 0)
+    , user_lookups            = COALESCE(x.user_lookups, 0)
+    , user_updates            = COALESCE(x.user_updates, 0)
+    , last_user_seek_utc      = tz.last_user_seek_utc
+    , last_user_scan_utc      = tz.last_user_scan_utc
+    , last_user_lookup_utc    = tz.last_user_lookup_utc
+    , last_user_update_utc    = tz.last_user_update_utc
     /*--*/
-    , system_seeks           = COALESCE(x.system_seeks  , 0)
-    , system_scans           = COALESCE(x.system_scans  , 0)
-    , system_lookups         = COALESCE(x.system_lookups, 0)
-    , system_updates         = COALESCE(x.system_updates, 0)
-    , last_system_seek_utc   = tz.last_system_seek_utc
-    , last_system_scan_utc   = tz.last_system_scan_utc
-    , last_system_lookup_utc = tz.last_system_lookup_utc
-    , last_system_update_utc = tz.last_system_update_utc
-FROM sys.indexes i
-    JOIN sys.objects o ON o.[object_id] = i.[object_id]
-    JOIN sys.schemas s ON s.[schema_id] = o.[schema_id]
-    LEFT JOIN sys.dm_db_index_usage_stats x ON x.database_id = DB_ID() AND x.[object_id] = i.[object_id] AND x.index_id = i.index_id
+    , system_seeks            = COALESCE(x.system_seeks  , 0)
+    , system_scans            = COALESCE(x.system_scans  , 0)
+    , system_lookups          = COALESCE(x.system_lookups, 0)
+    , system_updates          = COALESCE(x.system_updates, 0)
+    , last_system_seek_utc    = tz.last_system_seek_utc
+    , last_system_scan_utc    = tz.last_system_scan_utc
+    , last_system_lookup_utc  = tz.last_system_lookup_utc
+    , last_system_update_utc  = tz.last_system_update_utc
+FROM sys.schemas s
+    JOIN sys.objects o ON o.[schema_id] = s.[schema_id]
+    JOIN sys.indexes i ON i.[object_id] = o.[object_id]
+    LEFT JOIN #ius x ON x.[object_id] = i.[object_id] AND x.index_id = i.index_id
     LEFT JOIN sys.key_constraints kc ON kc.parent_object_id = i.[object_id] AND kc.unique_index_id = i.index_id
     /* Handle time zone conversions */
     CROSS APPLY (

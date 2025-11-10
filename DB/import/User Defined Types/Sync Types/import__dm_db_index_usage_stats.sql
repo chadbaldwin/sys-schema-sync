@@ -1,11 +1,11 @@
 CREATE TYPE import.import__dm_db_index_usage_stats AS TABLE (
-    __ID                   int           NOT NULL,
-    _SchemaName            nvarchar(128) NOT NULL,
-    _ObjectName            nvarchar(128) NOT NULL,
-    _ObjectType            char(2)       NOT NULL,
-    _IndexName             nvarchar(128) NOT NULL,
+    __ID                    int           NOT NULL,
+    _SchemaName             nvarchar(128) NOT NULL,
+    _ObjectName             nvarchar(128) NOT NULL,
+    _ObjectType             char(2)       NOT NULL,
+    _IndexName              nvarchar(128) NOT NULL,
     --
-    EstStatsBeginTime       datetime2    NOT NULL,
+    EstimatedStatsBeginTime datetime2    NOT NULL,
     StatsEndTime            datetime2    NOT NULL,
     --
     database_id             smallint         NULL,
