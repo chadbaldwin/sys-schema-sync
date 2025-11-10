@@ -4,30 +4,30 @@ BEGIN;
     SET NOCOUNT ON;
 
     CREATE TABLE #naming_issues (
-        SmellDesc       nvarchar(200)   NOT NULL,
-        ObjectName      nvarchar(128)   NOT NULL,
-        TypeDesc        nvarchar(60)    NOT NULL,
-        CurrentName     nvarchar(128)   NOT NULL,
-        ProperName      nvarchar(128)   NOT NULL,
-        RenameScript    nvarchar(500)       NULL,
+        SmellDesc    nvarchar(200) NOT NULL,
+        ObjectName   nvarchar(128) NOT NULL,
+        TypeDesc     nvarchar(60)  NOT NULL,
+        CurrentName  nvarchar(128) NOT NULL,
+        ProperName   nvarchar(128) NOT NULL,
+        RenameScript nvarchar(500)     NULL,
     );
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
     -- Check default constraint names
     INSERT #naming_issues (SmellDesc, ObjectName, TypeDesc, CurrentName, ProperName, RenameScript)
-    SELECT SmellDesc = 'BAD_CONSTRAINT_NAME', ObjectName = OBJECT_NAME(dc.parent_object_id), TypeDesc = dc.[type_desc], CurrentName = dc.[name], n.ProperName
+    SELECT SmellDesc = 'BAD_CONSTRAINT_OR_INDEX_NAME', ObjectName = QUOTENAME(OBJECT_SCHEMA_NAME(dc.parent_object_id)) + '.' + QUOTENAME(OBJECT_NAME(dc.parent_object_id)), TypeDesc = dc.[type_desc], CurrentName = dc.[name], n.ProperName
         , RenameScript = CONCAT('EXEC sp_rename N''', SCHEMA_NAME(dc.[schema_id]), '.', dc.[name], ''', N''', n.ProperName, ''', N''OBJECT'';')
     FROM sys.default_constraints dc
         CROSS APPLY (
             SELECT ProperName = CONCAT_WS(N'_', 'DF', OBJECT_NAME(dc.parent_object_id), COL_NAME(dc.parent_object_id, dc.parent_column_id))
         ) n
-    WHERE dc.is_ms_shipped = 0
+    WHERE dc.is_ms_shipped = 0 AND dc.[schema_id] <> SCHEMA_ID('ext')
         AND dc.[name] COLLATE SQL_Latin1_General_CP1_CS_AS <> n.ProperName COLLATE SQL_Latin1_General_CP1_CS_AS;
 
     -- Check FK names
     INSERT #naming_issues (SmellDesc, ObjectName, TypeDesc, CurrentName, ProperName, RenameScript)
-    SELECT SmellDesc = 'BAD_CONSTRAINT_NAME', ObjectName = OBJECT_NAME(fk.parent_object_id), TypeDesc = fk.[type_desc], CurrentName = fk.[name], n.ProperName
+    SELECT SmellDesc = 'BAD_CONSTRAINT_OR_INDEX_NAME', ObjectName = QUOTENAME(OBJECT_SCHEMA_NAME(fk.parent_object_id)) + '.' + QUOTENAME(OBJECT_NAME(fk.parent_object_id)), TypeDesc = fk.[type_desc], CurrentName = fk.[name], n.ProperName
         , RenameScript = CONCAT('EXEC sp_rename N''', SCHEMA_NAME(fk.[schema_id]), '.', fk.[name], ''', N''', n.ProperName, ''', N''OBJECT'';')
     FROM sys.foreign_keys fk
         CROSS APPLY (
@@ -38,26 +38,37 @@ BEGIN;
         CROSS APPLY (
             SELECT ProperName = CONCAT_WS('_', 'FK', OBJECT_NAME(fk.parent_object_id), x.Cols)
         ) n
-    WHERE fk.[name] COLLATE SQL_Latin1_General_CP1_CS_AS <> n.ProperName COLLATE SQL_Latin1_General_CP1_CS_AS;
+    WHERE fk.is_ms_shipped = 0 AND fk.[schema_id] <> SCHEMA_ID('ext')
+        AND fk.[name] COLLATE SQL_Latin1_General_CP1_CS_AS <> n.ProperName COLLATE SQL_Latin1_General_CP1_CS_AS;
 
     -- Check index names
     INSERT #naming_issues (SmellDesc, ObjectName, TypeDesc, CurrentName, ProperName, RenameScript)
-    SELECT SmellDesc = 'BAD_CONSTRAINT_NAME', ObjectName = o.[name], TypeDesc = COALESCE(kc.[type_desc], 'INDEX'), CurrentName = i.[name], n.ProperName
+    SELECT SmellDesc = 'BAD_CONSTRAINT_OR_INDEX_NAME', ObjectName = QUOTENAME(SCHEMA_NAME(o.[schema_id])) + '.' + QUOTENAME(o.[name]), TypeDesc = COALESCE(kc.[type_desc], 'INDEX'), CurrentName = i.[name], n.ProperName
         , RenameScript = CONCAT('EXEC sp_rename N''', SCHEMA_NAME(o.[schema_id]), '.', o.[name], '.', i.[name], ''', N''', n.ProperName, ''', N''INDEX'';')
     FROM sys.objects o
         JOIN sys.indexes i ON i.[object_id] = o.[object_id]
         LEFT JOIN sys.key_constraints kc ON kc.parent_object_id = i.[object_id] AND kc.unique_index_id = i.index_id
         CROSS APPLY (
-            SELECT Cols = STRING_AGG(COL_NAME(ic.[object_id], ic.column_id), N'_') WITHIN GROUP (ORDER BY ic.key_ordinal, ic.index_column_id)
+            SELECT Cols = STRING_AGG(COL_NAME(ic.[object_id], ic.column_id), N'_') WITHIN GROUP (ORDER BY ic.key_ordinal, ic.column_store_order_ordinal, ic.index_column_id)
             FROM sys.index_columns ic
             WHERE ic.[object_id] = i.[object_id]
                 AND ic.index_id = i.index_id
-                AND ic.is_included_column = 0
+                AND (ic.is_included_column = 0 OR ic.column_store_order_ordinal > 0)
         ) x
         CROSS APPLY (
-            SELECT ProperName = CONCAT_WS(N'_', IIF(i.[type] = 1, 'C', '') + CASE WHEN i.is_primary_key = 1 THEN 'PK' WHEN i.is_unique_constraint = 1 THEN 'UQ' ELSE 'IX' END, o.[name], x.Cols)
+            SELECT ProperName = CONCAT_WS(N'_'
+                    , IIF(i.index_id = 1, 'C', '')
+                        + CASE
+                            WHEN i.is_primary_key = 1 THEN 'PK'
+                            WHEN i.is_unique_constraint = 1 THEN 'UQ'
+                            WHEN i.[type_desc] IN ('CLUSTERED COLUMNSTORE', 'NONCLUSTERED COLUMNSTORE') THEN 'CSIX'
+                            ELSE 'IX'
+                          END
+                    , o.[name]
+                    , x.Cols
+                )
         ) n
-    WHERE o.is_ms_shipped = 0
+    WHERE o.is_ms_shipped = 0 AND o.[schema_id] <> SCHEMA_ID('ext')
         AND i.[name] COLLATE SQL_Latin1_General_CP1_CS_AS <> n.ProperName COLLATE SQL_Latin1_General_CP1_CS_AS;
 
     IF EXISTS (SELECT * FROM #naming_issues)
@@ -69,10 +80,10 @@ BEGIN;
 
     ------------------------------------------------------------------------------
     CREATE TABLE #issues (
-        SmellDesc       nvarchar(200)   NOT NULL,
-        ObjectName      nvarchar(128)   NOT NULL,
-        ColumnName      nvarchar(128)       NULL,
-        DataType        nvarchar(128)       NULL,
+        SmellDesc  nvarchar(200) NOT NULL,
+        ObjectName nvarchar(128) NOT NULL,
+        ColumnName nvarchar(128)     NULL,
+        DataType   nvarchar(128)     NULL,
     );
     ------------------------------------------------------------------------------
 
@@ -80,15 +91,16 @@ BEGIN;
     -- Check for heaps
     INSERT #issues (SmellDesc, ObjectName)
     SELECT SmellDesc = 'HEAP'
-        , ObjectName = o.[name]
+        , ObjectName = QUOTENAME(SCHEMA_NAME(o.[schema_id])) + '.' + QUOTENAME(o.[name])
     FROM sys.objects o
         JOIN sys.indexes i ON i.[object_id] = o.[object_id]
-    WHERE o.is_ms_shipped = 0
+    WHERE o.is_ms_shipped = 0 AND o.[schema_id] <> SCHEMA_ID('ext')
         AND i.[type] = 0;
 
     -- TODO: non-unique clustered indexes
     -- TODO: nonclustered primary keys
     -- TODO: missing indexes on foreign keys
+    -- TODO: ability to add exclusions - like the ext schema
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
@@ -97,22 +109,22 @@ BEGIN;
     -- Common columns missing default constraints
     INSERT #issues (SmellDesc, ObjectName, ColumnName)
     SELECT SmellDesc = 'MISSING_DEFAULT_CONSTRAINT'
-        , ObjectName = t.[name]
+        , ObjectName = QUOTENAME(SCHEMA_NAME(t.[schema_id])) + '.' + QUOTENAME(t.[name])
         , ColumnName = c.[name]
     FROM sys.tables t
         JOIN sys.columns c ON c.[object_id] = t.[object_id]
-    WHERE t.is_ms_shipped = 0 AND t.temporal_type_desc <> 'HISTORY_TABLE'
+    WHERE t.is_ms_shipped = 0 AND t.[schema_id] <> SCHEMA_ID('ext') AND t.temporal_type_desc <> 'HISTORY_TABLE'
         AND c.[name] IN ('_ModifyDate', '_InsertDate')
         AND c.default_object_id = 0;
 
     -- Common columns missing FK constraints
     INSERT #issues (SmellDesc, ObjectName, ColumnName)
     SELECT SmellDesc = 'MISSING_FOREIGN_KEY_CONSTRAINT'
-        , ObjectName = t.[name]
+        , ObjectName = QUOTENAME(SCHEMA_NAME(t.[schema_id])) + '.' + QUOTENAME(t.[name])
         , ColumnName = c.[name]
     FROM sys.tables t
         JOIN sys.columns c ON c.[object_id] = t.[object_id]
-    WHERE t.is_ms_shipped = 0 AND t.temporal_type_desc <> 'HISTORY_TABLE'
+    WHERE t.is_ms_shipped = 0 AND t.[schema_id] <> SCHEMA_ID('ext') AND t.temporal_type_desc <> 'HISTORY_TABLE'
         AND c.[name] IN ('_ColumnID','_DatabaseID','_IndexID','_InstanceID','_ObjectDefinitionID','_ObjectID','_ParentColumnID','_ParentObjectID','_ReferencedColumnID','_ReferencedIndexID','_ReferencedObjectID')
         AND (SCHEMA_NAME(t.[schema_id]) = 'import' AND t.[name] NOT IN ('Instance','Database','Object','ObjectDefinition','Index','Column'))
         AND NOT EXISTS (
@@ -129,24 +141,26 @@ BEGIN;
     -- Usage of datetime datatype on non-synced columns
     INSERT #issues (SmellDesc, ObjectName, ColumnName, DataType)
     SELECT SmellDesc = 'DATETIME_DATATYPE_USED'
-        , ObjectName = t.[name]
+        , ObjectName = QUOTENAME(SCHEMA_NAME(t.[schema_id])) + '.' + QUOTENAME(t.[name])
         , ColumnName = c.[name]
         , DataType = TYPE_NAME(c.system_type_id)
     FROM sys.tables t
         JOIN sys.columns c ON c.[object_id] = t.[object_id]
-    WHERE TYPE_NAME(c.system_type_id) = 'datetime'
+    WHERE t.is_ms_shipped = 0 AND t.[schema_id] <> SCHEMA_ID('ext')
+        AND TYPE_NAME(c.system_type_id) = 'datetime'
         AND NOT (t.[name] LIKE '[_]%' AND c.[name] NOT LIKE '[_]%');
 
     -- TVP's with sql_variant are not supported by the import process which uses System.Data.Common.DbDataAdapter.Fill
     INSERT #issues (SmellDesc, ObjectName, ColumnName, DataType)
     SELECT SmellDesc = 'SQL_VARIANT_DATATYPE_USED_IN_TVP'
-        , ObjectName = t.[name]
+        , ObjectName = QUOTENAME(SCHEMA_NAME(t.[schema_id])) + '.' + QUOTENAME(t.[name])
         , ColumnName = c.[name]
         , DataType = TYPE_NAME(c.system_type_id)
     FROM sys.table_types t
         JOIN sys.objects o ON o.[object_id] = t.type_table_object_id
         JOIN sys.columns c ON c.[object_id] = o.[object_id]
-    WHERE TYPE_NAME(c.system_type_id) = 'sql_variant'
+    WHERE t.[schema_id] = SCHEMA_ID('ext')
+        AND TYPE_NAME(c.system_type_id) = 'sql_variant'
         AND EXISTS (SELECT * FROM import.SyncObject so WHERE so.ImportType = t.[name]);
     ------------------------------------------------------------------------------
 
