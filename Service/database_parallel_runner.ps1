@@ -77,19 +77,8 @@ try {
 }
 
 Write-Log 'Getting list of instances and databases to run against'
-$query_target = @'
-    -- Throwing in some sql injection protection - still need to figure out how to handle the ChecksumQueryText
-    SELECT _InstanceID, _DatabaseID, InstanceName, DatabaseName
-        , SyncObjectID, SyncObjectName, SyncObjectLevelID, LastSyncChecksum
-        , SyncObjectNameClean = NULLIF(CONCAT_WS('.', QUOTENAME(PARSENAME(q.SyncObjectName, 3)), QUOTENAME(PARSENAME(q.SyncObjectName, 2)), QUOTENAME(PARSENAME(q.SyncObjectName, 1))), '')
-        , ImportTableClean    = NULLIF(CONCAT_WS('.', QUOTENAME(PARSENAME(q.ImportTable   , 3)), QUOTENAME(PARSENAME(q.ImportTable   , 2)), QUOTENAME(PARSENAME(q.ImportTable   , 1))), '')
-        , ImportProcClean     = NULLIF(CONCAT_WS('.', QUOTENAME(PARSENAME(q.ImportProc    , 3)), QUOTENAME(PARSENAME(q.ImportProc    , 2)), QUOTENAME(PARSENAME(q.ImportProc    , 1))), '')
-        , ImportTypeClean     = NULLIF(CONCAT_WS('.', QUOTENAME(PARSENAME(q.ImportType    , 3)), QUOTENAME(PARSENAME(q.ImportType    , 2)), QUOTENAME(PARSENAME(q.ImportType    , 1))), '')
-        , ExportQueryPath, ChecksumQueryText
-    FROM import.vw_DatabaseSyncObjectQueue q;
-'@
 try {
-    $targets = Invoke-DbaQuery -SqlInstance $conn -Query $query_target -As PSObject -QueryTimeout 30 |
+    $targets = Invoke-DbaQuery $conn -Query 'import.usp_GetDatabaseSyncObjectsToProcess' -CommandType StoredProcedure -As PSObject -QueryTimeout 30 |
         Group-Object InstanceName | ForEach-Object {
             [pscustomobject]@{
                 Instance = $_.Name

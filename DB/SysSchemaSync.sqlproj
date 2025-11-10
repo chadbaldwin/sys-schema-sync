@@ -195,6 +195,7 @@
     <Build Include="import\Stored Procedures\usp_CreateItems.sql" />
     <Build Include="import\Stored Procedures\usp_DatabaseSyncObjectStatus_Reset_Friendly.sql" />
     <Build Include="import\Stored Procedures\usp_DatabaseSyncObjectStatus_Reset.sql" />
+    <Build Include="import\Stored Procedures\usp_GetDatabaseSyncObjectsToProcess.sql" />
     <Build Include="import\Stored Procedures\usp_PopulateLookupTables.sql" />
     <Build Include="import\Stored Procedures\usp_SetSyncStatus.sql" />
     <Build Include="import\Stored Procedures\usp_SyncObject_SimpleDelete.sql" />
@@ -234,7 +235,6 @@
     <Build Include="import\User Defined Types\Sync Types\import__views.sql" />
     <Build Include="import\Views\vw_DatabaseQueue.sql" />
     <Build Include="import\Views\vw_DatabaseSyncObject.sql" />
-    <Build Include="import\Views\vw_DatabaseSyncObjectQueue.sql" />
     <Build Include="Security\dw.sql" />
     <Build Include="Security\ext.sql" />
     <Build Include="Security\import.sql" />

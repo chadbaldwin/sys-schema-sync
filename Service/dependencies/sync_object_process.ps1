@@ -28,16 +28,43 @@ function ConvertFrom-DBNull {
     process { $value -is [DBNull] ? $null : $value }
 }
 
-#################################################
+function Get-CleanSqlIdentifiers {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory, Position=0)][pscustomobject]$SyncObject,
+        [Parameter(Mandatory, Position=1)][Microsoft.SqlServer.Management.Smo.Server]$SqlConnection
+    )
 
-# Write-Output ($SyncObject | ConvertTo-Json)
+    $query = @'
+        SELECT SyncObjectNameClean = NULLIF(CONCAT_WS('.', QUOTENAME(PARSENAME(@SyncObjectName, 3)), QUOTENAME(PARSENAME(@SyncObjectName, 2)), QUOTENAME(PARSENAME(@SyncObjectName, 1))), '')
+            ,  ImportTableClean    = NULLIF(CONCAT_WS('.', QUOTENAME(PARSENAME(@ImportTable   , 3)), QUOTENAME(PARSENAME(@ImportTable   , 2)), QUOTENAME(PARSENAME(@ImportTable   , 1))), '')
+            ,  ImportProcClean     = NULLIF(CONCAT_WS('.', QUOTENAME(PARSENAME(@ImportProc    , 3)), QUOTENAME(PARSENAME(@ImportProc    , 2)), QUOTENAME(PARSENAME(@ImportProc    , 1))), '')
+            ,  ImportTypeClean     = NULLIF(CONCAT_WS('.', QUOTENAME(PARSENAME(@ImportType    , 3)), QUOTENAME(PARSENAME(@ImportType    , 2)), QUOTENAME(PARSENAME(@ImportType    , 1))), '')
+'@
+
+    Invoke-DbaQuery $SqlConnection -Query $query -As PSObject -SqlParameter @{
+            SyncObjectName = $SyncObject.SyncObjectName
+            ImportTable    = $SyncObject.ImportTable
+            ImportProc     = $SyncObject.ImportProc
+            ImportType     = $SyncObject.ImportType
+        }
+}
+
+#################################################
 
 $sw_syncItem = [Diagnostics.Stopwatch]::StartNew()
 Write-Output 'Start: Sync'
-#Write-Output "SyncItem:`r`n$($SyncObject | ConvertTo-Json)"
 
 try {
     $sw = [Diagnostics.Stopwatch]::StartNew()
+
+    # Get cleansed identifiers
+    $Clean = Get-CleanSqlIdentifiers -SyncObject $SyncObject -SqlConnection $TargetSqlConnection
+
+    $SyncObjectNameClean = $Clean.SyncObjectNameClean
+    $ImportProcClean     = $Clean.ImportProcClean
+    $ImportTableClean    = $Clean.ImportTableClean
+    $ImportTypeClean     = $Clean.ImportTypeClean
 
     # Get the new and old checksums
     [Nullable[int]]$oldchecksum = $null
@@ -62,14 +89,14 @@ try {
         $exportQuery = if ($SyncObject.ExportQueryPath) {
             Get-Content -LiteralPath (Join-Path $current_path 'dependencies\SQL' $SyncObject.ExportQueryPath) -Raw
         } else {
-            'SELECT _CollectionDate = SYSUTCDATETIME(), * FROM {0};' -f $SyncObject.SyncObjectNameClean
+            'SELECT _CollectionDate = SYSUTCDATETIME(), * FROM {0};' -f $SyncObjectNameClean
         }
         $exportQuery = "SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED; {0}" -f $exportQuery
 
         # Set sync type (simple/complex)
         $syncType = switch ($true) {
-            {($SyncObject.ImportProcClean) -and ($null -eq $SyncObject.ImportTableClean)} { 'Complex' }
-            {($null -eq $SyncObject.ImportProcClean) -and ($SyncObject.ImportTableClean)} { 'Simple' }
+            {($ImportProcClean) -and ($null -eq $ImportTableClean)} { 'Complex' }
+            {($null -eq $ImportProcClean) -and ($ImportTableClean)} { 'Simple' }
             Default { throw "[$($SyncObject.SyncObjectName)] Invalid configuration" }
         }
 
@@ -90,7 +117,7 @@ try {
             'Complex' {
                 if ($data_src.Tables[0].Rows.Count -gt 0) {
                     # Create empty datatable in the shape of the target table type, merge the source data into it, then prep the TVP
-                    $data_dst = Invoke-DbaQuery $TargetSqlConnection -Query ('DECLARE @x {0}; SELECT * FROM @x;' -f $SyncObject.ImportTypeClean) -As DataSet
+                    $data_dst = Invoke-DbaQuery $TargetSqlConnection -Query ('DECLARE @x {0}; SELECT * FROM @x;' -f $ImportTypeClean) -As DataSet
                     # If the table type contains a magic __ID column, set it to auto-increment. This way we don't have to handle it in every export query
                     # Export queries should not have an __ID column, when the merge occurs, it will fill in row numbers automatically
                     if ($data_dst.Tables[0].Columns['__ID']) {
@@ -108,10 +135,10 @@ try {
 
                     # No delete step because the import proc will handle it - deletes, updates, etc
                     Write-Output 'Start: Write'; $sw.Restart()
-                    Invoke-DbaQuery $TargetSqlConnection -CommandType StoredProcedure -Query $SyncObject.ImportProcClean `
+                    Invoke-DbaQuery $TargetSqlConnection -CommandType StoredProcedure -Query $ImportProcClean `
                                     -SqlParameter @(
                                         $sqlParamImportID
-                                        , (New-DbaSqlParameter -ParameterName 'Dataset' -SqlDbType Structured -Value $data_dst.Tables[0] -TypeName $SyncObject.ImportTypeClean)
+                                        , (New-DbaSqlParameter -ParameterName 'Dataset' -SqlDbType Structured -Value $data_dst.Tables[0] -TypeName $ImportTypeClean)
                                         , (New-DbaSqlParameter -ParameterName 'Verbose' -SqlDbType Bit -Value $VerboseLog)
                                     )
                     Write-Output "Done: Write [$($sw.Elapsed)]"
@@ -136,12 +163,12 @@ try {
                     Write-Output 'Start: Write'; $sw.Restart()
 
                     # Create empty datatable in the shape of the target table, add instance/database id column, then merge ithe source data into it
-                    $data_dst = Invoke-DbaQuery $TargetSqlConnection -Query ('SELECT TOP(0) * FROM {0};' -f $SyncObject.ImportTableClean) -As DataSet
+                    $data_dst = Invoke-DbaQuery $TargetSqlConnection -Query ('SELECT TOP(0) * FROM {0};' -f $ImportTableClean) -As DataSet
                     $data_src.Tables[0].Columns.Add([System.Data.DataColumn]::new('_InstanceID', [Int], $SyncObject._InstanceID))
                     $data_src.Tables[0].Columns.Add([System.Data.DataColumn]::new('_DatabaseID', [Int], $SyncObject._DatabaseID))
                     $data_dst.Tables[0].Merge($data_src.Tables[0], $false, [System.Data.MissingSchemaAction]::Ignore)
 
-                    Write-DbaDbTableData -InputObject $data_dst -SqlInstance $TargetSqlConnection -Table $SyncObject.ImportTableClean
+                    Write-DbaDbTableData -InputObject $data_dst -SqlInstance $TargetSqlConnection -Table $ImportTableClean
                     Write-Output "Done: Write [$($sw.Elapsed)]"
                 } else {
                     Write-Output 'Skip: Write - No data to import'
