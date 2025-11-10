@@ -30,7 +30,8 @@ CREATE TABLE dw._dm_db_index_usage_stats_delta_history (
     last_system_update_utc  datetime       NULL,
     last_system_read_utc    datetime       NULL,
 
-    CONSTRAINT UQ__dm_db_index_usage_stats_delta_history_StatsEndTime__DatabaseID__IndexID UNIQUE (StatsEndTime, _DatabaseID, _IndexID)
+    CONSTRAINT UQ__dm_db_index_usage_stats_delta_history_StatsEndTime__DatabaseID__IndexID UNIQUE (StatsEndTime, _DatabaseID, _IndexID),
+    INDEX IX__dm_db_index_usage_stats_delta_history__DatabaseID__IndexID (_DatabaseID, _IndexID)
 );
 GO
 
