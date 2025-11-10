@@ -75,6 +75,9 @@
     <Folder Include="dbo\Tables\" />
     <Folder Include="dbo\Tables\Sync Tables" />
     <Folder Include="dbo\Views" />
+    <Folder Include="dw" />
+    <Folder Include="dw\Stored Procedures" />
+    <Folder Include="dw\Tables" />
     <Folder Include="import" />
     <Folder Include="import\Stored Procedures" />
     <Folder Include="import\Stored Procedures\Sync Procs" />
@@ -84,9 +87,6 @@
     <Folder Include="import\Views" />
     <Folder Include="Properties" />
     <Folder Include="Security" />
-    <Folder Include="dw" />
-    <Folder Include="dw\Tables" />
-    <Folder Include="dw\Stored Procedures" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Tables\Column.sql" />
@@ -103,6 +103,7 @@
     <Build Include="dbo\Tables\Sync Tables\_computed_columns.sql" />
     <Build Include="dbo\Tables\Sync Tables\_configurations_history.sql" />
     <Build Include="dbo\Tables\Sync Tables\_configurations.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_data_spaces.sql" />
     <Build Include="dbo\Tables\Sync Tables\_database_automatic_tuning_options_history.sql" />
     <Build Include="dbo\Tables\Sync Tables\_database_automatic_tuning_options.sql" />
     <Build Include="dbo\Tables\Sync Tables\_database_files.sql" />
@@ -113,15 +114,18 @@
     <Build Include="dbo\Tables\Sync Tables\_databases.sql" />
     <Build Include="dbo\Tables\Sync Tables\_default_constraints_history.sql" />
     <Build Include="dbo\Tables\Sync Tables\_default_constraints.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_destination_data_spaces.sql" />
     <Build Include="dbo\Tables\Sync Tables\_dm_db_index_usage_stats.sql" />
     <Build Include="dbo\Tables\Sync Tables\_dm_db_log_space_usage.sql" />
     <Build Include="dbo\Tables\Sync Tables\_dm_db_partition_stats.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_dm_db_stats_properties.sql" />
     <Build Include="dbo\Tables\Sync Tables\_dm_hadr_cluster.sql" />
     <Build Include="dbo\Tables\Sync Tables\_dm_hadr_database_replica_states.sql" />
     <Build Include="dbo\Tables\Sync Tables\_dm_io_virtual_file_stats.sql" />
     <Build Include="dbo\Tables\Sync Tables\_dm_os_cluster_nodes.sql" />
     <Build Include="dbo\Tables\Sync Tables\_dm_os_enumerate_fixed_drives.sql" />
     <Build Include="dbo\Tables\Sync Tables\_dm_os_host_info.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_dm_os_memory_nodes.sql" />
     <Build Include="dbo\Tables\Sync Tables\_dm_os_nodes.sql" />
     <Build Include="dbo\Tables\Sync Tables\_dm_os_process_memory.sql" />
     <Build Include="dbo\Tables\Sync Tables\_dm_os_sys_info.sql" />
@@ -130,6 +134,7 @@
     <Build Include="dbo\Tables\Sync Tables\_dm_os_wait_stats.sql" />
     <Build Include="dbo\Tables\Sync Tables\_dm_resource_governor_resource_pools.sql" />
     <Build Include="dbo\Tables\Sync Tables\_dm_server_services.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_dm_xe_sessions.sql" />
     <Build Include="dbo\Tables\Sync Tables\_filegroups.sql" />
     <Build Include="dbo\Tables\Sync Tables\_foreign_key_columns.sql" />
     <Build Include="dbo\Tables\Sync Tables\_foreign_keys_history.sql" />
@@ -138,15 +143,23 @@
     <Build Include="dbo\Tables\Sync Tables\_identity_columns.sql" />
     <Build Include="dbo\Tables\Sync Tables\_index_columns_history.sql" />
     <Build Include="dbo\Tables\Sync Tables\_index_columns.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_index_resumable_operations.sql" />
     <Build Include="dbo\Tables\Sync Tables\_indexes_history.sql" />
     <Build Include="dbo\Tables\Sync Tables\_indexes.sql" />
     <Build Include="dbo\Tables\Sync Tables\_key_constraints_history.sql" />
     <Build Include="dbo\Tables\Sync Tables\_key_constraints.sql" />
     <Build Include="dbo\Tables\Sync Tables\_master_files.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_missing_indexes.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_OBJECTPROPERTYEX.sql" />
     <Build Include="dbo\Tables\Sync Tables\_objects_history.sql" />
     <Build Include="dbo\Tables\Sync Tables\_objects.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_partition_functions.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_partition_parameters.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_partition_range_values.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_partition_schemes.sql" />
     <Build Include="dbo\Tables\Sync Tables\_partitions.sql" />
     <Build Include="dbo\Tables\Sync Tables\_restorehistory.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_server_event_sessions.sql" />
     <Build Include="dbo\Tables\Sync Tables\_SERVERPROPERTY.sql" />
     <Build Include="dbo\Tables\Sync Tables\_sql_modules_history.sql" />
     <Build Include="dbo\Tables\Sync Tables\_sql_modules.sql" />
@@ -166,6 +179,8 @@
     <Build Include="dbo\Views\vw_Index.sql" />
     <Build Include="dbo\Views\vw_Instance.sql" />
     <Build Include="dbo\Views\vw_Object.sql" />
+    <Build Include="dw\Stored Procedures\usp_import__dm_db_index_usage_stats_delta_history.sql" />
+    <Build Include="dw\Tables\_dm_db_index_usage_stats_delta_history.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__check_constraints.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__columns.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__computed_columns.sql" />
@@ -175,6 +190,7 @@
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__default_constraints.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__dm_db_index_usage_stats.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__dm_db_partition_stats.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__dm_db_stats_properties.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__dm_os_wait_stats.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__foreign_key_columns.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__foreign_keys.sql" />
@@ -183,6 +199,8 @@
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__indexes.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__key_constraints.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__master_files.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__missing_indexes.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__OBJECTPROPERTYEX.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__objects.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__partitions.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__sql_modules.sql" />
@@ -192,11 +210,12 @@
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__triggers.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__views.sql" />
     <Build Include="import\Stored Procedures\usp_CreateItems.sql" />
+    <Build Include="import\Stored Procedures\usp_DatabaseSyncObjectStatus_Reset_Friendly.sql" />
+    <Build Include="import\Stored Procedures\usp_DatabaseSyncObjectStatus_Reset.sql" />
     <Build Include="import\Stored Procedures\usp_PopulateLookupTables.sql" />
     <Build Include="import\Stored Procedures\usp_SetSyncStatus.sql" />
-    <Build Include="import\Stored Procedures\usp_UpdateTargets.sql">
-      <SuppressTSqlWarnings>70558</SuppressTSqlWarnings>
-    </Build>
+    <Build Include="import\Stored Procedures\usp_SyncObject_SimpleDelete.sql" />
+    <Build Include="import\Stored Procedures\usp_UpdateTargets.sql" />
     <Build Include="import\Stored Procedures\usp_ValidateSchema.sql" />
     <Build Include="import\Tables\DatabaseSyncObjectStatus.sql" />
     <Build Include="import\Tables\SyncObject.sql" />
@@ -211,6 +230,7 @@
     <Build Include="import\User Defined Types\Sync Types\import__default_constraints.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__dm_db_index_usage_stats.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__dm_db_partition_stats.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__dm_db_stats_properties.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__dm_os_wait_stats.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__foreign_key_columns.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__foreign_keys.sql" />
@@ -219,6 +239,8 @@
     <Build Include="import\User Defined Types\Sync Types\import__indexes.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__key_constraints.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__master_files.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__missing_indexes.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__OBJECTPROPERTYEX.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__objects.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__partitions.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__sql_modules.sql" />
@@ -230,33 +252,9 @@
     <Build Include="import\Views\vw_DatabaseQueue.sql" />
     <Build Include="import\Views\vw_DatabaseSyncObject.sql" />
     <Build Include="import\Views\vw_DatabaseSyncObjectQueue.sql" />
+    <Build Include="Security\dw.sql" />
     <Build Include="Security\ext.sql" />
     <Build Include="Security\import.sql" />
-    <Build Include="dbo\Tables\Sync Tables\_dm_xe_sessions.sql" />
-    <Build Include="dbo\Tables\Sync Tables\_dm_os_memory_nodes.sql" />
-    <Build Include="dbo\Tables\Sync Tables\_server_event_sessions.sql" />
-    <Build Include="dbo\Tables\Sync Tables\_dm_db_stats_properties.sql" />
-    <Build Include="import\User Defined Types\Sync Types\import__dm_db_stats_properties.sql" />
-    <Build Include="import\Stored Procedures\Sync Procs\usp_import__dm_db_stats_properties.sql" />
-    <Build Include="dbo\Tables\Sync Tables\_OBJECTPROPERTYEX.sql" />
-    <Build Include="import\User Defined Types\Sync Types\import__OBJECTPROPERTYEX.sql" />
-    <Build Include="import\Stored Procedures\Sync Procs\usp_import__OBJECTPROPERTYEX.sql" />
-    <Build Include="import\Stored Procedures\usp_DatabaseSyncObjectStatus_Reset.sql" />
-    <Build Include="dbo\Tables\Sync Tables\_data_spaces.sql" />
-    <Build Include="dbo\Tables\Sync Tables\_missing_indexes.sql" />
-    <Build Include="import\User Defined Types\Sync Types\import__missing_indexes.sql" />
-    <Build Include="import\Stored Procedures\Sync Procs\usp_import__missing_indexes.sql" />
-    <Build Include="import\Stored Procedures\usp_SyncObject_SimpleDelete.sql" />
-    <Build Include="dbo\Tables\Sync Tables\_index_resumable_operations.sql" />
-    <Build Include="dbo\Tables\Sync Tables\_partition_schemes.sql" />
-    <Build Include="dbo\Tables\Sync Tables\_partition_range_values.sql" />
-    <Build Include="dbo\Tables\Sync Tables\_partition_functions.sql" />
-    <Build Include="dbo\Tables\Sync Tables\_partition_parameters.sql" />
-    <Build Include="dbo\Tables\Sync Tables\_destination_data_spaces.sql" />
-    <Build Include="import\Stored Procedures\usp_DatabaseSyncObjectStatus_Reset_Friendly.sql" />
-    <Build Include="Security\dw.sql" />
-    <Build Include="dw\Tables\_dm_db_index_usage_stats_delta_history.sql" />
-    <Build Include="dw\Stored Procedures\usp_import__dm_db_index_usage_stats_delta_history.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="StaticCodeAnalysis.SuppressMessages.xml" />
@@ -267,7 +265,7 @@
   <ItemGroup>
     <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\160\SqlSchemas\master.dacpac">
       <HintPath>$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\160\SqlSchemas\master.dacpac</HintPath>
-      <SuppressMissingDependenciesErrors>True</SuppressMissingDependenciesErrors>
+      <SuppressMissingDependenciesErrors>False</SuppressMissingDependenciesErrors>
       <DatabaseVariableLiteralValue>master</DatabaseVariableLiteralValue>
     </ArtifactReference>
   </ItemGroup>
