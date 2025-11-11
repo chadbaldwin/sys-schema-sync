@@ -50,5 +50,5 @@ CREATE TYPE import.import__columns AS TABLE (
     vector_base_type                    tinyint           NULL, -- Added: SQL Server 2025
     vector_base_type_desc               nvarchar(10)      NULL, -- Added: SQL Server 2025
 
-    INDEX CIX UNIQUE CLUSTERED (_SchemaName, _ObjectName, _ObjectType, _ColumnName)
+    INDEX CIX CLUSTERED (__ID)
 );

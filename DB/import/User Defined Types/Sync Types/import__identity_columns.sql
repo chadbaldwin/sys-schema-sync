@@ -51,5 +51,5 @@ CREATE TYPE import.import__identity_columns AS TABLE (
     ledger_view_column_type_desc        nvarchar(60)      NULL, -- Added: SQL Server 2022
     is_dropped_ledger_column            bit               NULL, -- Added: SQL Server 2022
 
-    INDEX CIX UNIQUE CLUSTERED (_SchemaName, _ObjectName, _ObjectType, _ColumnName)
+    INDEX CIX CLUSTERED (__ID)
 );

@@ -29,5 +29,5 @@ CREATE TYPE import.import__sysarticles AS TABLE (
     custom_script               nvarchar(2048)      NULL,
     fire_triggers_on_snapshot   bit             NOT NULL,
 
-    INDEX CIX UNIQUE CLUSTERED (_SchemaName, _ObjectName, _ObjectType, artid)
+    INDEX CIX CLUSTERED (__ID)
 );

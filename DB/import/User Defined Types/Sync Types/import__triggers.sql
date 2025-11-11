@@ -21,5 +21,5 @@ CREATE TYPE import.import__triggers AS TABLE (
     is_not_for_replication bit            NOT NULL,
     is_instead_of_trigger  bit            NOT NULL,
 
-    INDEX CIX UNIQUE CLUSTERED (_SchemaName, _ObjectName, _ObjectType)
+    INDEX CIX CLUSTERED (__ID)
 );

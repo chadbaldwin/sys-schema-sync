@@ -51,5 +51,5 @@ CREATE TYPE import.import__computed_columns AS TABLE (
     is_dropped_ledger_column            bit               NULL, -- Added: SQL Server 2022
     is_index_column_expression          bit               NULL, -- Added: SQL Server 2025
 
-    INDEX CIX UNIQUE CLUSTERED (_SchemaName, _ObjectName, _ObjectType, _ColumnName)
+    INDEX CIX CLUSTERED (__ID)
 );

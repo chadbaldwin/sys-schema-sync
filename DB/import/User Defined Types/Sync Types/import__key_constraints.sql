@@ -24,5 +24,5 @@ CREATE TYPE import.import__key_constraints AS TABLE (
     is_system_named     bit           NOT NULL,
     is_enforced         bit               NULL,
 
-    INDEX CIX UNIQUE CLUSTERED (_SchemaName, _ObjectName, _ObjectType)
+    INDEX CIX CLUSTERED (__ID)
 );

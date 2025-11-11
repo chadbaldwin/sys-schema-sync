@@ -18,5 +18,5 @@ CREATE TYPE import.import__partitions AS TABLE (
     xml_compression         bit               NULL, -- Added: SQL Server 2022
     xml_compression_desc    varchar(3)        NULL, -- Added: SQL Server 2022
 
-    INDEX CIX UNIQUE CLUSTERED (_SchemaName, _ObjectName, _ObjectType, _IndexName, partition_number)
+    INDEX CIX CLUSTERED (__ID)
 );

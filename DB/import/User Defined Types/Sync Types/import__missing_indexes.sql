@@ -16,5 +16,7 @@ CREATE TYPE import.import__missing_indexes AS TABLE (
     equality_columns    nvarchar(4000)     NULL,
     inequality_columns  nvarchar(4000)     NULL,
     included_columns    nvarchar(4000)     NULL,
-    column_data         nvarchar(MAX)  NOT NULL
+    column_data         nvarchar(MAX)  NOT NULL,
+
+    INDEX CIX CLUSTERED (__ID)
 );

@@ -18,5 +18,5 @@ CREATE TYPE import.import__index_columns AS TABLE (
     column_store_order_ordinal tinyint             NULL, -- Added: SQL Server 2019
     data_clustering_ordinal    tinyint             NULL, -- Added: SQL Server 2025
 
-    INDEX CIX UNIQUE CLUSTERED (_SchemaName, _ObjectName, _ObjectType, _IndexName, _ColumnName)
+    INDEX CIX CLUSTERED (__ID)
 );

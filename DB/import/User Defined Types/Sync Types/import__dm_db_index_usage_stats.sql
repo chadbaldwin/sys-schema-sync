@@ -30,5 +30,5 @@ CREATE TYPE import.import__dm_db_index_usage_stats AS TABLE (
     last_system_lookup_utc  datetime         NULL,
     last_system_update_utc  datetime         NULL,
 
-    INDEX CIX UNIQUE CLUSTERED (_SchemaName, _ObjectName, _ObjectType, _IndexName)
+    INDEX CIX CLUSTERED (__ID)
 );

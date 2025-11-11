@@ -24,5 +24,5 @@ CREATE TYPE import.import__default_constraints AS TABLE (
     [definition]        nvarchar(MAX)     NULL,
     is_system_named     bit           NOT NULL,
 
-    INDEX CIX UNIQUE CLUSTERED (_SchemaName, _ObjectName, _ObjectType)
+    INDEX CIX CLUSTERED (__ID)
 );

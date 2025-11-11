@@ -30,5 +30,5 @@ CREATE TYPE import.import__indexes AS TABLE (
     auto_created                  bit               NULL,
     [optimize_for_sequential_key] bit               NULL, -- Added: SQL Server 2019
 
-    INDEX CIX UNIQUE CLUSTERED (_SchemaName, _ObjectName, _ObjectType, _IndexName)
+    INDEX CIX CLUSTERED (__ID)
 );

@@ -28,5 +28,5 @@ CREATE TYPE import.import__check_constraints AS TABLE (
     uses_database_collation bit               NULL,
     is_system_named         bit           NOT NULL,
 
-    INDEX CIX UNIQUE CLUSTERED (_SchemaName, _ObjectName, _ObjectType)
+    INDEX CIX CLUSTERED (__ID)
 );

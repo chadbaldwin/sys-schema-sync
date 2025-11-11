@@ -17,5 +17,5 @@ CREATE TYPE import.import__objects AS TABLE (
     is_published        bit           NOT NULL,
     is_schema_published bit           NOT NULL,
 
-    INDEX CIX UNIQUE CLUSTERED (_SchemaName, _ObjectName, _ObjectType)
+    INDEX CIX CLUSTERED (__ID)
 );

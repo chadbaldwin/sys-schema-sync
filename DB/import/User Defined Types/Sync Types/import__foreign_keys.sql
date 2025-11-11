@@ -35,5 +35,5 @@ CREATE TYPE import.import__foreign_keys AS TABLE (
     update_referential_action_desc nvarchar(60)      NULL,
     is_system_named                bit           NOT NULL,
 
-    INDEX CIX UNIQUE CLUSTERED (_SchemaName, _ObjectName, _ObjectType)
+    INDEX CIX CLUSTERED (__ID)
 );

@@ -53,5 +53,5 @@ CREATE TYPE import.import__tables AS TABLE (
     ledger_view_id                     int               NULL, -- Added: SQL Server 2022
     is_dropped_ledger_table            bit               NULL, -- Added: SQL Server 2022
 
-    INDEX CIX UNIQUE CLUSTERED (_SchemaName, _ObjectName, _ObjectType)
+    INDEX CIX CLUSTERED (__ID)
 );

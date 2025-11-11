@@ -20,5 +20,5 @@ CREATE TYPE import.import__foreign_key_columns AS TABLE (
     referenced_object_id    int             NOT NULL,
     referenced_column_id    int             NOT NULL,
 
-    INDEX CIX CLUSTERED (_SchemaName, _ObjectName, _ObjectType)
+    INDEX CIX CLUSTERED (__ID)
 );

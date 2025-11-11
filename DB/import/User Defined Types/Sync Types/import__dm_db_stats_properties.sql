@@ -16,5 +16,5 @@ CREATE TYPE import.import__dm_db_stats_properties AS TABLE (
     modification_counter     bigint            NULL,
     persisted_sample_percent float             NULL,
 
-    INDEX CIX UNIQUE CLUSTERED (_SchemaName, _ObjectName, _ObjectType, _IndexName)
+    INDEX CIX CLUSTERED (__ID)
 );

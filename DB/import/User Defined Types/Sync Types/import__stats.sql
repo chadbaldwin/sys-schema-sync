@@ -24,5 +24,5 @@ CREATE TYPE import.import__stats AS TABLE (
     replica_role_desc            nvarchar(60)      NULL, -- Added: SQL Server 2025
     replica_name                 nvarchar(128)     NULL, -- Added: SQL Server 2025
 
-    INDEX CIX UNIQUE CLUSTERED (_SchemaName, _ObjectName, _ObjectType, _IndexName)
+    INDEX CIX CLUSTERED (__ID)
 );
