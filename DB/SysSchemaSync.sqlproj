@@ -233,7 +233,6 @@
     <Build Include="import\User Defined Types\Sync Types\import__tables.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__triggers.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__views.sql" />
-    <Build Include="import\Views\vw_DatabaseQueue.sql" />
     <Build Include="import\Views\vw_DatabaseSyncObject.sql" />
     <Build Include="Security\dw.sql" />
     <Build Include="Security\ext.sql" />

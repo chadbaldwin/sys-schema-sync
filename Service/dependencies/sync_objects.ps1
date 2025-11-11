@@ -20,10 +20,16 @@ $script_to_run = Get-Item -LiteralPath (Join-Path $PSScriptRoot 'sync_object_pro
 
 ##################################################
 try {
-    $conn_dst = Connect-DbaInstance -ConnectionString $Config.RepositoryDatabaseConnectionString
+    $ts = Measure-Command {
+        $conn_dst = Connect-DbaInstance -ConnectionString $Config.RepositoryDatabaseConnectionString
+    }
+    Write-Output "Connected to destination database [${ts}]"
 
     try {
-        $conn_src = Connect-DbaInstance $SqlInstance -Database $SqlDatabase -MultiSubnetFailover
+        $ts = Measure-Command {
+            $conn_src = Connect-DbaInstance $SqlInstance -Database $SqlDatabase -MultiSubnetFailover
+        }
+        Write-Output "Connected to source database [${ts}]"
     } catch {
         Write-Output ("Failed to connect to [$($SqlInstance)].[$($SqlDatabase)]. Exception: " + ($_.Exception.InnerException.Errors.Message -join ' '))
         # If we fail to even connect to the DB, then log an error at the DB level, thus pushing all syncs to next run interval

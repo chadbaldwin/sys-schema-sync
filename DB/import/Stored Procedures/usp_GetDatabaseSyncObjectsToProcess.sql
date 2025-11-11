@@ -1,4 +1,4 @@
-CREATE PROCEDURE import.usp_GetDatabaseSyncObjectsToProcess (
+﻿CREATE PROCEDURE import.usp_GetDatabaseSyncObjectsToProcess (
     @Limit int = 500,
     @EnableOptimisticScheduling bit = 1,
     @OptimisticSchedulingLimit int = 50
@@ -23,13 +23,15 @@ BEGIN;
     SELECT TOP(@Limit) x._InstanceID, x._DatabaseID, x.SyncObjectID, x.NextCheckTime, x.[priority], x.age_group, x.age_rank, x.age_rank_rand
     INTO #tmp_limit
     FROM (
-        SELECT x._InstanceID, x._DatabaseID, x.SyncObjectID, x.NextCheckTime, x.[priority], x.age_group, x.age_rank
+        SELECT x._InstanceID, x._DatabaseID, x.SyncObjectID, x.InstanceName, x.DatabaseName, x.SyncObjectName
+            , x.NextCheckTime, x.[priority], x.age_group, x.age_rank
             /* Sorting by age group and _then_ NEWID() in order to add some randomization within the age group
-                This helps with breaking up strings of instances/databases that are clustered together and helps
-                with spreading the workload out over time */
+               This helps with breaking up strings of instances/databases that are clustered together and helps
+               with spreading the workload out over time */
             , age_rank_rand = ROW_NUMBER() OVER (PARTITION BY x.[priority] ORDER BY x.age_group, NEWID())
         FROM (
-            SELECT so._InstanceID, so._DatabaseID, so.SyncObjectID, n.NextCheckTime, x.[priority]
+            SELECT so._InstanceID, so._DatabaseID, so.SyncObjectID, so.InstanceName, so.DatabaseName, so.SyncObjectName
+                , n.NextCheckTime, x.[priority]
                 , age_group = NTILE(10) OVER win
                 , age_rank = ROW_NUMBER() OVER win
             FROM import.vw_DatabaseSyncObject so
@@ -47,7 +49,10 @@ BEGIN;
     ) x
     WHERE x.[priority] IN (0,1,2)
         OR (x.[priority] = 999 AND @EnableOptimisticScheduling = 1 AND (x.age_rank <= @OptimisticSchedulingLimit * 0.2 OR x.age_rank_rand <= @OptimisticSchedulingLimit * 0.8)) -- Grab the top N oldest syncs as well as N random, these two can overlap, but that's ok, this is just to fill empty time
-    ORDER BY x.[priority], IIF(x.[priority] = 2, x.NextCheckTime, NULL), x.age_rank_rand
+    ORDER BY x.[priority]
+        , IIF(x.[priority] IN (0,1), CONCAT_WS('.', x.InstanceName, x.DatabaseName, x.SyncObjectName), NULL) -- Normally we'd want work spread out over time, but for new databases and bulk manual resets, it's nice to knock out whole instances/databases together
+        , IIF(x.[priority] = 2, x.NextCheckTime, NULL) -- The most stale syncs get run first
+        , IIF(x.[priority] = 999, x.age_rank_rand, NULL) -- Optimistically scheduled syncs get randomized within their age group
     OPTION (RECOMPILE);
 
     SELECT so._InstanceID, so._DatabaseID, so.InstanceName, so.DatabaseName
