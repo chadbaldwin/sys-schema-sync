@@ -238,6 +238,9 @@
     <Build Include="Security\dw.sql" />
     <Build Include="Security\ext.sql" />
     <Build Include="Security\import.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_dm_db_index_operational_stats.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__dm_db_index_operational_stats.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__dm_db_index_operational_stats.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="StaticCodeAnalysis.SuppressMessages.xml" />
