@@ -52,12 +52,12 @@ CREATE TABLE dbo._dm_db_index_operational_stats (
     tree_page_io_latch_wait_in_ms      bigint        NOT NULL,
     page_compression_attempt_count     bigint        NOT NULL,
     page_compression_success_count     bigint        NOT NULL,
-    version_generated_inrow            bigint            NULL, -- Added in SQL Server 2019
-    version_generated_offrow           bigint            NULL, -- Added in SQL Server 2019
-    ghost_version_inrow                bigint            NULL, -- Added in SQL Server 2019
-    ghost_version_offrow               bigint            NULL, -- Added in SQL Server 2019
-    insert_over_ghost_version_inrow    bigint            NULL, -- Added in SQL Server 2019
-    insert_over_ghost_version_offrow   bigint            NULL, -- Added in SQL Server 2019
+    version_generated_inrow            bigint        NOT NULL, -- Added in SQL Server 2019
+    version_generated_offrow           bigint        NOT NULL, -- Added in SQL Server 2019
+    ghost_version_inrow                bigint        NOT NULL, -- Added in SQL Server 2019
+    ghost_version_offrow               bigint        NOT NULL, -- Added in SQL Server 2019
+    insert_over_ghost_version_inrow    bigint        NOT NULL, -- Added in SQL Server 2019
+    insert_over_ghost_version_offrow   bigint        NOT NULL, -- Added in SQL Server 2019
 
     CONSTRAINT CUQ__dm_db_index_operational_stats__DatabaseID__IndexID__BoundaryValue UNIQUE CLUSTERED (_DatabaseID, _IndexID, _BoundaryValue),
 );

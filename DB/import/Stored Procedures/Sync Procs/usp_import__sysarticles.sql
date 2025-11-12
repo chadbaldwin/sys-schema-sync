@@ -25,6 +25,15 @@ BEGIN;
 
     INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
+
+    SELECT _DatabaseID = @DatabaseID
+        , _ObjectID    = o._ObjectID
+        , d._RowHash, d.artid, d.creation_script, d.del_cmd, d.[description], d.dest_table, d.[filter], d.filter_clause, d.ins_cmd, d.[name], d.[objid], d.pubid, d.pre_creation_cmd, d.[status], d.sync_objid, d.[type], d.upd_cmd, d.schema_option, d.dest_owner, d.ins_scripting_proc, d.del_scripting_proc, d.upd_scripting_proc, d.custom_script, d.fire_triggers_on_snapshot
+    INTO #tmp_Dataset
+    FROM @Dataset d
+        JOIN @output o ON o.ID = d.__ID;
+
+    CREATE INDEX IX ON #tmp_Dataset (_DatabaseID, _ObjectID);
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
@@ -34,64 +43,45 @@ BEGIN;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
         DELETE x FROM dbo._sysarticles x
         WHERE x._DatabaseID = @DatabaseID
-            AND NOT EXISTS (
-                SELECT *
-                FROM @output o
-                    JOIN @Dataset d ON d.__ID = o.ID
-                WHERE o._ObjectID = x._ObjectID
-                    AND d.artid = x.artid
-            );
+            AND NOT EXISTS (SELECT * FROM #tmp_Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID AND d.artid = x.artid);
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
         UPDATE x
-        SET   x._ModifyDate                 = SYSUTCDATETIME()
-            , x._RowHash                    = d._RowHash
-            --
-            , x.artid                       = d.artid
-            , x.creation_script             = d.creation_script
-            , x.del_cmd                     = d.del_cmd
-            , x.[description]               = d.[description]
-            , x.dest_table                  = d.dest_table
-            , x.[filter]                    = d.[filter]
-            , x.filter_clause               = d.filter_clause
-            , x.ins_cmd                     = d.ins_cmd
-            , x.[name]                      = d.[name]
-            , x.[objid]                     = d.[objid]
-            , x.pubid                       = d.pubid
-            , x.pre_creation_cmd            = d.pre_creation_cmd
-            , x.[status]                    = d.[status]
-            , x.sync_objid                  = d.sync_objid
-            , x.[type]                      = d.[type]
-            , x.upd_cmd                     = d.upd_cmd
-            , x.schema_option               = d.schema_option
-            , x.dest_owner                  = d.dest_owner
-            , x.ins_scripting_proc          = d.ins_scripting_proc
-            , x.del_scripting_proc          = d.del_scripting_proc
-            , x.upd_scripting_proc          = d.upd_scripting_proc
-            , x.custom_script               = d.custom_script
-            , x.fire_triggers_on_snapshot   = d.fire_triggers_on_snapshot
+        SET x._ModifyDate               = SYSUTCDATETIME()
+          , x._RowHash                  = d._RowHash
+          , x.creation_script           = d.creation_script
+          , x.del_cmd                   = d.del_cmd
+          , x.[description]             = d.[description]
+          , x.dest_table                = d.dest_table
+          , x.[filter]                  = d.[filter]
+          , x.filter_clause             = d.filter_clause
+          , x.ins_cmd                   = d.ins_cmd
+          , x.[name]                    = d.[name]
+          , x.[objid]                   = d.[objid]
+          , x.pubid                     = d.pubid
+          , x.pre_creation_cmd          = d.pre_creation_cmd
+          , x.[status]                  = d.[status]
+          , x.sync_objid                = d.sync_objid
+          , x.[type]                    = d.[type]
+          , x.upd_cmd                   = d.upd_cmd
+          , x.schema_option             = d.schema_option
+          , x.dest_owner                = d.dest_owner
+          , x.ins_scripting_proc        = d.ins_scripting_proc
+          , x.del_scripting_proc        = d.del_scripting_proc
+          , x.upd_scripting_proc        = d.upd_scripting_proc
+          , x.custom_script             = d.custom_script
+          , x.fire_triggers_on_snapshot = d.fire_triggers_on_snapshot
         FROM dbo._sysarticles x
-            JOIN @output y ON y._ObjectID = x._ObjectID
-            JOIN @Dataset d ON d.__ID = y.ID AND d.artid = x.artid
-        WHERE x._DatabaseID = @DatabaseID
-            AND x._RowHash <> d._RowHash;
+            JOIN #tmp_Dataset d ON d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID AND d.artid = x.artid
+        WHERE x._RowHash <> d._RowHash;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-        INSERT dbo._sysarticles (_DatabaseID, _ObjectID, _RowHash
-            , artid, creation_script, del_cmd, [description], dest_table, [filter], filter_clause, ins_cmd, [name], [objid], pubid, pre_creation_cmd, [status], sync_objid, [type], upd_cmd, schema_option, dest_owner, ins_scripting_proc, del_scripting_proc, upd_scripting_proc, custom_script, fire_triggers_on_snapshot)
-        SELECT @DatabaseID, y._ObjectID, d._RowHash
-            , d.artid, d.creation_script, d.del_cmd, d.[description], d.dest_table, d.[filter], d.filter_clause, d.ins_cmd, d.[name], d.[objid], d.pubid, d.pre_creation_cmd, d.[status], d.sync_objid, d.[type], d.upd_cmd, d.schema_option, d.dest_owner, d.ins_scripting_proc, d.del_scripting_proc, d.upd_scripting_proc, d.custom_script, d.fire_triggers_on_snapshot
-        FROM @Dataset d
-            JOIN @output y ON y.ID = d.__ID
-        WHERE NOT EXISTS (
-                SELECT *
-                FROM dbo._sysarticles x
-                WHERE x._DatabaseID = @DatabaseID
-                    AND x._ObjectID = y._ObjectID
-                    AND x.artid = d.artid
-            );
+        INSERT dbo._sysarticles (_DatabaseID, _ObjectID, _RowHash, artid, creation_script, del_cmd, [description], dest_table, [filter], filter_clause, ins_cmd, [name], [objid], pubid, pre_creation_cmd, [status], sync_objid, [type], upd_cmd, schema_option, dest_owner, ins_scripting_proc, del_scripting_proc, upd_scripting_proc, custom_script, fire_triggers_on_snapshot)
+        SELECT d._DatabaseID, d._ObjectID, d._RowHash, d.artid, d.creation_script, d.del_cmd, d.[description], d.dest_table, d.[filter], d.filter_clause, d.ins_cmd, d.[name], d.[objid], d.pubid, d.pre_creation_cmd, d.[status], d.sync_objid, d.[type], d.upd_cmd, d.schema_option, d.dest_owner, d.ins_scripting_proc, d.del_scripting_proc, d.upd_scripting_proc, d.custom_script, d.fire_triggers_on_snapshot
+        FROM #tmp_Dataset d
+        WHERE NOT EXISTS (SELECT * FROM dbo._sysarticles x WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID AND d.artid = x.artid);
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
     COMMIT;
     ------------------------------------------------------------------------------

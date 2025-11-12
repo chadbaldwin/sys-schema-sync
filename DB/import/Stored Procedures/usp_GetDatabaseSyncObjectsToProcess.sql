@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE import.usp_GetDatabaseSyncObjectsToProcess (
+CREATE PROCEDURE import.usp_GetDatabaseSyncObjectsToProcess (
     @Limit int = 500,
     @EnableOptimisticScheduling bit = 1,
     @OptimisticSchedulingLimit int = 50
@@ -39,20 +39,23 @@ BEGIN;
                 CROSS APPLY (
                     SELECT [priority] = CASE
                                             WHEN so.LastSyncCheck = '1900-01-01 00:00:00.0000000' THEN 0 -- Manual resets - status record exists, but the date was reset
-                                            WHEN so.DatabaseSyncObjectID IS NULL THEN 1 -- Brand new syncs, status record does not exist, so it has never run before, or was deleted
+                                            WHEN so.DatabaseSyncObjectID IS NULL THEN 1 -- Brand new syncs - status record does not exist, so it has never run before, or was deleted
                                             WHEN n.NextCheckTime < SYSUTCDATETIME() THEN 2 -- Aging syncs
-                                            ELSE 999 -- Everything else
+                                            WHEN so.LastSyncWasError = 0 THEN 3 -- Eligible for optimistic scheduling -- Errored syncs should just wait their normal turn to run
+                                            ELSE NULL
                                         END
                 ) x
+            WHERE x.[priority] IS NOT NULL
             WINDOW win AS (PARTITION BY x.[priority] ORDER BY so.LastSyncCheck)
         ) x
     ) x
     WHERE x.[priority] IN (0,1,2)
-        OR (x.[priority] = 999 AND @EnableOptimisticScheduling = 1 AND (x.age_rank <= @OptimisticSchedulingLimit * 0.2 OR x.age_rank_rand <= @OptimisticSchedulingLimit * 0.8)) -- Grab the top N oldest syncs as well as N random, these two can overlap, but that's ok, this is just to fill empty time
+        OR (x.[priority] = 3 AND @EnableOptimisticScheduling = 1 AND (x.age_rank <= @OptimisticSchedulingLimit * 0.2 OR x.age_rank_rand <= @OptimisticSchedulingLimit * 0.8)) -- Grab the top N oldest syncs as well as N random, these two can overlap, but that's ok, this is just to fill empty time
     ORDER BY x.[priority]
-        , IIF(x.[priority] IN (0,1), CONCAT_WS('.', x.InstanceName, x.DatabaseName, x.SyncObjectName), NULL) -- Normally we'd want work spread out over time, but for new databases and bulk manual resets, it's nice to knock out whole instances/databases together
+        , IIF(x.[priority] IN (0,1), NEWID(), NULL)
+    --  , IIF(x.[priority] IN (0,1), CONCAT_WS('.', x.InstanceName, x.DatabaseName, x.SyncObjectName), NULL) -- Normally we'd want work spread out over time, but for new databases and bulk manual resets, it's nice to knock out whole instances/databases together
         , IIF(x.[priority] = 2, x.NextCheckTime, NULL) -- The most stale syncs get run first
-        , IIF(x.[priority] = 999, x.age_rank_rand, NULL) -- Optimistically scheduled syncs get randomized within their age group
+        , IIF(x.[priority] = 3, x.age_rank_rand, NULL) -- Optimistically scheduled syncs get randomized within their age group
     OPTION (RECOMPILE);
 
     SELECT so._InstanceID, so._DatabaseID, so.InstanceName, so.DatabaseName

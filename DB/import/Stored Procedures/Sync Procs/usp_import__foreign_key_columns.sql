@@ -45,6 +45,21 @@ BEGIN;
 
     INSERT @reference (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
+
+    SELECT _DatabaseID        = @DatabaseID
+        , _ObjectID           = o._ObjectID
+        , _ParentObjectID     = p._ObjectID
+        , _ParentColumnID     = p._ColumnID
+        , _ReferencedObjectID = r._ObjectID
+        , _ReferencedColumnID = r._ColumnID
+        , d._RowHash, d.constraint_object_id, d.constraint_column_id, d.parent_object_id, d.parent_column_id, d.referenced_object_id, d.referenced_column_id
+    INTO #tmp_Dataset
+    FROM @Dataset d
+        JOIN @output o ON o.ID = d.__ID
+        JOIN @parent p ON p.ID = d.__ID
+        JOIN @reference r ON r.ID = d.__ID;
+
+    CREATE INDEX IX ON #tmp_Dataset (_DatabaseID, _ObjectID);
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
@@ -52,51 +67,34 @@ BEGIN;
         DECLARE @tableName nvarchar(128) = N'dbo._foreign_key_columns';
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-        DELETE x FROM dbo._foreign_keys x
+        DELETE x FROM dbo._foreign_key_columns x
         WHERE x._DatabaseID = @DatabaseID
-            AND NOT EXISTS (SELECT * FROM @output o WHERE o._ObjectID = x._ObjectID);
+            AND NOT EXISTS (SELECT * FROM #tmp_Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID AND d.constraint_column_id = x.constraint_column_id);
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
         UPDATE x
-        SET   x._ParentObjectID      = p._ObjectID
-            , x._ParentColumnID      = p._ColumnID
-            , x._ReferencedObjectID  = r._ObjectID
-            , x._ReferencedColumnID  = r._ColumnID
-            , x._ModifyDate          = SYSUTCDATETIME()
-            , x._RowHash             = d._RowHash
-            --
-            , x.constraint_object_id = d.constraint_object_id
-            , x.constraint_column_id = d.constraint_column_id
-            , x.parent_object_id     = d.parent_object_id
-            , x.parent_column_id     = d.parent_column_id
-            , x.referenced_object_id = d.referenced_object_id
-            , x.referenced_column_id = d.referenced_column_id
+        SET x._ParentObjectID      = d._ParentObjectID
+          , x._ParentColumnID      = d._ParentColumnID
+          , x._ReferencedObjectID  = d._ReferencedObjectID
+          , x._ReferencedColumnID  = d._ReferencedColumnID
+          , x._ModifyDate          = SYSUTCDATETIME()
+          , x._RowHash             = d._RowHash
+          , x.constraint_object_id = d.constraint_object_id
+          , x.parent_object_id     = d.parent_object_id
+          , x.parent_column_id     = d.parent_column_id
+          , x.referenced_object_id = d.referenced_object_id
+          , x.referenced_column_id = d.referenced_column_id
         FROM dbo._foreign_key_columns x
-            JOIN @output y ON y._ObjectID = x._ObjectID
-            JOIN @Dataset d ON d.__ID = y.ID AND d.constraint_column_id = x.constraint_column_id
-            JOIN @parent p ON p.ID = y.ID
-            JOIN @reference r ON r.ID = y.ID
-        WHERE x._DatabaseID = @DatabaseID
-            AND x._RowHash <> d._RowHash;
+            JOIN #tmp_Dataset d ON d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID AND d.constraint_column_id = x.constraint_column_id
+        WHERE x._RowHash <> d._RowHash;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
-        INSERT dbo._foreign_key_columns (_DatabaseID, _ObjectID, _ParentObjectID, _ParentColumnID, _ReferencedObjectID, _ReferencedColumnID, _RowHash
-            , constraint_object_id, constraint_column_id, parent_object_id, parent_column_id, referenced_object_id, referenced_column_id)
-        SELECT @DatabaseID, y._ObjectID, p._ObjectID, p._ColumnID, r._ObjectID, r._ColumnID, d._RowHash
-            , d.constraint_object_id, d.constraint_column_id, d.parent_object_id, d.parent_column_id, d.referenced_object_id, d.referenced_column_id
-        FROM @Dataset d
-            JOIN @output y ON y.ID = d.__ID
-            JOIN @parent p ON p.ID = d.__ID
-            JOIN @reference r ON r.ID = d.__ID
-        WHERE NOT EXISTS (
-                SELECT *
-                FROM dbo._foreign_key_columns x
-                WHERE x._DatabaseID = @DatabaseID
-                    AND x._ObjectID  = y._ObjectID
-                    AND x.constraint_column_id = d.constraint_column_id
-            );
+        INSERT dbo._foreign_key_columns (_DatabaseID, _ObjectID, _ParentObjectID, _ParentColumnID, _ReferencedObjectID, _ReferencedColumnID, _RowHash, constraint_object_id, constraint_column_id, parent_object_id, parent_column_id, referenced_object_id, referenced_column_id)
+        SELECT d._DatabaseID, d._ObjectID, d._ParentObjectID, d._ParentColumnID, d._ReferencedObjectID, d._ReferencedColumnID, d._RowHash, d.constraint_object_id, d.constraint_column_id, d.parent_object_id, d.parent_column_id, d.referenced_object_id, d.referenced_column_id
+        FROM #tmp_Dataset d
+        WHERE NOT EXISTS (SELECT * FROM dbo._foreign_key_columns x WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID AND d.constraint_column_id = x.constraint_column_id);
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
     COMMIT;
     ------------------------------------------------------------------------------

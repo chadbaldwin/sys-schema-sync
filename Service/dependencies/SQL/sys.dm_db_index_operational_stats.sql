@@ -1,4 +1,5 @@
-﻿/* 
+--SET STATISTICS IO, TIME ON;
+/* 
     This export script is a special case due to how the `sys.dm_db_index_usage_stats` DMV works.
 
     This DMV is cleared and reset for various reasons at the instnace, DB, object and index level.
@@ -41,7 +42,7 @@ FROM msdb.dbo.restorehistory WHERE destination_database_name = DB_NAME();
 /*------------------------------------------------------------*/
 
 /*------------------------------------------------------------*/
-DROP TABLE IF EXISTS #prv;
+--DROP TABLE IF EXISTS #prv;
 CREATE TABLE #prv (
     data_space_id    int           NOT NULL,
     partition_number int           NOT NULL,
@@ -73,11 +74,6 @@ FROM sys.partition_schemes s
             , [MaxLength] = CONVERT(int, SQL_VARIANT_PROPERTY(rv.[value], 'MaxLength'))
     ) v;
 
-DROP TABLE IF EXISTS #ios;
-SELECT *
-INTO #ios
-FROM sys.dm_db_index_operational_stats(DB_ID(), NULL, NULL, NULL);
-
 SELECT _SchemaName            = s.[name]
     , _ObjectName             = o.[name]
     , _ObjectType             = o.[type]
@@ -91,7 +87,8 @@ FROM sys.schemas s
     JOIN sys.objects o ON o.[schema_id] = s.[schema_id]
     JOIN sys.indexes i ON i.[object_id] = o.[object_id]
     JOIN sys.partitions p ON p.[object_id] = i.[object_id] AND p.index_id = i.index_id
-    LEFT HASH JOIN #ios x ON x.[object_id] = i.[object_id] AND x.index_id = i.index_id AND x.partition_number = p.partition_number AND x.hobt_id = p.hobt_id
+    LEFT HASH JOIN sys.dm_db_index_operational_stats(DB_ID(), NULL, NULL, NULL) x ON x.[object_id] = i.[object_id] AND x.index_id = i.index_id AND x.partition_number = p.partition_number
+                                                                                    AND x.hobt_id = p.hobt_id -- Necessary due to odd duplicates issue in sys.dm_db_index_operational_stats. For some reason this DMV can return duplicate rows for partitions with differeing hobt_id values
     LEFT JOIN sys.key_constraints kc ON kc.parent_object_id = i.[object_id] AND kc.unique_index_id = i.index_id
     LEFT JOIN #prv prv ON prv.data_space_id = i.data_space_id AND prv.partition_number = p.partition_number
     /* Handle time zone conversions */
@@ -118,7 +115,6 @@ FROM sys.schemas s
     CROSS APPLY (SELECT BeginDate = MAX(x.BeginDate) FROM (VALUES (@SQLServerStartTime), (@DBLastRestoreTime), (tz.object_create_date_utc), (tz.constraint_create_date_utc)) x(BeginDate)) r
 WHERE o.is_ms_shipped = 0
     AND o.[type] IN ('U','V')
-ORDER BY 1,2,3,4
 OPTION(RECOMPILE);
 /*------------------------------------------------------------*/
 

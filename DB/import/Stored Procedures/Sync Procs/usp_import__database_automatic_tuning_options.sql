@@ -28,16 +28,14 @@ BEGIN;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
         UPDATE x
-        SET   x._ModifyDate        = SYSUTCDATETIME()
-            , x._RowHash           = d._RowHash
-            --
-            , x.[name]             = d.[name]
-            , x.[desired_state]    = d.[desired_state]
-            , x.desired_state_desc = d.desired_state_desc
-            , x.actual_state       = d.actual_state
-            , x.actual_state_desc  = d.actual_state_desc
-            , x.reason             = d.reason
-            , x.reason_desc        = d.reason_desc
+        SET x._ModifyDate        = SYSUTCDATETIME()
+          , x._RowHash           = d._RowHash
+          , x.[desired_state]    = d.[desired_state]
+          , x.desired_state_desc = d.desired_state_desc
+          , x.actual_state       = d.actual_state
+          , x.actual_state_desc  = d.actual_state_desc
+          , x.reason             = d.reason
+          , x.reason_desc        = d.reason_desc
         FROM dbo._database_automatic_tuning_options x
             JOIN @Dataset d ON d.[name] = x.[name]
         WHERE x._DatabaseID = @DatabaseID
