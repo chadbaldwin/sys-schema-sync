@@ -1,4 +1,4 @@
-CREATE OR ALTER FUNCTION dbo.udf_GetTextAsXml
+CREATE FUNCTION dbo.udf_GetTextAsXml
 (
 	@text nvarchar(MAX)
 )

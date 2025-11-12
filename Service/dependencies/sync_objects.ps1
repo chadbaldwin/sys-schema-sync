@@ -8,6 +8,8 @@ param (
     [Parameter(Mandatory, Position=3)][System.Collections.Hashtable]$Config
 )
 
+$VerboseLog = $Config.VerboseLog
+
 $ErrorActionPreference = 'Stop'
 $PSDefaultParameterValues= @{
     'Invoke-DbaQuery:EnableException' = $true
@@ -23,13 +25,13 @@ try {
     $ts = Measure-Command {
         $conn_dst = Connect-DbaInstance -ConnectionString $Config.RepositoryDatabaseConnectionString
     }
-    Write-Output "Connected to destination database [${ts}]"
+    if ($VerboseLog) { Write-Output "Connected to destination database [${ts}]" }
 
     try {
         $ts = Measure-Command {
             $conn_src = Connect-DbaInstance $SqlInstance -Database $SqlDatabase -MultiSubnetFailover
         }
-        Write-Output "Connected to source database [${ts}]"
+        if ($VerboseLog) { Write-Output "Connected to source database [${ts}]" }
     } catch {
         Write-Output ("Failed to connect to [$($SqlInstance)].[$($SqlDatabase)]. Exception: " + ($_.Exception.InnerException.Errors.Message -join ' '))
         # If we fail to even connect to the DB, then log an error at the DB level, thus pushing all syncs to next run interval
@@ -39,14 +41,14 @@ try {
                             InstanceID   = $SyncObjects[0]._InstanceID
                             DatabaseID   = $SyncObjects[0]._DatabaseID
                             ErrorMessage = $errorMsg
-                            Verbose      = $true
+                            Verbose      = $VerboseLog
                          } | Write-Output
         return
     }
 
     foreach ($syncObject in $SyncObjects) {
         $key = "[$($syncObject.SyncObjectName)]"
-        & $script_to_run -SyncObject $syncObject -SourceSqlConnection $conn_src -TargetSqlConnection $conn_dst |
+        & $script_to_run $syncObject $conn_src $conn_dst $config |
             ForEach-Object { Write-Output "${key} ${_}" }
     }
 } catch {

@@ -59,6 +59,6 @@ CREATE TABLE dbo._dm_db_index_operational_stats (
     insert_over_ghost_version_inrow    bigint        NOT NULL, -- Added in SQL Server 2019
     insert_over_ghost_version_offrow   bigint        NOT NULL, -- Added in SQL Server 2019
 
-    CONSTRAINT CUQ__dm_db_index_operational_stats__DatabaseID__IndexID__BoundaryValue UNIQUE CLUSTERED (_DatabaseID, _IndexID, _BoundaryValue),
+    CONSTRAINT CUQ__dm_db_index_operational_stats__DatabaseID__IndexID__BoundaryValue UNIQUE CLUSTERED (_DatabaseID, _IndexID, _BoundaryValue) WITH (DATA_COMPRESSION = PAGE),
 );
 GO

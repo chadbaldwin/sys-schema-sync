@@ -4,10 +4,11 @@
 param (
     [Parameter(Mandatory, Position=0)][pscustomobject]$SyncObject,
     [Parameter(Mandatory, Position=1)][Microsoft.SqlServer.Management.Smo.Server]$SourceSqlConnection,
-    [Parameter(Mandatory, Position=2)][Microsoft.SqlServer.Management.Smo.Server]$TargetSqlConnection
+    [Parameter(Mandatory, Position=2)][Microsoft.SqlServer.Management.Smo.Server]$TargetSqlConnection,
+    [Parameter(Mandatory, Position=3)][System.Collections.Hashtable]$Config
 )
 
-$VerboseLog = $true # $VerbosePreference -eq 'Continue'
+$VerboseLog = $Config.VerboseLog
 
 $ErrorActionPreference = 'Stop'
 $PSDefaultParameterValues= @{
@@ -70,7 +71,7 @@ function Get-TVPTypeFromProcName {
 #################################################
 
 $sw_syncItem = [Diagnostics.Stopwatch]::StartNew()
-Write-Output 'Start: Sync'
+if ($VerboseLog) { Write-Output 'Start: Sync' }
 
 try {
     $sw = [Diagnostics.Stopwatch]::StartNew()
@@ -79,13 +80,13 @@ try {
     [Nullable[int]]$oldchecksum = $null
     [Nullable[int]]$newchecksum = $null
     if ($SyncObject.ChecksumQueryText) {
-        Write-Output 'Start: Checksum'; $sw.Restart()
+        if ($VerboseLog) { Write-Output 'Start: Checksum' } $sw.Restart()
         $oldchecksum = $SyncObject.LastSyncChecksum | ConvertFrom-DBNull
         $checksumQuery = "SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED; {0}" -f $SyncObject.ChecksumQueryText
         $newchecksum = Invoke-DbaQuery $SourceSqlConnection -Query $checksumQuery -As SingleValue -QueryTimeout 30 | ConvertFrom-DBNull
-        Write-Output "Old checksum: ${oldchecksum}"
-        Write-Output "New checksum: ${newchecksum}"
-        Write-Output "Done: Checksum [$($sw.Elapsed)]"
+        if ($VerboseLog) { Write-Output "Old checksum: ${oldchecksum}" }
+        if ($VerboseLog) { Write-Output "New checksum: ${newchecksum}" }
+        if ($VerboseLog) { Write-Output "Done: Checksum [$($sw.Elapsed)]" }
     }
 
     <# If the checksums are different
@@ -93,7 +94,8 @@ try {
         or) there is no ChecksumQueryText (meaning disable checksum usage)
         then run
     #>
-    if (($oldchecksum -ne $newchecksum) -or ($null -eq $oldchecksum) -or ($null -eq $SyncObject.ChecksumQueryText)) {
+    if ($ForceSync.IsPresent) { Write-Output 'Override: Force sync requested (-ForceSync). Ignoring checksum logic.' }
+    if ($ForceSync.IsPresent -or ($oldchecksum -ne $newchecksum) -or ($null -eq $oldchecksum) -or ($null -eq $SyncObject.ChecksumQueryText)) {
         # Get cleansed identifiers
         $Clean = Get-CleanSqlIdentifiers -SyncObject $SyncObject -SqlConnection $TargetSqlConnection
         $ImportProcClean  = $Clean.ImportProcClean
@@ -124,10 +126,10 @@ try {
             > Use DataSet for optimal performance as all records import in a single SqlBulkCopy call.
             > DataTable also performs well but avoid piping directly as it converts to slower DataRow processing.
         #>
-        Write-Output 'Start: Export'; $sw.Restart()
+        if ($VerboseLog) { Write-Output 'Start: Export' } $sw.Restart()
         # using DataSet here because it's easy to pull the DataTable out of it
         $data_src = Invoke-DbaQuery $SourceSqlConnection -Query $exportQuery -As DataSet -QueryTimeout 30
-        Write-Output "Done: Export [$($sw.Elapsed)]"
+        if ($VerboseLog) { Write-Output "Done: Export [$($sw.Elapsed)]" }
 
         switch ($syncType) {
             'Complex' {
@@ -151,22 +153,22 @@ try {
                     }
 
                     # No delete step because the import proc will handle it - deletes, updates, etc
-                    Write-Output 'Start: Write'; $sw.Restart()
+                    if ($VerboseLog) { Write-Output 'Start: Write' } $sw.Restart()
                     Invoke-DbaQuery $TargetSqlConnection -CommandType StoredProcedure -Query $ImportProcClean `
                                     -SqlParameter @(
                                         $sqlParamImportID
                                         , (New-DbaSqlParameter -ParameterName 'Dataset' -SqlDbType Structured -Value $data_dst.Tables[0] -TypeName $ImportTypeClean)
                                         , (New-DbaSqlParameter -ParameterName 'Verbose' -SqlDbType Bit -Value $VerboseLog)
                                     )
-                    Write-Output "Done: Write [$($sw.Elapsed)]"
+                    if ($VerboseLog) { Write-Output "Done: Write [$($sw.Elapsed)]" }
                 } else {
-                    Write-Output 'Skip: Write - No data to import'
+                    if ($VerboseLog) { Write-Output 'Skip: Write - No data to import' }
                 }
             }
             'Simple' {
                 # There's no way to know whether the export having zero records is intentional or not
                 # For example, it could be a list of database errors...if their are none, then running the delete is correct
-                Write-Output 'Start: Delete'; $sw.Restart()
+                if ($VerboseLog) { Write-Output 'Start: Delete' } $sw.Restart()
                 $null = Invoke-DbaQuery $TargetSqlConnection -Query 'import.usp_SyncObject_SimpleDelete' -CommandType StoredProcedure `
                                         -SqlParameter @{
                                             SyncObjectID = $SyncObject.SyncObjectID
@@ -174,10 +176,10 @@ try {
                                             DatabaseID   = $SyncObject._DatabaseID
                                             Verbose      = $VerboseLog
                                         }
-                Write-Output "Done: Delete [$($sw.Elapsed)]"
+                if ($VerboseLog) { Write-Output "Done: Delete [$($sw.Elapsed)]" }
 
                 if ($data_src.Tables[0].Rows.Count -gt 0) {
-                    Write-Output 'Start: Write'; $sw.Restart()
+                    if ($VerboseLog) { Write-Output 'Start: Write' } $sw.Restart()
 
                     <# Create empty datatable in the shape of the target table, add instance/database id column, then merge the source data into it.
                        It's safe to add both columns because we're using merge with the Ignore missing schema action. If the destination datatable
@@ -189,21 +191,21 @@ try {
 
                     Write-DbaDbTableData -InputObject $data_dst -SqlInstance $TargetSqlConnection -Table $ImportTableClean
 
-                    Write-Output "Done: Write [$($sw.Elapsed)]"
+                    if ($VerboseLog) { Write-Output "Done: Write [$($sw.Elapsed)]" }
                 } else {
-                    Write-Output 'Skip: Write - No data to import'
+                    if ($VerboseLog) { Write-Output 'Skip: Write - No data to import' }
                 }
             }
         }
     } else {
-        Write-Output 'Skipping sync: Checksums match'
+        if ($VerboseLog) { Write-Output 'Skipping sync: Checksums match' }
     }
 } catch {
     $errorMsg = Get-Error $_ | Out-String
     Write-Output "Error: ${errorMsg}"
 } finally {
-    Write-Output 'Checking in SyncObjectStatus'
-    if ($oldchecksum -ne $newchecksum) { Write-Output "Set new checksum: ${newchecksum}" }
+    if ($VerboseLog) { Write-Output 'Checking in SyncObjectStatus' }
+    if ($oldchecksum -ne $newchecksum) { if ($VerboseLog) { Write-Output "Set new checksum: ${newchecksum}" } }
     Invoke-DbaQuery $TargetSqlConnection -CommandType StoredProcedure -Query 'import.usp_SetSyncStatus' `
                     -SqlParameter @{
                         InstanceID   = $SyncObject._InstanceID
@@ -211,7 +213,7 @@ try {
                         SyncObjectID = $SyncObject.SyncObjectID
                         Checksum     = $newchecksum
                         ErrorMessage = $errorMsg
-                        Verbose      = $true
+                        Verbose      = $VerboseLog
                     } | Write-Output
 }
 Write-Output "Done: Sync [$($sw_syncItem.Elapsed)]"
