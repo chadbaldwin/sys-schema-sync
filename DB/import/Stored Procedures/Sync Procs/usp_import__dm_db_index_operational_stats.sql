@@ -97,7 +97,7 @@ BEGIN;
         -- Kick off pre-merge tasks - tasks that need to be able to compare the old data with the new data before the merge occurs
 
         -- Record delta history before updating table
-        --EXEC dw.usp_import__dm_db_index_operational_stats_delta_history @DatabaseID = @DatabaseID, @Dataset = @Dataset, @ItemName = @output, @Verbose = @Verbose;
+        EXEC dw.usp_import__dm_db_index_operational_stats_delta_history @DatabaseID = @DatabaseID, @Dataset = @DatasetTransformed, @ItemName = @output, @Verbose = @Verbose;
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------
