@@ -134,7 +134,7 @@ try {
         switch ($syncType) {
             'Complex' {
                 if ($data_src.Tables[0].Rows.Count -gt 0) {
-                    $ImportTypeClean = Get-TVPTypeFromProcName -ProcName $ImportProcClean -SqlConnection $TargetSqlConnection
+                    $ImportTypeClean = Get-TVPTypeFromProcName $ImportProcClean $TargetSqlConnection
                     # Create empty datatable in the shape of the target table type, merge the source data into it, then prep the TVP
                     $data_dst = Invoke-DbaQuery $TargetSqlConnection -Query ('DECLARE @x {0}; SELECT * FROM @x;' -f $ImportTypeClean) -As DataSet
                     # If the table type contains a magic __ID column, set it to auto-increment. This way we don't have to handle it in every export query

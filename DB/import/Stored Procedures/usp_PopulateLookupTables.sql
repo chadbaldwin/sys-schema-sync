@@ -24,126 +24,147 @@ BEGIN;
     -- SyncObject configuration
     ------------------------------------------------------------------------------
         /*
-            SyncObjectID            =   Generally matches the original object_id of the object being synced from the `sys` schema,
-                                        this is not an operational requirement. It can be anything and it won't affect imports.
+            SyncObjectID                   =   Generally matches the original object_id of the object being synced from the `sys` schema,
+                                               this is not an operational requirement. It can be anything and it won't affect imports.
 
-            SyncObjectName          =   The name of the object being synced. In some cases, like with global variables and metadata
-                                        functions. The SyncObjectName is used by the sync process to know which table to query data
-                                        from when an ExportQueryPath is not provided.
+            SyncObjectName                 =   The name of the object being synced. In some cases, like with global variables and metadata
+                                               functions. The SyncObjectName is used by the sync process to know which table to query data
+                                               from when an ExportQueryPath is not provided.
 
-            SyncObjectLevelID       =   The scope at which the target SyncObject runs. Some system DMV's run at the Instance level.
-                                        Which means no matter which database you are querying the DMV from, it will always return
-                                        the same information about the instance and does not contain database level information.
-                                        For example, `sys.dm_os_host_info` returns information about the instance.
+            SyncObjectLevelID              =   The scope at which the target SyncObject runs. Some system DMV's run at the Instance level.
+                                               Which means no matter which database you are querying the DMV from, it will always return
+                                               the same information about the instance and does not contain database level information.
+                                               For example, `sys.dm_os_host_info` returns information about the instance.
 
-                                        Some DMV's run at the Database level, which means the results returned by the object will change
-                                        based on which database you are querying from and they return information specific to databases.
+                                               Some DMV's run at the Database level, which means the results returned by the object will change
+                                               based on which database you are querying from and they return information specific to databases.
 
-                                        This can get tricky with some DMV's because they return Database level information for all
-                                        databases regardless of which database they are queried from. For example, `sys.databases` or
-                                        `sys.dm_db_index_usage_stats`. Both of these will return records for ALL databases.
+                                               This can get tricky with some DMV's because they return Database level information for all
+                                               databases regardless of which database they are queried from. For example, `sys.databases` or
+                                               `sys.dm_db_index_usage_stats`. Both of these will return records for ALL databases.
 
-                                        In those cases, they are still considered to be running at the Database level, but they would
-                                        require creating an ExportQuery and supplying an ExportQueryPath in order to filter the results
-                                        by database.
+                                               In those cases, they are still considered to be running at the Database level, but they would
+                                               require creating an ExportQuery and supplying an ExportQueryPath in order to filter the results
+                                               by database.
 
-                                        This field controls two things...
-                                        If Instance level is specified, it will run against the master database on each instance.
-                                        If Database level is specified, it will run against each configured user database.
+                                               This field controls two things...
+                                               If Instance level is specified, it will run against the master database on each instance.
+                                               If Database level is specified, it will run against each configured user database.
 
-                                        In either case, if an ExportQueryPath is not provided, one will be generated and will use either
-                                        the _InstanceID or _DatabaseID when inserting into its configured ImportTable.
+                                               In either case, if an ExportQueryPath is not provided, one will be generated and will use either
+                                               the _InstanceID or _DatabaseID when inserting into its configured ImportTable.
 
-            IsEnabled               =   Controls whether the sync object is enabled. Disabling immediately removes all records from
-                                        the sync queue, but does not remove any records from import.DatabaseSyncObjectStatus.
+            IsEnabled                      =   Controls whether the sync object is enabled. Disabling immediately removes all records from
+                                               the sync queue, but does not remove any records from import.DatabaseSyncObjectStatus.
 
-            SyncStaleAgeMinutes     =   Minimum amount of time the sync process should wait before kicking off another sync. This is
-                                        checked at the Database+SyncObject level.
+            SyncStaleAgeMinutes            =   Minimum amount of time the sync process should wait before kicking off another sync. This is
+                                               checked at the Database+SyncObject level.
 
-                                        180=3hr;  360=6hr;  480=8hr;  720=12hr;  1440=24hr;  2880=48hr;
+                                               180=3hr;  360=6hr;  480=8hr;  720=12hr;  1440=24hr;  2880=48hr;
 
-            ImportTable             =   Used for simple imports (delete and insert). Tells the sync process which table to use for import.
-            ImportProc, ImportType  =   Used for complex imports (proc and type). Tells the sync process which proc and table type to use for import.
+            OpportunisticSchedulingEnabled =   Allows the sync process to opportunistically run this sync during free time if there are no other
+                                               higher priority syncs to run. This is useful for larger syncs that don't need to run as often
+                                               and can take advantage of free time windows to get caught up.
 
-            ExportQueryPath         =   Used to override the default export query (typically `SELECT _CollectionDate = SYSUTCDATETIME(), * FROM {SyncObjectName}`)
-                                        If configured, a file must be created in the SQL scripts directory of the service. Can be used
-                                        with both simple and complex sync types.
+            ImportTable                    =   Used for simple imports (delete and insert). Tells the sync process which table to use for import.
+            ImportProc                     =   Used for complex imports (proc + type). Tells the sync process which proc to use for import (as well as type, via looking at the @Dataset parameter).
 
-            ChecksumQueryText       =   Optional checksum query. Used to decide whether to perform the sync for larger datasets. This adds
-                                        extra overhead on the target databases having to run this first, however, it tends to save quite
-                                        a bit of processing time due to saved network IO.
+            ExportQueryPath                =   Used to override the default export query (typically `SELECT _CollectionDate = SYSUTCDATETIME(), * FROM {SyncObjectName}`)
+                                               If configured, a file must be created in the SQL scripts directory of the service. Can be used
+                                               with both simple and complex sync types.
+
+            ChecksumQueryText              =   Optional checksum query. Used to decide whether to perform the sync for larger datasets. This adds
+                                               extra overhead on the target databases having to run this first, however, it tends to save quite
+                                               a bit of processing time due to saved network IO.
         */
 
         IF OBJECT_ID('tempdb..#tmp_SyncObject','U') IS NOT NULL DROP TABLE #tmp_SyncObject; --SELECT * FROM #tmp_SyncObject
-        SELECT n.SyncObjectID, n.SyncObjectName, n.SyncObjectLevelID, n.IsEnabled, n.SyncStaleAgeMinutes, n.ImportTable, n.ImportProc, n.ImportType, n.ExportQueryPath, n.ChecksumQueryText
+        SELECT n.SyncObjectID, n.SyncObjectName, n.SyncObjectLevelID, n.SyncStaleAgeMinutes, n.ImportTable, n.ImportProc, n.ExportQueryPath, n.ChecksumQueryText
         INTO #tmp_SyncObject
-        FROM ( --               SyncObjectName                                            ImportTable                                 ImportProc                                              ImportType                                          ExportQueryPath                              ChecksumQueryText
-            VALUES (-951091328, 'sys.dm_hadr_cluster'                       , 1, 1, 1440, 'dbo._dm_hadr_cluster'                    , NULL                                                  , NULL                                              , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.dm_hadr_cluster;')
-                ,  (-897487264, 'sys.dm_xe_sessions'                        , 1, 1,  480, 'dbo._dm_xe_sessions'                     , NULL                                                  , NULL                                              , NULL                                       , NULL)
-                ,  (-879924562, 'sys.dm_db_log_space_usage'                 , 2, 1,  480, 'dbo._dm_db_log_space_usage'              , NULL                                                  , NULL                                              , NULL                                       , NULL)
-                ,  (-806439612, 'sys.dm_io_virtual_file_stats'              , 2, 1,  480, 'dbo._dm_io_virtual_file_stats'           , NULL                                                  , NULL                                              , 'sys.dm_io_virtual_file_stats.sql'         , NULL)
-                ,  (-783733354, 'sys.dm_os_wait_stats'                      , 1, 1,  480, NULL                                      , 'import.usp_import__dm_os_wait_stats'                 , 'import.import__dm_os_wait_stats'                 , NULL                                       , NULL)
-                ,  (-680277963, 'sys.database_query_store_options'          , 2, 1,  480, 'dbo._database_query_store_options'       , NULL                                                  , NULL                                              , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.database_query_store_options;')
-                ,  (-644579219, 'sys.dm_db_stats_properties'                , 2, 1, 1440, NULL                                      , 'import.usp_import__dm_db_stats_properties'           , 'import.import__dm_db_stats_properties'           , 'sys.dm_db_stats_properties.sql'           , NULL)
-                ,  (-641734695, 'sys.dm_resource_governor_resource_pools'   , 1, 1,  480, 'dbo._dm_resource_governor_resource_pools', NULL                                                  , NULL                                              , NULL                                       , NULL)
-                ,  (-638989397, 'sys.dm_os_volume_stats'                    , 2, 1,  480, 'dbo._dm_os_volume_stats'                 , NULL                                                  , NULL                                              , 'sys.dm_os_volume_stats.sql'               , NULL)
-                ,  (-558058590, 'sys.dm_os_host_info'                       , 1, 1, 1440, 'dbo._dm_os_host_info'                    , NULL                                                  , NULL                                              , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.dm_os_host_info;')
-                ,  (-500638940, 'sys.dm_db_index_operational_stats'         , 2, 1,  360, NULL                                      , 'import.usp_import__dm_db_index_operational_stats'    , 'import.import__dm_db_index_operational_stats'    , 'sys.dm_db_index_operational_stats.sql'    , NULL)
-                ,  (-495130372, 'sys.dm_db_partition_stats'                 , 2, 1, 1440, NULL                                      , 'import.usp_import__dm_db_partition_stats'            , 'import.import__dm_db_partition_stats'            , 'sys.dm_db_partition_stats.sql'            , NULL)
-                ,  (-489165464, 'sys.dm_os_sys_memory'                      , 1, 1,  480, 'dbo._dm_os_sys_memory'                   , NULL                                                  , NULL                                              , NULL                                       , NULL)
-                ,  (-469313267, 'sys.dm_os_nodes'                           , 1, 1,  480, 'dbo._dm_os_nodes'                        , NULL                                                  , NULL                                              , NULL                                       , NULL)
-                ,  (-334110873, 'sys.dm_db_index_usage_stats'               , 2, 1,  360, NULL                                      , 'import.usp_import__dm_db_index_usage_stats'          , 'import.import__dm_db_index_usage_stats'          , 'sys.dm_db_index_usage_stats.sql'          , NULL)
-                ,  (-305100784, 'sys.dm_server_services'                    , 1, 1, 1440, 'dbo._dm_server_services'                 , NULL                                                  , NULL                                              , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.dm_server_services;')
-                ,  (-233577667, 'sys.dm_hadr_database_replica_states'       , 2, 1,  480, 'dbo._dm_hadr_database_replica_states'    , NULL                                                  , NULL                                              , 'sys.dm_hadr_database_replica_states.sql'  , NULL)
-                ,  (-215103612, 'sys.dm_os_sys_info'                        , 1, 1,  480, 'dbo._dm_os_sys_info'                     , NULL                                                  , NULL                                              , NULL                                       , NULL)
-                ,  (-129939010, 'sys.dm_os_enumerate_fixed_drives'          , 1, 1,  480, 'dbo._dm_os_enumerate_fixed_drives'       , NULL                                                  , NULL                                              , NULL                                       , NULL)
-                ,  ( -46687631, 'sys.dm_os_memory_nodes'                    , 1, 1,  480, 'dbo._dm_os_memory_nodes'                 , NULL                                                  , NULL                                              , NULL                                       , NULL)
-                ,  ( -39192848, 'sys.dm_os_cluster_nodes'                   , 1, 1, 1440, 'dbo._dm_os_cluster_nodes'                , NULL                                                  , NULL                                              , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.dm_os_cluster_nodes;')
-                ,  ( -32276936, 'sys.dm_os_process_memory'                  , 1, 1,  480, 'dbo._dm_os_process_memory'               , NULL                                                  , NULL                                              , NULL                                       , NULL)
-                ,  (      -598, 'sys.database_automatic_tuning_options'     , 2, 1,  480, NULL                                      , 'import.usp_import__database_automatic_tuning_options', 'import.import__database_automatic_tuning_options', 'sys.database_automatic_tuning_options.sql', 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.database_automatic_tuning_options;')
-                ,  (      -587, 'sys.index_resumable_operations'            , 2, 1, 1440, 'dbo._index_resumable_operations'         , NULL                                                  , NULL                                              , NULL                                       , NULL)
-                ,  (      -582, 'sys.database_scoped_configurations'        , 2, 1, 1440, 'dbo._database_scoped_configurations'     , NULL                                                  , NULL                                              , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.database_scoped_configurations;')
-                ,  (      -448, 'sys.database_files'                        , 2, 1,  480, 'dbo._database_files'                     , NULL                                                  , NULL                                              , NULL                                       , NULL)
-                ,  (      -439, 'sys.destination_data_spaces'               , 2, 1, 1440, 'dbo._destination_data_spaces'            , NULL                                                  , NULL                                              , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.destination_data_spaces;')
-                ,  (      -438, 'sys.partition_schemes'                     , 2, 1, 1440, 'dbo._partition_schemes'                  , NULL                                                  , NULL                                              , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.partition_schemes;')
-                ,  (      -437, 'sys.filegroups'                            , 2, 1,  480, 'dbo._filegroups'                         , NULL                                                  , NULL                                              , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.filegroups;')
-                ,  (      -436, 'sys.data_spaces'                           , 2, 1,  480, 'dbo._data_spaces'                        , NULL                                                  , NULL                                              , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.data_spaces;')
-                ,  (      -435, 'sys.partition_functions'                   , 2, 1, 1440, 'dbo._partition_functions'                , NULL                                                  , NULL                                              , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.partition_functions;')
-                ,  (      -434, 'sys.partition_parameters'                  , 2, 1, 1440, 'dbo._partition_parameters'               , NULL                                                  , NULL                                              , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.partition_parameters;')
-                ,  (      -433, 'sys.partition_range_values'                , 2, 1, 1440, 'dbo._partition_range_values'             , NULL                                                  , NULL                                              , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.partition_range_values;')
-                ,  (      -416, 'sys.sql_modules'                           , 2, 1, 1440, NULL                                      , 'import.usp_import__sql_modules'                      , 'import.import__sql_modules'                      , 'sys.sql_modules.sql'                      , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.sql_modules x       WHERE EXISTS (SELECT * FROM sys.objects o WHERE o.[object_id] = x.[object_id] AND o.is_ms_shipped = 0);')
-                ,  (      -412, 'sys.triggers'                              , 2, 1,  480, NULL                                      , 'import.usp_import__triggers'                         , 'import.import__triggers'                         , 'sys.triggers.sql'                         , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.triggers            WHERE is_ms_shipped = 0;')
-                ,  (      -410, 'sys.foreign_key_columns'                   , 2, 1,  480, NULL                                      , 'import.usp_import__foreign_key_columns'              , 'import.import__foreign_key_columns'              , 'sys.foreign_key_columns.sql'              , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.foreign_key_columns;')
-                ,  (      -409, 'sys.foreign_keys'                          , 2, 1,  480, NULL                                      , 'import.usp_import__foreign_keys'                     , 'import.import__foreign_keys'                     , 'sys.foreign_keys.sql'                     , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.foreign_keys        WHERE is_ms_shipped = 0;')
-                ,  (      -408, 'sys.default_constraints'                   , 2, 1,  480, NULL                                      , 'import.usp_import__default_constraints'              , 'import.import__default_constraints'              , 'sys.default_constraints.sql'              , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.default_constraints WHERE is_ms_shipped = 0;')
-                ,  (      -407, 'sys.check_constraints'                     , 2, 1,  480, NULL                                      , 'import.usp_import__check_constraints'                , 'import.import__check_constraints'                , 'sys.check_constraints.sql'                , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.check_constraints   WHERE is_ms_shipped = 0;')
-                ,  (      -406, 'sys.key_constraints'                       , 2, 1,  480, NULL                                      , 'import.usp_import__key_constraints'                  , 'import.import__key_constraints'                  , 'sys.key_constraints.sql'                  , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.key_constraints     WHERE is_ms_shipped = 0;')
-                ,  (      -402, 'sys.stats'                                 , 2, 1,  480, NULL                                      , 'import.usp_import__stats'                            , 'import.import__stats'                            , 'sys.stats.sql'                            , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.stats x             WHERE EXISTS (SELECT * FROM sys.objects o WHERE o.[object_id] = x.[object_id] AND o.is_ms_shipped = 0) AND x.auto_created = 0;')
-                ,  (      -401, 'sys.index_columns'                         , 2, 1,  480, NULL                                      , 'import.usp_import__index_columns'                    , 'import.import__index_columns'                    , 'sys.index_columns.sql'                    , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.index_columns x     WHERE EXISTS (SELECT * FROM sys.objects o WHERE o.[object_id] = x.[object_id] AND o.is_ms_shipped = 0);')
-                ,  (      -399, 'sys.partitions'                            , 2, 1,  480, NULL                                      , 'import.usp_import__partitions'                       , 'import.import__partitions'                       , 'sys.partitions.sql'                       , NULL)
-                ,  (      -397, 'sys.indexes'                               , 2, 1,  480, NULL                                      , 'import.usp_import__indexes'                          , 'import.import__indexes'                          , 'sys.indexes.sql'                          , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.indexes x           WHERE EXISTS (SELECT * FROM sys.objects o WHERE o.[object_id] = x.[object_id] AND o.is_ms_shipped = 0);')
-                ,  (      -396, 'sys.identity_columns'                      , 2, 1,  480, NULL                                      , 'import.usp_import__identity_columns'                 , 'import.import__identity_columns'                 , 'sys.identity_columns.sql'                 , NULL) -- There will almost definitely always be changes because this table stores the last identity value
-                ,  (      -395, 'sys.computed_columns'                      , 2, 1,  480, NULL                                      , 'import.usp_import__computed_columns'                 , 'import.import__computed_columns'                 , 'sys.computed_columns.sql'                 , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.computed_columns;')    -- As of SQL Server 2022, there are no system computed columns
-                ,  (      -391, 'sys.columns'                               , 2, 1, 1440, NULL                                      , 'import.usp_import__columns'                          , 'import.import__columns'                          , 'sys.columns.sql'                          , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.columns x           WHERE EXISTS (SELECT * FROM sys.objects o WHERE o.[object_id] = x.[object_id] AND o.is_ms_shipped = 0);')
-                ,  (      -387, 'sys.views'                                 , 2, 1,  480, NULL                                      , 'import.usp_import__views'                            , 'import.import__views'                            , 'sys.views.sql'                            , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.views               WHERE is_ms_shipped = 0;')
-                ,  (      -386, 'sys.tables'                                , 2, 1,  480, NULL                                      , 'import.usp_import__tables'                           , 'import.import__tables'                           , 'sys.tables.sql'                           , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM([name], [object_id], principal_id, [schema_id], parent_object_id, [type], is_published, is_schema_published, lob_data_space_id, filestream_data_space_id, max_column_id_used, lock_on_bulk_load, uses_ansi_nulls, is_replicated, has_replication_filter, is_merge_published, is_sync_tran_subscribed, has_unchecked_assembly_data, text_in_row_limit, large_value_types_out_of_row, is_tracked_by_cdc, [lock_escalation], is_filetable, is_memory_optimized, [durability], temporal_type, history_table_id, is_remote_data_archive_enabled, is_external, history_retention_period, history_retention_period_unit, is_node, is_edge)), 0)
-                                                                                                                                                                                                                                                                                                                                              FROM sys.tables              WHERE is_ms_shipped = 0;')
-                ,  (      -385, 'sys.objects'                               , 2, 1, 1440, NULL                                      , 'import.usp_import__objects'                          , 'import.import__objects'                          , 'sys.objects.sql'                          , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM([name], [object_id], principal_id, [schema_id], parent_object_id, [type], is_published, is_schema_published)), 0)
-                                                                                                                                                                                                                                                                                                                                              FROM sys.objects             WHERE is_ms_shipped = 0;')
-                ,  (      -252, 'sys.server_event_sessions'                 , 1, 1,  480, 'dbo._server_event_sessions'              , NULL                                                  , NULL                                              , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.server_event_sessions;')
-                ,  (      -224, 'sys.configurations'                        , 1, 1, 1440, NULL                                      , 'import.usp_import__configurations'                   , 'import.import__configurations'                   , 'sys.configurations.sql'                   , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.configurations;')
-                ,  (      -216, 'sys.master_files'                          , 1, 1,  480, NULL                                      , 'import.usp_import__master_files'                     , 'import.import__master_files'                     , 'sys.master_files.sql'                     , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.master_files;')
-                ,  (      -213, 'sys.databases'                             , 1, 1,  480, NULL                                      , 'import.usp_import__databases'                        , 'import.import__databases'                        , 'sys.databases.sql'                        , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.databases;')
-                ,  (         1, 'SERVERPROPERTY'                            , 1, 1,  480, 'dbo._SERVERPROPERTY'                     , NULL                                                  , NULL                                              , 'SERVERPROPERTY.sql'                       , NULL)
-                ,  (         2, 'DATABASEPROPERTYEX'                        , 2, 1,  480, 'dbo._DATABASEPROPERTYEX'                 , NULL                                                  , NULL                                              , 'DATABASEPROPERTYEX.sql'                   , NULL)
-                ,  (         3, 'msdb.dbo.restorehistory'                   , 1, 1, 1440, 'dbo._restorehistory'                     , NULL                                                  , NULL                                              , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM msdb.dbo.restorehistory;')
-                ,  (         4, 'dbo.sysarticles'                           , 2, 1,  480, NULL                                      , 'import.usp_import__sysarticles'                      , 'import.import__sysarticles'                      , 'dbo.sysarticles.sql'                      , 'IF (OBJECT_ID(''dbo.sysarticles'')     IS NOT NULL) BEGIN; SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM dbo.sysarticles;     END; ELSE BEGIN; SELECT 0; END;')
-                ,  (         5, 'dbo.syspublications'                       , 2, 1, 1440, 'dbo._syspublications'                    , NULL                                                  , NULL                                              , 'dbo.syspublications.sql'                  , 'IF (OBJECT_ID(''dbo.syspublications'') IS NOT NULL) BEGIN; SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM dbo.syspublications; END; ELSE BEGIN; SELECT 0; END;')
-                ,  (         6, 'dbo.sysreplservers'                        , 2, 1, 1440, 'dbo._sysreplservers'                     , NULL                                                  , NULL                                              , 'dbo.sysreplservers.sql'                   , 'IF (OBJECT_ID(''dbo.sysreplservers'')  IS NOT NULL) BEGIN; SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM dbo.sysreplservers;  END; ELSE BEGIN; SELECT 0; END;')
-                ,  (         7, 'global_variables'                          , 1, 1,  480, 'dbo._global_variables'                   , NULL                                                  , NULL                                              , 'global_variables.sql'                     , NULL)
-                ,  (         8, 'OBJECTPROPERTYEX'                          , 2, 0, 1440, NULL                                      , 'import.usp_import__OBJECTPROPERTYEX'                 , 'import.import__OBJECTPROPERTYEX'                 , 'OBJECTPROPERTYEX.sql'                     , NULL)
-                ,  (         9, 'missing_indexes'                           , 2, 1,  480, NULL                                      , 'import.usp_import__missing_indexes'                  , 'import.import__missing_indexes'                  , 'missing_indexes.sql'                      , NULL)
-        ) n (SyncObjectID, SyncObjectName, SyncObjectLevelID, IsEnabled, SyncStaleAgeMinutes, ImportTable, ImportProc, ImportType, ExportQueryPath, ChecksumQueryText);
+        FROM ( --               SyncObjectName                                         ImportTable                                 ImportProc                                              ExportQueryPath                              ChecksumQueryText
+            VALUES (-951091328, 'sys.dm_hadr_cluster'                       , 1, 1440, 'dbo._dm_hadr_cluster'                    , NULL                                                  , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.dm_hadr_cluster;')
+                ,  (-897487264, 'sys.dm_xe_sessions'                        , 1,  480, 'dbo._dm_xe_sessions'                     , NULL                                                  , NULL                                       , NULL)
+                ,  (-879924562, 'sys.dm_db_log_space_usage'                 , 2,  480, 'dbo._dm_db_log_space_usage'              , NULL                                                  , NULL                                       , NULL)
+                ,  (-806439612, 'sys.dm_io_virtual_file_stats'              , 2,  480, 'dbo._dm_io_virtual_file_stats'           , NULL                                                  , 'sys.dm_io_virtual_file_stats.sql'         , NULL)
+                ,  (-783733354, 'sys.dm_os_wait_stats'                      , 1,  480, NULL                                      , 'import.usp_import__dm_os_wait_stats'                 , NULL                                       , NULL)
+                ,  (-680277963, 'sys.database_query_store_options'          , 2,  480, 'dbo._database_query_store_options'       , NULL                                                  , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.database_query_store_options;')
+                ,  (-644579219, 'sys.dm_db_stats_properties'                , 2, 1440, NULL                                      , 'import.usp_import__dm_db_stats_properties'           , 'sys.dm_db_stats_properties.sql'           , NULL)
+                ,  (-641734695, 'sys.dm_resource_governor_resource_pools'   , 1,  480, 'dbo._dm_resource_governor_resource_pools', NULL                                                  , NULL                                       , NULL)
+                ,  (-638989397, 'sys.dm_os_volume_stats'                    , 2,  480, 'dbo._dm_os_volume_stats'                 , NULL                                                  , 'sys.dm_os_volume_stats.sql'               , NULL)
+                ,  (-558058590, 'sys.dm_os_host_info'                       , 1, 1440, 'dbo._dm_os_host_info'                    , NULL                                                  , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.dm_os_host_info;')
+                ,  (-500638940, 'sys.dm_db_index_operational_stats'         , 2,  360, NULL                                      , 'import.usp_import__dm_db_index_operational_stats'    , 'sys.dm_db_index_operational_stats.sql'    , NULL)
+                ,  (-495130372, 'sys.dm_db_partition_stats'                 , 2, 1440, NULL                                      , 'import.usp_import__dm_db_partition_stats'            , 'sys.dm_db_partition_stats.sql'            , NULL)
+                ,  (-489165464, 'sys.dm_os_sys_memory'                      , 1,  480, 'dbo._dm_os_sys_memory'                   , NULL                                                  , NULL                                       , NULL)
+                ,  (-469313267, 'sys.dm_os_nodes'                           , 1,  480, 'dbo._dm_os_nodes'                        , NULL                                                  , NULL                                       , NULL)
+                ,  (-334110873, 'sys.dm_db_index_usage_stats'               , 2,  360, NULL                                      , 'import.usp_import__dm_db_index_usage_stats'          , 'sys.dm_db_index_usage_stats.sql'          , NULL)
+                ,  (-305100784, 'sys.dm_server_services'                    , 1, 1440, 'dbo._dm_server_services'                 , NULL                                                  , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.dm_server_services;')
+                ,  (-233577667, 'sys.dm_hadr_database_replica_states'       , 2,  480, 'dbo._dm_hadr_database_replica_states'    , NULL                                                  , 'sys.dm_hadr_database_replica_states.sql'  , NULL)
+                ,  (-215103612, 'sys.dm_os_sys_info'                        , 1,  480, 'dbo._dm_os_sys_info'                     , NULL                                                  , NULL                                       , NULL)
+                ,  (-129939010, 'sys.dm_os_enumerate_fixed_drives'          , 1,  480, 'dbo._dm_os_enumerate_fixed_drives'       , NULL                                                  , NULL                                       , NULL)
+                ,  ( -46687631, 'sys.dm_os_memory_nodes'                    , 1,  480, 'dbo._dm_os_memory_nodes'                 , NULL                                                  , NULL                                       , NULL)
+                ,  ( -39192848, 'sys.dm_os_cluster_nodes'                   , 1, 1440, 'dbo._dm_os_cluster_nodes'                , NULL                                                  , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.dm_os_cluster_nodes;')
+                ,  ( -32276936, 'sys.dm_os_process_memory'                  , 1,  480, 'dbo._dm_os_process_memory'               , NULL                                                  , NULL                                       , NULL)
+                ,  (      -598, 'sys.database_automatic_tuning_options'     , 2,  480, NULL                                      , 'import.usp_import__database_automatic_tuning_options', 'sys.database_automatic_tuning_options.sql', 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.database_automatic_tuning_options;')
+                ,  (      -587, 'sys.index_resumable_operations'            , 2, 1440, 'dbo._index_resumable_operations'         , NULL                                                  , NULL                                       , NULL)
+                ,  (      -582, 'sys.database_scoped_configurations'        , 2, 1440, 'dbo._database_scoped_configurations'     , NULL                                                  , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.database_scoped_configurations;')
+                ,  (      -448, 'sys.database_files'                        , 2,  480, 'dbo._database_files'                     , NULL                                                  , NULL                                       , NULL)
+                ,  (      -439, 'sys.destination_data_spaces'               , 2, 1440, 'dbo._destination_data_spaces'            , NULL                                                  , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.destination_data_spaces;')
+                ,  (      -438, 'sys.partition_schemes'                     , 2, 1440, 'dbo._partition_schemes'                  , NULL                                                  , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.partition_schemes;')
+                ,  (      -437, 'sys.filegroups'                            , 2,  480, 'dbo._filegroups'                         , NULL                                                  , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.filegroups;')
+                ,  (      -436, 'sys.data_spaces'                           , 2,  480, 'dbo._data_spaces'                        , NULL                                                  , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.data_spaces;')
+                ,  (      -435, 'sys.partition_functions'                   , 2, 1440, 'dbo._partition_functions'                , NULL                                                  , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.partition_functions;')
+                ,  (      -434, 'sys.partition_parameters'                  , 2, 1440, 'dbo._partition_parameters'               , NULL                                                  , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.partition_parameters;')
+                ,  (      -433, 'sys.partition_range_values'                , 2, 1440, 'dbo._partition_range_values'             , NULL                                                  , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.partition_range_values;')
+                ,  (      -416, 'sys.sql_modules'                           , 2, 1440, NULL                                      , 'import.usp_import__sql_modules'                      , 'sys.sql_modules.sql'                      , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.sql_modules x       WHERE EXISTS (SELECT * FROM sys.objects o WHERE o.[object_id] = x.[object_id] AND o.is_ms_shipped = 0);')
+                ,  (      -412, 'sys.triggers'                              , 2,  480, NULL                                      , 'import.usp_import__triggers'                         , 'sys.triggers.sql'                         , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.triggers            WHERE is_ms_shipped = 0;')
+                ,  (      -410, 'sys.foreign_key_columns'                   , 2,  480, NULL                                      , 'import.usp_import__foreign_key_columns'              , 'sys.foreign_key_columns.sql'              , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.foreign_key_columns;')
+                ,  (      -409, 'sys.foreign_keys'                          , 2,  480, NULL                                      , 'import.usp_import__foreign_keys'                     , 'sys.foreign_keys.sql'                     , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.foreign_keys        WHERE is_ms_shipped = 0;')
+                ,  (      -408, 'sys.default_constraints'                   , 2,  480, NULL                                      , 'import.usp_import__default_constraints'              , 'sys.default_constraints.sql'              , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.default_constraints WHERE is_ms_shipped = 0;')
+                ,  (      -407, 'sys.check_constraints'                     , 2,  480, NULL                                      , 'import.usp_import__check_constraints'                , 'sys.check_constraints.sql'                , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.check_constraints   WHERE is_ms_shipped = 0;')
+                ,  (      -406, 'sys.key_constraints'                       , 2,  480, NULL                                      , 'import.usp_import__key_constraints'                  , 'sys.key_constraints.sql'                  , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.key_constraints     WHERE is_ms_shipped = 0;')
+                ,  (      -402, 'sys.stats'                                 , 2,  480, NULL                                      , 'import.usp_import__stats'                            , 'sys.stats.sql'                            , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.stats x             WHERE EXISTS (SELECT * FROM sys.objects o WHERE o.[object_id] = x.[object_id] AND o.is_ms_shipped = 0) AND x.auto_created = 0;')
+                ,  (      -401, 'sys.index_columns'                         , 2,  480, NULL                                      , 'import.usp_import__index_columns'                    , 'sys.index_columns.sql'                    , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.index_columns x     WHERE EXISTS (SELECT * FROM sys.objects o WHERE o.[object_id] = x.[object_id] AND o.is_ms_shipped = 0);')
+                ,  (      -399, 'sys.partitions'                            , 2,  480, NULL                                      , 'import.usp_import__partitions'                       , 'sys.partitions.sql'                       , NULL)
+                ,  (      -397, 'sys.indexes'                               , 2,  480, NULL                                      , 'import.usp_import__indexes'                          , 'sys.indexes.sql'                          , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.indexes x           WHERE EXISTS (SELECT * FROM sys.objects o WHERE o.[object_id] = x.[object_id] AND o.is_ms_shipped = 0);')
+                ,  (      -396, 'sys.identity_columns'                      , 2,  480, NULL                                      , 'import.usp_import__identity_columns'                 , 'sys.identity_columns.sql'                 , NULL) -- There will almost definitely always be changes because this table stores the last identity value
+                ,  (      -395, 'sys.computed_columns'                      , 2,  480, NULL                                      , 'import.usp_import__computed_columns'                 , 'sys.computed_columns.sql'                 , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.computed_columns;')    -- As of SQL Server 2022, there are no system computed columns
+                ,  (      -391, 'sys.columns'                               , 2, 1440, NULL                                      , 'import.usp_import__columns'                          , 'sys.columns.sql'                          , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.columns x           WHERE EXISTS (SELECT * FROM sys.objects o WHERE o.[object_id] = x.[object_id] AND o.is_ms_shipped = 0);')
+                ,  (      -387, 'sys.views'                                 , 2,  480, NULL                                      , 'import.usp_import__views'                            , 'sys.views.sql'                            , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.views               WHERE is_ms_shipped = 0;')
+                ,  (      -386, 'sys.tables'                                , 2,  480, NULL                                      , 'import.usp_import__tables'                           , 'sys.tables.sql'                           , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM([name], [object_id], principal_id, [schema_id], parent_object_id, [type], is_published, is_schema_published, lob_data_space_id, filestream_data_space_id, max_column_id_used, lock_on_bulk_load, uses_ansi_nulls, is_replicated, has_replication_filter, is_merge_published, is_sync_tran_subscribed, has_unchecked_assembly_data, text_in_row_limit, large_value_types_out_of_row, is_tracked_by_cdc, [lock_escalation], is_filetable, is_memory_optimized, [durability], temporal_type, history_table_id, is_remote_data_archive_enabled, is_external, history_retention_period, history_retention_period_unit, is_node, is_edge)), 0)
+                                                                                                                                                                                                                                                                                       FROM sys.tables              WHERE is_ms_shipped = 0;')
+                ,  (      -385, 'sys.objects'                               , 2, 1440, NULL                                      , 'import.usp_import__objects'                          , 'sys.objects.sql'                          , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM([name], [object_id], principal_id, [schema_id], parent_object_id, [type], is_published, is_schema_published)), 0)
+                                                                                                                                                                                                                                                                                       FROM sys.objects             WHERE is_ms_shipped = 0;')
+                ,  (      -252, 'sys.server_event_sessions'                 , 1,  480, 'dbo._server_event_sessions'              , NULL                                                  , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.server_event_sessions;')
+                ,  (      -224, 'sys.configurations'                        , 1, 1440, NULL                                      , 'import.usp_import__configurations'                   , 'sys.configurations.sql'                   , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.configurations;')
+                ,  (      -216, 'sys.master_files'                          , 1,  480, NULL                                      , 'import.usp_import__master_files'                     , 'sys.master_files.sql'                     , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.master_files;')
+                ,  (      -213, 'sys.databases'                             , 1,  480, NULL                                      , 'import.usp_import__databases'                        , 'sys.databases.sql'                        , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.databases;')
+                ,  (         1, 'SERVERPROPERTY'                            , 1,  480, 'dbo._SERVERPROPERTY'                     , NULL                                                  , 'SERVERPROPERTY.sql'                       , NULL)
+                ,  (         2, 'DATABASEPROPERTYEX'                        , 2,  480, 'dbo._DATABASEPROPERTYEX'                 , NULL                                                  , 'DATABASEPROPERTYEX.sql'                   , NULL)
+                ,  (         3, 'msdb.dbo.restorehistory'                   , 1, 1440, 'dbo._restorehistory'                     , NULL                                                  , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM msdb.dbo.restorehistory;')
+                ,  (         4, 'dbo.sysarticles'                           , 2,  480, NULL                                      , 'import.usp_import__sysarticles'                      , 'dbo.sysarticles.sql'                      , 'IF (OBJECT_ID(''dbo.sysarticles'')     IS NOT NULL) BEGIN; SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM dbo.sysarticles;     END; ELSE BEGIN; SELECT 0; END;')
+                ,  (         5, 'dbo.syspublications'                       , 2, 1440, 'dbo._syspublications'                    , NULL                                                  , 'dbo.syspublications.sql'                  , 'IF (OBJECT_ID(''dbo.syspublications'') IS NOT NULL) BEGIN; SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM dbo.syspublications; END; ELSE BEGIN; SELECT 0; END;')
+                ,  (         6, 'dbo.sysreplservers'                        , 2, 1440, 'dbo._sysreplservers'                     , NULL                                                  , 'dbo.sysreplservers.sql'                   , 'IF (OBJECT_ID(''dbo.sysreplservers'')  IS NOT NULL) BEGIN; SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM dbo.sysreplservers;  END; ELSE BEGIN; SELECT 0; END;')
+                ,  (         7, 'global_variables'                          , 1,  480, 'dbo._global_variables'                   , NULL                                                  , 'global_variables.sql'                     , NULL)
+                ,  (         8, 'OBJECTPROPERTYEX'                          , 2, 1440, NULL                                      , 'import.usp_import__OBJECTPROPERTYEX'                 , 'OBJECTPROPERTYEX.sql'                     , NULL)
+                ,  (         9, 'missing_indexes'                           , 2,  480, NULL                                      , 'import.usp_import__missing_indexes'                  , 'missing_indexes.sql'                      , NULL)
+        ) n (SyncObjectID, SyncObjectName, SyncObjectLevelID, SyncStaleAgeMinutes, ImportTable, ImportProc, ExportQueryPath, ChecksumQueryText);
+
+    ALTER TABLE #tmp_SyncObject ADD IsEnabled bit NOT NULL DEFAULT (1);
+    ALTER TABLE #tmp_SyncObject ADD OpportunisticSchedulingEnabled bit NOT NULL DEFAULT (1);
+
+    UPDATE #tmp_SyncObject
+    SET IsEnabled = 0
+    WHERE SyncObjectName IN (
+        'OBJECTPROPERTYEX' -- Turned out to be a very heavy export query and not enough useful info.
+    );
+
+    UPDATE #tmp_SyncObject
+    SET OpportunisticSchedulingEnabled = 0
+    WHERE SyncObjectName IN (
+        'sys.dm_db_index_usage_stats',       -- Prefer to keep this on a regular schedule.
+        'sys.dm_db_index_operational_stats', -- Prefer to keep this on a regular schedule.
+        'sys.sql_modules'                    -- Heavy export and checksum queries. So only run on normal schedule.
+    );
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
@@ -178,13 +199,6 @@ BEGIN;
         WHERE 'import.usp_import__' + PARSENAME(so.SyncObjectName, 1) <> so.ImportProc
         UNION ALL
         SELECT SyncObjectID = so.SyncObjectID
-            , IssueDesc     = 'Bad ImportType Name'
-            , Suggestion    = 'Fix ImportType name to follow naming convention'
-            , ProperName    = 'import.import__' + PARSENAME(so.SyncObjectName, 1)
-        FROM #tmp_SyncObject so
-        WHERE 'import.import__' + PARSENAME(so.SyncObjectName, 1) <> so.ImportType
-        UNION ALL
-        SELECT SyncObjectID = so.SyncObjectID
             , IssueDesc     = 'Bad ExportQueryPath Name'
             , Suggestion    = 'ExportQueryPath name should match the SyncObjectName'
             , ProperName    = so.SyncObjectName + '.sql'
@@ -192,12 +206,18 @@ BEGIN;
         WHERE so.SyncObjectName + '.sql' <> so.ExportQueryPath
         UNION ALL
         SELECT SyncObjectID = so.SyncObjectID
-            , IssueDesc     = 'Missing ImportType configuration'
-            , Suggestion    = 'Configurations with an ImportProc require an ImportType as well'
-            , ProperName    = NULL
+            , IssueDesc     = 'Bad ImportType Name'
+            , Suggestion    = 'Fix ImportType name to follow naming convention'
+            , ProperName    = 'import.import__' + PARSENAME(so.SyncObjectName, 1)
         FROM #tmp_SyncObject so
-        WHERE so.IsEnabled = 1
-            AND ImportProc IS NOT NULL AND COALESCE(so.ImportType, '') = '';
+            CROSS APPLY (
+                SELECT ImportType = CONCAT(SCHEMA_NAME(tt.[schema_id]), '.', tt.[name])
+                FROM sys.parameters pa
+                    JOIN sys.table_types tt ON tt.user_type_id = pa.user_type_id
+                WHERE pa.[object_id] = OBJECT_ID(so.ImportProc, 'P') AND pa.[name] = '@Dataset'
+            ) x
+        WHERE so.ImportProc IS NOT NULL
+            AND 'import.import__' + PARSENAME(so.SyncObjectName, 1) <> x.ImportType;
 
         IF EXISTS (SELECT * FROM #issues)
         BEGIN;
@@ -225,16 +245,7 @@ BEGIN;
         FROM #tmp_SyncObject so
         WHERE so.IsEnabled = 1
             AND so.ImportProc IS NOT NULL
-            AND OBJECT_ID(so.ImportProc, 'P') IS NULL
-        UNION ALL
-        SELECT SyncObjectID = so.SyncObjectID
-            , IssueDesc     = 'ImportType does not exist in database'
-            , Suggestion    = 'Create missing type'
-            , ProperName    = NULL
-        FROM #tmp_SyncObject so
-        WHERE so.IsEnabled = 1
-            AND so.ImportType IS NOT NULL
-            AND TYPE_ID(so.ImportType) IS NULL;
+            AND OBJECT_ID(so.ImportProc, 'P') IS NULL;
 
         IF EXISTS (SELECT * FROM #issues)
         BEGIN;
@@ -317,7 +328,6 @@ BEGIN;
                     SELECT *
                     FROM sys.parameters p
                     WHERE p.[object_id] = o.[object_id]
-                        AND p.user_type_id = TYPE_ID(so.ImportType)
                         AND p.[name] = '@Dataset'
                         AND TYPE_NAME(p.system_type_id) = 'table type'
                 )
@@ -372,21 +382,21 @@ BEGIN;
         RAISERROR('Updating: import.SyncObject ',0,1) WITH NOWAIT;
         MERGE INTO import.SyncObject WITH(HOLDLOCK) o
         USING #tmp_SyncObject n ON o.SyncObjectID = n.SyncObjectID
-        WHEN MATCHED AND EXISTS (SELECT o.* EXCEPT SELECT n.*)
+        WHEN MATCHED
         THEN UPDATE
-            SET SyncObjectName      = n.SyncObjectName,
-                SyncObjectLevelID   = n.SyncObjectLevelID,
-                IsEnabled           = n.IsEnabled,
-                SyncStaleAgeMinutes = n.SyncStaleAgeMinutes,
-                ImportTable         = n.ImportTable,
-                ImportProc          = n.ImportProc,
-                ImportType          = n.ImportType,
-                ExportQueryPath     = n.ExportQueryPath,
-                ChecksumQueryText   = n.ChecksumQueryText
+            SET SyncObjectName              = n.SyncObjectName,
+                SyncObjectLevelID           = n.SyncObjectLevelID,
+                IsEnabled                   = n.IsEnabled,
+                SyncStaleAgeMinutes         = n.SyncStaleAgeMinutes,
+                OpportunisticSchedulingEnabled = n.OpportunisticSchedulingEnabled,
+                ImportTable                 = n.ImportTable,
+                ImportProc                  = n.ImportProc,
+                ExportQueryPath             = n.ExportQueryPath,
+                ChecksumQueryText           = n.ChecksumQueryText
         WHEN NOT MATCHED BY TARGET
         THEN
-            INSERT (SyncObjectID, SyncObjectName, SyncObjectLevelID, IsEnabled, SyncStaleAgeMinutes, ImportTable, ImportProc, ImportType, ExportQueryPath, ChecksumQueryText)
-            VALUES (n.SyncObjectID, n.SyncObjectName, n.SyncObjectLevelID, n.IsEnabled, n.SyncStaleAgeMinutes, n.ImportTable, n.ImportProc, n.ImportType, n.ExportQueryPath, n.ChecksumQueryText)
+            INSERT (SyncObjectID, SyncObjectName, SyncObjectLevelID, IsEnabled, SyncStaleAgeMinutes, OpportunisticSchedulingEnabled, ImportTable, ImportProc, ExportQueryPath, ChecksumQueryText)
+            VALUES (n.SyncObjectID, n.SyncObjectName, n.SyncObjectLevelID, n.IsEnabled, n.SyncStaleAgeMinutes, n.OpportunisticSchedulingEnabled, n.ImportTable, n.ImportProc, n.ExportQueryPath, n.ChecksumQueryText)
         WHEN NOT MATCHED BY SOURCE
         THEN DELETE -- Will only work if there are no sync records in import.DatabaseSyncObjectStatus
         OUTPUT $action, 'Deleted', Deleted.*, 'Inserted', Inserted.*;

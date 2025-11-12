@@ -1,7 +1,7 @@
 CREATE PROCEDURE import.usp_GetDatabaseSyncObjectsToProcess (
     @Limit int = 500,
-    @EnableOptimisticScheduling bit = 1,
-    @OptimisticSchedulingLimit int = 50
+    @EnableOpportunisticScheduling bit = 1,
+    @OpportunisticSchedulingLimit int = 50
 )
 AS
 BEGIN;
@@ -39,9 +39,13 @@ BEGIN;
                 CROSS APPLY (
                     SELECT [priority] = CASE
                                             WHEN so.LastSyncCheck = '1900-01-01 00:00:00.0000000' THEN 0 -- Manual resets - status record exists, but the date was reset
-                                            WHEN so.DatabaseSyncObjectID IS NULL THEN 1 -- Brand new syncs - status record does not exist, so it has never run before, or was deleted
-                                            WHEN n.NextCheckTime < SYSUTCDATETIME() THEN 2 -- Aging syncs
-                                            WHEN so.LastSyncWasError = 0 THEN 3 -- Eligible for optimistic scheduling -- Errored syncs should just wait their normal turn to run
+                                            WHEN so.DatabaseSyncObjectID IS NULL                  THEN 1 -- Brand new syncs - status record does not exist, so it has never run before, or was deleted
+                                            WHEN n.NextCheckTime < SYSUTCDATETIME()               THEN 2 -- Aging syncs
+                                            WHEN @EnableOpportunisticScheduling = 1                            -- Opportunistic scheduling at the proc level
+                                                AND so.OpportunisticSchedulingEnabled = 1                      -- Opportunistic scheduling at the sync object level
+                                                AND so.LastSyncWasError = 0                                    -- Errored syncs should just wait their normal turn to run
+                                                AND DATEDIFF(MINUTE, so.LastSyncCheck, SYSUTCDATETIME()) > 120 -- If it ran that recently, it can wait
+                                            THEN 3 -- Eligible for opportunistic scheduling 
                                             ELSE NULL
                                         END
                 ) x
@@ -50,12 +54,12 @@ BEGIN;
         ) x
     ) x
     WHERE x.[priority] IN (0,1,2)
-        OR (x.[priority] = 3 AND @EnableOptimisticScheduling = 1 AND (x.age_rank <= @OptimisticSchedulingLimit * 0.2 OR x.age_rank_rand <= @OptimisticSchedulingLimit * 0.8)) -- Grab the top N oldest syncs as well as N random, these two can overlap, but that's ok, this is just to fill empty time
+        OR (x.[priority] = 3 AND (x.age_rank <= @OpportunisticSchedulingLimit * 0.2 OR x.age_rank_rand <= @OpportunisticSchedulingLimit * 0.8)) -- Grab the top N oldest syncs as well as N random, these two can overlap, but that's ok, this is just to fill empty time
     ORDER BY x.[priority]
         , IIF(x.[priority] IN (0,1), NEWID(), NULL)
     --  , IIF(x.[priority] IN (0,1), CONCAT_WS('.', x.InstanceName, x.DatabaseName, x.SyncObjectName), NULL) -- Normally we'd want work spread out over time, but for new databases and bulk manual resets, it's nice to knock out whole instances/databases together
         , IIF(x.[priority] = 2, x.NextCheckTime, NULL) -- The most stale syncs get run first
-        , IIF(x.[priority] = 3, x.age_rank_rand, NULL) -- Optimistically scheduled syncs get randomized within their age group
+        , IIF(x.[priority] = 3, x.age_rank_rand, NULL) -- Opportunistically scheduled syncs get randomized within their age group
     OPTION (RECOMPILE);
 
     SELECT so._InstanceID, so._DatabaseID, so.InstanceName, so.DatabaseName
