@@ -20,7 +20,7 @@ BEGIN;
     -- Insert stats deltas
     ------------------------------------------------------------------------------
         INSERT dw._dm_db_index_operational_stats_delta_history (
-              _DatabaseID, _ObjectID, _IndexID, _BoundaryValue
+              _DatabaseID, _IndexID, _BoundaryValue, partition_number
             , EstimatedStatsBeginTime, StatsEndTime
             , StatsAgeMS
             , WereStatsReset
@@ -32,7 +32,7 @@ BEGIN;
             , page_compression_success_count, version_generated_inrow, version_generated_offrow, ghost_version_inrow, ghost_version_offrow, insert_over_ghost_version_inrow, insert_over_ghost_version_offrow
         )
         -- Calcualted fields are being handled here because the destination table is a clustered columnstore index, which currently do not support computed columns
-        SELECT @DatabaseID, x._ObjectID, x._IndexID, x._BoundaryValue
+        SELECT @DatabaseID, x._IndexID, x._BoundaryValue, x.partition_number
             , x.EstimatedStatsBeginTime, x.StatsEndTime
             , StatsAgeMS = DATEDIFF(MILLISECOND, x.EstimatedStatsBeginTime, x.StatsEndTime)
             , x.WereStatsReset
@@ -43,7 +43,7 @@ BEGIN;
             , x.page_io_latch_wait_count, x.page_io_latch_wait_in_ms, x.tree_page_latch_wait_count, x.tree_page_latch_wait_in_ms, x.tree_page_io_latch_wait_count, x.tree_page_io_latch_wait_in_ms, x.page_compression_attempt_count
             , x.page_compression_success_count, x.version_generated_inrow, x.version_generated_offrow, x.ghost_version_inrow, x.ghost_version_offrow, x.insert_over_ghost_version_inrow, x.insert_over_ghost_version_offrow
         FROM (
-            SELECT i._ObjectID, i._IndexID, s._BoundaryValue
+            SELECT i._IndexID, s._BoundaryValue, s.partition_number
                 , EstimatedStatsBeginTime = y.EstimatedStatsBeginTime
                 , StatsEndTime            = s.StatsEndTime
                 , WereStatsReset          = x.WereStatsReset
@@ -109,7 +109,11 @@ BEGIN;
                             Unfortunately, this isn't a perfect solution. There may be other reasons for a stats record to be reset that we are not detecting. */
                            WereStatsReset    = CONVERT(bit, IIF(s.EstimatedStatsBeginTime > t.StatsEndTime, 1, 0))
                         /*  If the new value is lower than the previous value for counter based stats, then we know it has been reset.
-                            This is a safety measure to prevent negative values from being produced due to undetected counter resets. */
+                            This is a safety measure to prevent negative values from being produced due to undetected counter resets. 
+                            
+                            Just like the other reset detection logic, this is just a best attempt. It's still possible for values to be higher and still
+                            be a reset especially when the values are typically on the low end. By using multiple fields that tend to be the most active,
+                            this can potentially help reduce any false positives on reset detection. */
                         ,  WereIdxStatsReset = CONVERT(bit, CASE
                                                                 WHEN s.leaf_insert_count        < t.leaf_insert_count
                                                                   OR s.leaf_delete_count        < t.leaf_delete_count

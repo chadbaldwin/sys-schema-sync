@@ -1,6 +1,5 @@
 CREATE TABLE dbo._dm_db_index_operational_stats (
     _DatabaseID                        int           NOT NULL CONSTRAINT FK__dm_db_index_operational_stats__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) INDEX IX__dm_db_index_operational_stats__DatabaseID,
-    _ObjectID                          bigint        NOT NULL CONSTRAINT FK__dm_db_index_operational_stats__ObjectID   REFERENCES dbo.[Object]   (_ObjectID)   INDEX IX__dm_db_index_operational_stats__ObjectID,
     _IndexID                           bigint        NOT NULL CONSTRAINT FK__dm_db_index_operational_stats__IndexID    REFERENCES dbo.[Index]    (_IndexID)    INDEX IX__dm_db_index_operational_stats__IndexID,
     _BoundaryValue                     nvarchar(100)     NULL,
     --

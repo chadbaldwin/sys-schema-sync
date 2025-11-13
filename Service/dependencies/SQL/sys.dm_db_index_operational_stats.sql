@@ -81,6 +81,13 @@ SELECT _SchemaName            = s.[name]
     , _BoundaryValue          = prv.boundary_value
     , EstimatedStatsBeginTime = r.BeginDate
     , StatsEndTime            = @CollectionTime
+    /* Set aside values to be used for filling in NULLs.
+       Doing it this way so we can stick with the x.* logic to make supporting multiple versions of SQL Server easier */
+    , __database_id           = DB_ID()
+    , __object_id             = o.[object_id]
+    , __index_id              = i.index_id
+    , __partition_number      = p.partition_number
+    , __hobt_id               = p.hobt_id
     /*--*/
     , x.*
 FROM sys.schemas s
