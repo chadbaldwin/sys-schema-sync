@@ -1,10 +1,13 @@
 CREATE VIEW dbo.vw_Object
+WITH SCHEMABINDING
 AS
-SELECT d._InstanceID, d.InstanceName
+SELECT i._InstanceID, i.InstanceName
     , d._DatabaseID, d.DatabaseName
     , o._ObjectID, o.SchemaName, o.ObjectName, o.ObjectType
     , o.FQON
-FROM dbo.[Object] o
-    JOIN dbo.vw_Database d ON d._DatabaseID = o._DatabaseID
-WHERE o.IsDeleted = 0;
+FROM dbo.Instance i
+    JOIN dbo.[Database] d ON d._InstanceID = i._InstanceID
+    JOIN dbo.[Object] o ON o._DatabaseID = d._DatabaseID
+WHERE i.IsEnabled = 1 AND d.IsEnabled = 1 AND o.IsDeleted = 0;
 GO
+CREATE UNIQUE CLUSTERED INDEX CIX_vw_Object__DatabaseID__ObjectID ON dbo.vw_Object (_DatabaseID, _ObjectID);

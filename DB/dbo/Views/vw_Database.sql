@@ -1,11 +1,10 @@
 CREATE VIEW dbo.vw_Database
+WITH SCHEMABINDING
 AS
 SELECT i._InstanceID, i.InstanceName
     , d._DatabaseID, d.DatabaseName
-    , DatabaseNamespace = CONCAT_WS('\', i.InstanceName, d.DatabaseName)
-    , IsPrimaryReplica = rs.is_primary_replica
-FROM dbo.[Database] d
-    JOIN dbo.vw_Instance i ON i._InstanceID = d._InstanceID
-    LEFT JOIN dbo._dm_hadr_database_replica_states rs ON rs._DatabaseID = d._DatabaseID AND rs.is_local = 1
-WHERE d.IsEnabled = 1;
+FROM dbo.Instance i
+    JOIN dbo.[Database] d ON d._InstanceID = i._InstanceID
+WHERE i.IsEnabled = 1 AND d.IsEnabled = 1;
 GO
+CREATE UNIQUE CLUSTERED INDEX CIX_vw_Database__DatabaseID ON dbo.vw_Database (_DatabaseID);
