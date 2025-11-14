@@ -242,8 +242,8 @@
     <Build Include="dbo\Tables\Sync Tables\_dm_db_index_operational_stats.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__dm_db_index_operational_stats.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__dm_db_index_operational_stats.sql" />
-    <Build Include="dw\Tables\_dm_db_index_operational_stats_delta_history.sql" />
-    <Build Include="dw\Stored Procedures\usp_import__dm_db_index_operational_stats_delta_history.sql" />
+    <Build Include="dw\Tables\_dm_db_index_operational_stats_delta.sql" />
+    <Build Include="dw\Stored Procedures\usp_import__dm_db_index_operational_stats_delta.sql" />
     <Build Include="dbo\Functions\udf_GetTextAsXml.sql" />
     <Build Include="dbo\Stored Procedures\usp_Raiserror.sql" />
   </ItemGroup>

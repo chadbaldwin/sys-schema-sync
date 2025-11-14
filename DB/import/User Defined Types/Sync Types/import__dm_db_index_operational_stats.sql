@@ -68,5 +68,5 @@ CREATE TYPE import.import__dm_db_index_operational_stats AS TABLE (
     insert_over_ghost_version_inrow    bigint            NULL, -- Added in SQL Server 2019
     insert_over_ghost_version_offrow   bigint            NULL, -- Added in SQL Server 2019
 
-    INDEX CIX CLUSTERED (__ID, _BoundaryValue)
+    INDEX CIX CLUSTERED (__ID)
 );

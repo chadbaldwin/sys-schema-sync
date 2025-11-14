@@ -24,7 +24,8 @@ BEGIN;
         , EstimatedStatsBeginTime, StatsEndTime
         , database_id, [object_id], index_id, partition_number, hobt_id
         , leaf_insert_count, leaf_delete_count, leaf_update_count, leaf_ghost_count, nonleaf_insert_count, nonleaf_delete_count, nonleaf_update_count, leaf_allocation_count, nonleaf_allocation_count, leaf_page_merge_count, nonleaf_page_merge_count, range_scan_count, singleton_lookup_count, forwarded_fetch_count, lob_fetch_in_pages, lob_fetch_in_bytes, lob_orphan_create_count, lob_orphan_insert_count, row_overflow_fetch_in_pages, row_overflow_fetch_in_bytes, column_value_push_off_row_count, column_value_pull_in_row_count, row_lock_count, row_lock_wait_count, row_lock_wait_in_ms, page_lock_count, page_lock_wait_count, page_lock_wait_in_ms, index_lock_promotion_attempt_count, index_lock_promotion_count, page_latch_wait_count, page_latch_wait_in_ms, page_io_latch_wait_count, page_io_latch_wait_in_ms, tree_page_latch_wait_count, tree_page_latch_wait_in_ms, tree_page_io_latch_wait_count, tree_page_io_latch_wait_in_ms, page_compression_attempt_count, page_compression_success_count, version_generated_inrow, version_generated_offrow, ghost_version_inrow, ghost_version_offrow, insert_over_ghost_version_inrow, insert_over_ghost_version_offrow)
-    SELECT __ID, _SchemaName, _ObjectName, _ObjectType, _IndexName, _BoundaryValue
+    SELECT __ID, _SchemaName, _ObjectName, _ObjectType, _IndexName
+        , COALESCE(_BoundaryValue, '<<OPEN BOUNDARY>>')
         , EstimatedStatsBeginTime, StatsEndTime
         , __database_id, __object_id, __index_id, __partition_number, __hobt_id
         , COALESCE(leaf_insert_count, 0)
@@ -103,7 +104,7 @@ BEGIN;
         -- Kick off pre-merge tasks - tasks that need to be able to compare the old data with the new data before the merge occurs
 
         -- Record delta history before updating table
-        EXEC dw.usp_import__dm_db_index_operational_stats_delta_history @DatabaseID = @DatabaseID, @Dataset = @DatasetTransformed, @ItemName = @output, @Verbose = @Verbose;
+        EXEC dw.usp_import__dm_db_index_operational_stats_delta @DatabaseID = @DatabaseID, @Dataset = @DatasetTransformed, @ItemName = @output, @Verbose = @Verbose;
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------
@@ -115,7 +116,7 @@ BEGIN;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
         DELETE x FROM dbo._dm_db_index_operational_stats x
         WHERE x._DatabaseID = @DatabaseID
-            AND NOT EXISTS (SELECT * FROM #tmp_Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID AND (d._BoundaryValue = x._BoundaryValue OR (d._BoundaryValue IS NULL AND x._BoundaryValue IS NULL)));
+            AND NOT EXISTS (SELECT * FROM #tmp_Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID AND d._BoundaryValue = x._BoundaryValue);
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
@@ -174,14 +175,14 @@ BEGIN;
           , x.insert_over_ghost_version_inrow    = d.insert_over_ghost_version_inrow
           , x.insert_over_ghost_version_offrow   = d.insert_over_ghost_version_offrow
         FROM dbo._dm_db_index_operational_stats x
-            JOIN #tmp_Dataset d ON d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID AND (d._BoundaryValue = x._BoundaryValue OR (d._BoundaryValue IS NULL AND x._BoundaryValue IS NULL));
+            JOIN #tmp_Dataset d ON d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID AND d._BoundaryValue = x._BoundaryValue;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
         INSERT dbo._dm_db_index_operational_stats (_DatabaseID, _IndexID, _BoundaryValue, EstimatedStatsBeginTime, StatsEndTime, database_id, [object_id], index_id, partition_number, hobt_id, leaf_insert_count, leaf_delete_count, leaf_update_count, leaf_ghost_count, nonleaf_insert_count, nonleaf_delete_count, nonleaf_update_count, leaf_allocation_count, nonleaf_allocation_count, leaf_page_merge_count, nonleaf_page_merge_count, range_scan_count, singleton_lookup_count, forwarded_fetch_count, lob_fetch_in_pages, lob_fetch_in_bytes, lob_orphan_create_count, lob_orphan_insert_count, row_overflow_fetch_in_pages, row_overflow_fetch_in_bytes, column_value_push_off_row_count, column_value_pull_in_row_count, row_lock_count, row_lock_wait_count, row_lock_wait_in_ms, page_lock_count, page_lock_wait_count, page_lock_wait_in_ms, index_lock_promotion_attempt_count, index_lock_promotion_count, page_latch_wait_count, page_latch_wait_in_ms, page_io_latch_wait_count, page_io_latch_wait_in_ms, tree_page_latch_wait_count, tree_page_latch_wait_in_ms, tree_page_io_latch_wait_count, tree_page_io_latch_wait_in_ms, page_compression_attempt_count, page_compression_success_count, version_generated_inrow, version_generated_offrow, ghost_version_inrow, ghost_version_offrow, insert_over_ghost_version_inrow, insert_over_ghost_version_offrow)
         SELECT d._DatabaseID, d._IndexID, d._BoundaryValue, d.EstimatedStatsBeginTime, d.StatsEndTime, d.database_id, d.[object_id], d.index_id, d.partition_number, d.hobt_id, d.leaf_insert_count, d.leaf_delete_count, d.leaf_update_count, d.leaf_ghost_count, d.nonleaf_insert_count, d.nonleaf_delete_count, d.nonleaf_update_count, d.leaf_allocation_count, d.nonleaf_allocation_count, d.leaf_page_merge_count, d.nonleaf_page_merge_count, d.range_scan_count, d.singleton_lookup_count, d.forwarded_fetch_count, d.lob_fetch_in_pages, d.lob_fetch_in_bytes, d.lob_orphan_create_count, d.lob_orphan_insert_count, d.row_overflow_fetch_in_pages, d.row_overflow_fetch_in_bytes, d.column_value_push_off_row_count, d.column_value_pull_in_row_count, d.row_lock_count, d.row_lock_wait_count, d.row_lock_wait_in_ms, d.page_lock_count, d.page_lock_wait_count, d.page_lock_wait_in_ms, d.index_lock_promotion_attempt_count, d.index_lock_promotion_count, d.page_latch_wait_count, d.page_latch_wait_in_ms, d.page_io_latch_wait_count, d.page_io_latch_wait_in_ms, d.tree_page_latch_wait_count, d.tree_page_latch_wait_in_ms, d.tree_page_io_latch_wait_count, d.tree_page_io_latch_wait_in_ms, d.page_compression_attempt_count, d.page_compression_success_count, d.version_generated_inrow, d.version_generated_offrow, d.ghost_version_inrow, d.ghost_version_offrow, d.insert_over_ghost_version_inrow, d.insert_over_ghost_version_offrow
         FROM #tmp_Dataset d
-        WHERE NOT EXISTS (SELECT * FROM dbo._dm_db_index_operational_stats x WHERE d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID AND (d._BoundaryValue = x._BoundaryValue OR (d._BoundaryValue IS NULL AND x._BoundaryValue IS NULL)));
+        WHERE NOT EXISTS (SELECT * FROM dbo._dm_db_index_operational_stats x WHERE d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID AND d._BoundaryValue = x._BoundaryValue);
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
     COMMIT;
     ------------------------------------------------------------------------------
