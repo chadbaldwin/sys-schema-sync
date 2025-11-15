@@ -14,8 +14,8 @@ $config = Get-Content -LiteralPath "${current_path}\appsettings.jsonc" -Raw | Co
 
 $config.InstanceConcurrencyLimit = $config.InstanceConcurrencyLimit ?? 5
 $config.DatabaseConcurrencyLimit = $config.DatabaseConcurrencyLimit ?? 1
+$config.VerboseLog = $config.VerboseLog ?? $false
 $config.ScriptToRun = Get-Item -LiteralPath "${current_path}\dependencies\sync_objects.ps1"
-$config.VerboseLog = $false
 
 $logdir = mkdir "${current_path}\$($config.LogDirectory)" -Force
 

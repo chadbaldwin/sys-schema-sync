@@ -75,11 +75,13 @@ BEGIN;
     BEGIN TRAN;
         DECLARE @tableName nvarchar(128) = N'dbo._sql_modules';
 
+        /* -- Turning off delete logic; rely on soft delete logic instead by joining to vw_Object
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
         DELETE x FROM dbo._sql_modules x
         WHERE x._DatabaseID = @DatabaseID
             AND NOT EXISTS (SELECT * FROM @output o WHERE o._ObjectID = x._ObjectID);
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        */
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
         UPDATE x

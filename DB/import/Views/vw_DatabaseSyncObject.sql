@@ -4,7 +4,8 @@ AS
 SELECT dso.DatabaseSyncObjectID, d._InstanceID, d._DatabaseID, d.InstanceName, d.DatabaseName
     , so.SyncObjectID, so.SyncObjectName, so.SyncObjectLevelID
     , dso.LastSyncChecksum, dso.LastSyncTime, dso.LastSyncCheck, dso.LastSyncError, dso.LastSyncErrorMessage, dso.LastSyncWasError
-    , so.ImportTable, so.ImportProc, so.ImportType, so.ExportQueryPath, so.ChecksumQueryText, so.SyncStaleAgeMinutes, so.OpportunisticSchedulingEnabled
+    , so.ImportTable, so.ImportProc, so.ImportType, so.ExportQueryPath, so.ChecksumQueryText, so.SyncStaleAgeMinutes
+    , so.OpportunisticSchedulingEnabled, so.SyncOnZeroChecksum
 FROM dbo.vw_Database d
     CROSS JOIN import.SyncObject so
     LEFT JOIN import.DatabaseSyncObjectStatus dso ON so.SyncObjectID = dso.SyncObjectID AND dso._DatabaseID = d._DatabaseID
@@ -15,7 +16,8 @@ UNION
 SELECT dso.DatabaseSyncObjectID, i._InstanceID, NULL, i.InstanceName, 'master'
     , so.SyncObjectID, so.SyncObjectName, so.SyncObjectLevelID
     , dso.LastSyncChecksum, dso.LastSyncTime, dso.LastSyncCheck, dso.LastSyncError, dso.LastSyncErrorMessage, dso.LastSyncWasError
-    , so.ImportTable, so.ImportProc, so.ImportType, so.ExportQueryPath, so.ChecksumQueryText, so.SyncStaleAgeMinutes, so.OpportunisticSchedulingEnabled
+    , so.ImportTable, so.ImportProc, so.ImportType, so.ExportQueryPath, so.ChecksumQueryText, so.SyncStaleAgeMinutes
+    , so.OpportunisticSchedulingEnabled, so.SyncOnZeroChecksum
 FROM dbo.vw_Instance i
     CROSS JOIN import.SyncObject so
     LEFT JOIN import.DatabaseSyncObjectStatus dso ON so.SyncObjectID = dso.SyncObjectID AND dso._InstanceID = i._InstanceID AND dso._DatabaseID IS NULL

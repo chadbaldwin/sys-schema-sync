@@ -23,8 +23,7 @@ SELECT _SchemaName, _ObjectName, _ObjectType
     , _RowHash = CONVERT(binary(32), HASHBYTES('SHA2_256', (SELECT x.* FROM (SELECT NULL) n(n) FOR JSON AUTO)))
     --
     , missing_index_hash
-    , unique_compiles
-    , user_seeks, user_scans
+    , unique_compiles, user_seeks, user_scans
     , last_user_seek_utc, last_user_scan_utc
     , avg_total_user_cost, avg_user_impact
     , equality_columns, inequality_columns, included_columns
@@ -41,7 +40,6 @@ FROM ( -- Encapsulating in a sub-query to make row-hash calculation easier using
         , migs.avg_total_user_cost, migs.avg_user_impact
         , mid.equality_columns, mid.inequality_columns, mid.included_columns
         , j.column_data
-        , c.EQUALITY, c.INEQUALITY, c.[INCLUDE]
     FROM sys.dm_db_missing_index_groups mig
         JOIN sys.dm_db_missing_index_details mid ON mid.index_handle = mig.index_handle
         JOIN sys.dm_db_missing_index_group_stats migs ON migs.group_handle = mig.index_group_handle

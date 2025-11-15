@@ -9,5 +9,6 @@ CREATE TABLE import.SyncObject (
     ImportProc                     nvarchar(128)     NULL,
     ImportType                     nvarchar(128)     NULL,
     ExportQueryPath                nvarchar(MAX)     NULL,
+    SyncOnZeroChecksum             bit           NOT NULL CONSTRAINT DF_SyncObject_SyncOnZeroChecksum DEFAULT (1),
     ChecksumQueryText              nvarchar(MAX)     NULL,
 );

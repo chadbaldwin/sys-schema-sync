@@ -73,6 +73,13 @@ BEGIN;
                                                If configured, a file must be created in the SQL scripts directory of the service. Can be used
                                                with both simple and complex sync types.
 
+            SyncOnZeroChecksum             =   If set to true, the sync process will run even if the last checksum calculated is zero. This is useful
+                                               for datasets that may legitimately have a checksum of zero and you want deletes to run anyway.
+
+                                               In some cases, you may want to disable this - for example, syncs which are insert/update only.
+
+                                               For example, sys.sql_modules. Only pulls data since the last sync time and relies on the soft delete system for deletes.
+
             ChecksumQueryText              =   Optional checksum query. Used to decide whether to perform the sync for larger datasets. This adds
                                                extra overhead on the target databases having to run this first, however, it tends to save quite
                                                a bit of processing time due to saved network IO.
@@ -115,7 +122,19 @@ BEGIN;
                 ,  (      -435, 'sys.partition_functions'                   , 2, 1440, 'dbo._partition_functions'                , NULL                                                  , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.partition_functions;')
                 ,  (      -434, 'sys.partition_parameters'                  , 2, 1440, 'dbo._partition_parameters'               , NULL                                                  , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.partition_parameters;')
                 ,  (      -433, 'sys.partition_range_values'                , 2, 1440, 'dbo._partition_range_values'             , NULL                                                  , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.partition_range_values;')
-                ,  (      -416, 'sys.sql_modules'                           , 2, 1440, NULL                                      , 'import.usp_import__sql_modules'                      , 'sys.sql_modules.sql'                      , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.sql_modules x       WHERE EXISTS (SELECT * FROM sys.objects o WHERE o.[object_id] = x.[object_id] AND o.is_ms_shipped = 0);')
+                ,  (      -416, 'sys.sql_modules'                           , 2, 1440, NULL                                      , 'import.usp_import__sql_modules'                      , 'sys.sql_modules.sql'                      , '/* To get around time zone offset discrepancies, just back up by one day
+                                                                                                                                                                                                                                             This will cause a slight overlap, but because we''re only checking for
+                                                                                                                                                                                                                                             changes, its not as big of a deal */
+                                                                                                                                                                                                                                         DECLARE @dt datetime = DATEADD(day, -1, @LastSyncTime)
+                                                                                                                                                                                                                                         SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0)
+                                                                                                                                                                                                                                         FROM (
+	                                                                                                                                                                                                                                         SELECT sm.*
+	                                                                                                                                                                                                                                         FROM sys.sql_modules sm
+		                                                                                                                                                                                                                                         JOIN sys.objects o ON o.[object_id] = sm.[object_id]
+	                                                                                                                                                                                                                                         WHERE (o.modify_date > @dt OR @dt IS NULL)
+		                                                                                                                                                                                                                                         AND is_ms_shipped = 0
+                                                                                                                                                                                                                                         ) x
+                                                                                                                                                                                                                                         OPTION (RECOMPILE);')
                 ,  (      -412, 'sys.triggers'                              , 2,  480, NULL                                      , 'import.usp_import__triggers'                         , 'sys.triggers.sql'                         , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.triggers            WHERE is_ms_shipped = 0;')
                 ,  (      -410, 'sys.foreign_key_columns'                   , 2,  480, NULL                                      , 'import.usp_import__foreign_key_columns'              , 'sys.foreign_key_columns.sql'              , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.foreign_key_columns;')
                 ,  (      -409, 'sys.foreign_keys'                          , 2,  480, NULL                                      , 'import.usp_import__foreign_keys'                     , 'sys.foreign_keys.sql'                     , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.foreign_keys        WHERE is_ms_shipped = 0;')
@@ -123,16 +142,16 @@ BEGIN;
                 ,  (      -407, 'sys.check_constraints'                     , 2,  480, NULL                                      , 'import.usp_import__check_constraints'                , 'sys.check_constraints.sql'                , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.check_constraints   WHERE is_ms_shipped = 0;')
                 ,  (      -406, 'sys.key_constraints'                       , 2,  480, NULL                                      , 'import.usp_import__key_constraints'                  , 'sys.key_constraints.sql'                  , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.key_constraints     WHERE is_ms_shipped = 0;')
                 ,  (      -402, 'sys.stats'                                 , 2,  480, NULL                                      , 'import.usp_import__stats'                            , 'sys.stats.sql'                            , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.stats x             WHERE EXISTS (SELECT * FROM sys.objects o WHERE o.[object_id] = x.[object_id] AND o.is_ms_shipped = 0) AND x.auto_created = 0;')
-                ,  (      -401, 'sys.index_columns'                         , 2,  480, NULL                                      , 'import.usp_import__index_columns'                    , 'sys.index_columns.sql'                    , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.index_columns x     WHERE EXISTS (SELECT * FROM sys.objects o WHERE o.[object_id] = x.[object_id] AND o.is_ms_shipped = 0);')
+                ,  (      -401, 'sys.index_columns'                         , 2,  480, NULL                                      , 'import.usp_import__index_columns'                    , 'sys.index_columns.sql'                    , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.index_columns x     WHERE OBJECTPROPERTYEX(x.[object_id], ''IsMSShipped'') = 0;')
                 ,  (      -399, 'sys.partitions'                            , 2,  480, NULL                                      , 'import.usp_import__partitions'                       , 'sys.partitions.sql'                       , NULL)
-                ,  (      -397, 'sys.indexes'                               , 2,  480, NULL                                      , 'import.usp_import__indexes'                          , 'sys.indexes.sql'                          , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.indexes x           WHERE EXISTS (SELECT * FROM sys.objects o WHERE o.[object_id] = x.[object_id] AND o.is_ms_shipped = 0);')
+                ,  (      -397, 'sys.indexes'                               , 2,  480, NULL                                      , 'import.usp_import__indexes'                          , 'sys.indexes.sql'                          , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.indexes x           WHERE OBJECTPROPERTYEX(x.[object_id], ''IsMSShipped'') = 0;')
                 ,  (      -396, 'sys.identity_columns'                      , 2,  480, NULL                                      , 'import.usp_import__identity_columns'                 , 'sys.identity_columns.sql'                 , NULL) -- There will almost definitely always be changes because this table stores the last identity value
                 ,  (      -395, 'sys.computed_columns'                      , 2,  480, NULL                                      , 'import.usp_import__computed_columns'                 , 'sys.computed_columns.sql'                 , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.computed_columns;')    -- As of SQL Server 2022, there are no system computed columns
                 ,  (      -391, 'sys.columns'                               , 2, 1440, NULL                                      , 'import.usp_import__columns'                          , 'sys.columns.sql'                          , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.columns x           WHERE EXISTS (SELECT * FROM sys.objects o WHERE o.[object_id] = x.[object_id] AND o.is_ms_shipped = 0);')
                 ,  (      -387, 'sys.views'                                 , 2,  480, NULL                                      , 'import.usp_import__views'                            , 'sys.views.sql'                            , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.views               WHERE is_ms_shipped = 0;')
                 ,  (      -386, 'sys.tables'                                , 2,  480, NULL                                      , 'import.usp_import__tables'                           , 'sys.tables.sql'                           , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM([name], [object_id], principal_id, [schema_id], parent_object_id, [type], is_published, is_schema_published, lob_data_space_id, filestream_data_space_id, max_column_id_used, lock_on_bulk_load, uses_ansi_nulls, is_replicated, has_replication_filter, is_merge_published, is_sync_tran_subscribed, has_unchecked_assembly_data, text_in_row_limit, large_value_types_out_of_row, is_tracked_by_cdc, [lock_escalation], is_filetable, is_memory_optimized, [durability], temporal_type, history_table_id, is_remote_data_archive_enabled, is_external, history_retention_period, history_retention_period_unit, is_node, is_edge)), 0)
                                                                                                                                                                                                                                                                                        FROM sys.tables              WHERE is_ms_shipped = 0;')
-                ,  (      -385, 'sys.objects'                               , 2, 1440, NULL                                      , 'import.usp_import__objects'                          , 'sys.objects.sql'                          , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM([name], [object_id], principal_id, [schema_id], parent_object_id, [type], is_published, is_schema_published)), 0)
+                ,  (      -385, 'sys.objects'                               , 2,  360, NULL                                      , 'import.usp_import__objects'                          , 'sys.objects.sql'                          , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM([name], [object_id], principal_id, [schema_id], parent_object_id, [type], is_published, is_schema_published)), 0)
                                                                                                                                                                                                                                                                                        FROM sys.objects             WHERE is_ms_shipped = 0;')
                 ,  (      -252, 'sys.server_event_sessions'                 , 1,  480, 'dbo._server_event_sessions'              , NULL                                                  , NULL                                       , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.server_event_sessions;')
                 ,  (      -224, 'sys.configurations'                        , 1, 1440, NULL                                      , 'import.usp_import__configurations'                   , 'sys.configurations.sql'                   , 'SELECT COALESCE(CHECKSUM_AGG(CHECKSUM(*)), 0) FROM sys.configurations;')
@@ -151,6 +170,7 @@ BEGIN;
 
     ALTER TABLE #tmp_SyncObject ADD IsEnabled bit NOT NULL DEFAULT (1);
     ALTER TABLE #tmp_SyncObject ADD OpportunisticSchedulingEnabled bit NOT NULL DEFAULT (1);
+    ALTER TABLE #tmp_SyncObject ADD SyncOnZeroChecksum bit NOT NULL DEFAULT (1);
 
     UPDATE #tmp_SyncObject
     SET IsEnabled = 0
@@ -164,6 +184,12 @@ BEGIN;
         'sys.dm_db_index_usage_stats',       -- Prefer to keep this on a regular schedule.
         'sys.dm_db_index_operational_stats', -- Prefer to keep this on a regular schedule.
         'sys.sql_modules'                    -- Heavy export and checksum queries. So only run on normal schedule.
+    );
+
+    UPDATE #tmp_SyncObject
+    SET SyncOnZeroChecksum = 0
+    WHERE SyncObjectName IN (
+        'sys.sql_modules'
     );
     ------------------------------------------------------------------------------
 
@@ -384,19 +410,20 @@ BEGIN;
         USING #tmp_SyncObject n ON o.SyncObjectID = n.SyncObjectID
         WHEN MATCHED
         THEN UPDATE
-            SET SyncObjectName              = n.SyncObjectName,
-                SyncObjectLevelID           = n.SyncObjectLevelID,
-                IsEnabled                   = n.IsEnabled,
-                SyncStaleAgeMinutes         = n.SyncStaleAgeMinutes,
+            SET SyncObjectName                 = n.SyncObjectName,
+                SyncObjectLevelID              = n.SyncObjectLevelID,
+                IsEnabled                      = n.IsEnabled,
+                SyncStaleAgeMinutes            = n.SyncStaleAgeMinutes,
                 OpportunisticSchedulingEnabled = n.OpportunisticSchedulingEnabled,
-                ImportTable                 = n.ImportTable,
-                ImportProc                  = n.ImportProc,
-                ExportQueryPath             = n.ExportQueryPath,
-                ChecksumQueryText           = n.ChecksumQueryText
+                ImportTable                    = n.ImportTable,
+                ImportProc                     = n.ImportProc,
+                ExportQueryPath                = n.ExportQueryPath,
+                SyncOnZeroChecksum             = n.SyncOnZeroChecksum,
+                ChecksumQueryText              = n.ChecksumQueryText
         WHEN NOT MATCHED BY TARGET
         THEN
-            INSERT (SyncObjectID, SyncObjectName, SyncObjectLevelID, IsEnabled, SyncStaleAgeMinutes, OpportunisticSchedulingEnabled, ImportTable, ImportProc, ExportQueryPath, ChecksumQueryText)
-            VALUES (n.SyncObjectID, n.SyncObjectName, n.SyncObjectLevelID, n.IsEnabled, n.SyncStaleAgeMinutes, n.OpportunisticSchedulingEnabled, n.ImportTable, n.ImportProc, n.ExportQueryPath, n.ChecksumQueryText)
+            INSERT (SyncObjectID, SyncObjectName, SyncObjectLevelID, IsEnabled, SyncStaleAgeMinutes, OpportunisticSchedulingEnabled, ImportTable, ImportProc, ExportQueryPath, SyncOnZeroChecksum, ChecksumQueryText)
+            VALUES (n.SyncObjectID, n.SyncObjectName, n.SyncObjectLevelID, n.IsEnabled, n.SyncStaleAgeMinutes, n.OpportunisticSchedulingEnabled, n.ImportTable, n.ImportProc, n.ExportQueryPath, n.SyncOnZeroChecksum, n.ChecksumQueryText)
         WHEN NOT MATCHED BY SOURCE
         THEN DELETE -- Will only work if there are no sync records in import.DatabaseSyncObjectStatus
         OUTPUT $action, 'Deleted', Deleted.*, 'Inserted', Inserted.*;
