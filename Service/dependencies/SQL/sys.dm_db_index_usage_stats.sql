@@ -1,4 +1,4 @@
--- SET STATISTICS IO, TIME ON;
+--SET STATISTICS IO, TIME ON;
 /* 
     This export script is a special case due to how the `sys.dm_db_index_usage_stats` DMV works.
 

@@ -49,7 +49,7 @@ BEGIN;
             , x.last_system_seek_utc, x.last_system_scan_utc, x.last_system_lookup_utc, x.last_system_update_utc
             , last_system_read_utc = GREATEST(x.last_system_seek_utc, x.last_system_scan_utc, x.last_system_lookup_utc)
         FROM (
-            SELECT i._ObjectID, i._IndexID
+            SELECT s._ObjectID, s._IndexID
                 , EstimatedStatsBeginTime = y.EstimatedStatsBeginTime
                 , StatsEndTime            = s.StatsEndTime
                 , WereStatsReset          = x.WereStatsReset
