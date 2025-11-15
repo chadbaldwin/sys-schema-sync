@@ -26,15 +26,17 @@ BEGIN;
     INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @FullImport_Index = 1, @Verbose = @Verbose;
 
-    SELECT _DatabaseID = @DatabaseID
-        , _ObjectID    = o._ObjectID
-        , _IndexID     = o._IndexID
-        , d._RowHash, d.[object_id], d.[name], d.index_id, d.[type], d.[type_desc], d.is_unique, d.data_space_id, d.[ignore_dup_key], d.is_primary_key, d.is_unique_constraint, d.fill_factor, d.is_padded, d.is_disabled, d.is_hypothetical, d.is_ignored_in_optimization, d.[allow_row_locks], d.[allow_page_locks], d.has_filter, d.filter_definition, d.[compression_delay], d.suppress_dup_key_messages, d.auto_created, d.[optimize_for_sequential_key]
-    INTO #tmp_Dataset
+    SELECT TOP (0) * INTO #Dataset FROM dbo._indexes;
+    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate;
+    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ModifyDate;
+    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidFrom;
+    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidTo;
+    CREATE CLUSTERED INDEX CIX ON #Dataset (_DatabaseID, _IndexID);
+
+    INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _IndexID, _RowHash, [object_id], [name], index_id, [type], [type_desc], is_unique, data_space_id, [ignore_dup_key], is_primary_key, is_unique_constraint, fill_factor, is_padded, is_disabled, is_hypothetical, is_ignored_in_optimization, [allow_row_locks], [allow_page_locks], has_filter, filter_definition, [compression_delay], suppress_dup_key_messages, auto_created, [optimize_for_sequential_key])
+    SELECT @DatabaseID, o._ObjectID, o._IndexID, d._RowHash, d.[object_id], d.[name], d.index_id, d.[type], d.[type_desc], d.is_unique, d.data_space_id, d.[ignore_dup_key], d.is_primary_key, d.is_unique_constraint, d.fill_factor, d.is_padded, d.is_disabled, d.is_hypothetical, d.is_ignored_in_optimization, d.[allow_row_locks], d.[allow_page_locks], d.has_filter, d.filter_definition, d.[compression_delay], d.suppress_dup_key_messages, d.auto_created, d.[optimize_for_sequential_key]
     FROM @Dataset d
         JOIN @output o ON o.ID = d.__ID;
-
-    CREATE INDEX IX ON #tmp_Dataset (_DatabaseID, _ObjectID);
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
@@ -44,7 +46,7 @@ BEGIN;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
         DELETE x FROM dbo._indexes x
         WHERE x._DatabaseID = @DatabaseID
-            AND NOT EXISTS (SELECT * FROM #tmp_Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID);
+            AND NOT EXISTS (SELECT * FROM #Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID);
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
@@ -76,14 +78,14 @@ BEGIN;
           , x.auto_created                  = d.auto_created
           , x.[optimize_for_sequential_key] = d.[optimize_for_sequential_key]
         FROM dbo._indexes x
-            JOIN #tmp_Dataset d ON d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID
+            JOIN #Dataset d ON d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID
         WHERE x._RowHash <> d._RowHash;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
         INSERT dbo._indexes (_DatabaseID, _ObjectID, _IndexID, _RowHash, [object_id], [name], index_id, [type], [type_desc], is_unique, data_space_id, [ignore_dup_key], is_primary_key, is_unique_constraint, fill_factor, is_padded, is_disabled, is_hypothetical, is_ignored_in_optimization, [allow_row_locks], [allow_page_locks], has_filter, filter_definition, [compression_delay], suppress_dup_key_messages, auto_created, [optimize_for_sequential_key])
         SELECT d._DatabaseID, d._ObjectID, d._IndexID, d._RowHash, d.[object_id], d.[name], d.index_id, d.[type], d.[type_desc], d.is_unique, d.data_space_id, d.[ignore_dup_key], d.is_primary_key, d.is_unique_constraint, d.fill_factor, d.is_padded, d.is_disabled, d.is_hypothetical, d.is_ignored_in_optimization, d.[allow_row_locks], d.[allow_page_locks], d.has_filter, d.filter_definition, d.[compression_delay], d.suppress_dup_key_messages, d.auto_created, d.[optimize_for_sequential_key]
-        FROM #tmp_Dataset d
+        FROM #Dataset d
         WHERE NOT EXISTS (SELECT * FROM dbo._indexes x WHERE d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID);
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
     COMMIT;

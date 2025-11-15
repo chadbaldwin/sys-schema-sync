@@ -9,6 +9,10 @@ CREATE TYPE import.import__dm_db_index_usage_stats AS TABLE (
     StatsEndTime            datetime2     NOT NULL,
     InstanceTimeZone        nvarchar(128) NOT NULL,
     --
+    __database_id           smallint      NOT NULL,
+    __object_id             int           NOT NULL,
+    __index_id              int           NOT NULL,
+    --
     database_id             smallint          NULL,
     [object_id]             int               NULL,
     index_id                int               NULL,
@@ -28,17 +32,6 @@ CREATE TYPE import.import__dm_db_index_usage_stats AS TABLE (
     last_system_scan        datetime          NULL,
     last_system_lookup      datetime          NULL,
     last_system_update      datetime          NULL,
-
-    -- UTC conversion placeholders
-    -- Tried using computed columns here, but it fails when using as a TVP. So instead they act as placeholders to be filled later.
-    last_user_seek_utc      datetime          NULL,
-    last_user_scan_utc      datetime          NULL,
-    last_user_lookup_utc    datetime          NULL,
-    last_user_update_utc    datetime          NULL,
-    last_system_seek_utc    datetime          NULL,
-    last_system_scan_utc    datetime          NULL,
-    last_system_lookup_utc  datetime          NULL,
-    last_system_update_utc  datetime          NULL,
 
     INDEX CIX CLUSTERED (__ID)
 );

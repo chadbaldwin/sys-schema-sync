@@ -46,20 +46,19 @@ BEGIN;
     INSERT @reference (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
 
-    SELECT _DatabaseID        = @DatabaseID
-        , _ObjectID           = o._ObjectID
-        , _ParentObjectID     = p._ObjectID
-        , _ParentColumnID     = p._ColumnID
-        , _ReferencedObjectID = r._ObjectID
-        , _ReferencedColumnID = r._ColumnID
-        , d._RowHash, d.constraint_object_id, d.constraint_column_id, d.parent_object_id, d.parent_column_id, d.referenced_object_id, d.referenced_column_id
-    INTO #tmp_Dataset
+    SELECT TOP (0) * INTO #Dataset FROM dbo._foreign_key_columns;
+    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate;
+    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ModifyDate;
+    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidFrom;
+    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidTo;
+    CREATE CLUSTERED INDEX CIX ON #Dataset (_DatabaseID, _ObjectID, constraint_column_id);
+
+    INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _ParentObjectID, _ParentColumnID, _ReferencedObjectID, _ReferencedColumnID, _RowHash, constraint_object_id, constraint_column_id, parent_object_id, parent_column_id, referenced_object_id, referenced_column_id)
+    SELECT @DatabaseID, o._ObjectID, p._ObjectID, p._ColumnID, r._ObjectID, r._ColumnID, d._RowHash, d.constraint_object_id, d.constraint_column_id, d.parent_object_id, d.parent_column_id, d.referenced_object_id, d.referenced_column_id
     FROM @Dataset d
         JOIN @output o ON o.ID = d.__ID
         JOIN @parent p ON p.ID = d.__ID
         JOIN @reference r ON r.ID = d.__ID;
-
-    CREATE INDEX IX ON #tmp_Dataset (_DatabaseID, _ObjectID);
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
@@ -69,7 +68,7 @@ BEGIN;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
         DELETE x FROM dbo._foreign_key_columns x
         WHERE x._DatabaseID = @DatabaseID
-            AND NOT EXISTS (SELECT * FROM #tmp_Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID AND d.constraint_column_id = x.constraint_column_id);
+            AND NOT EXISTS (SELECT * FROM #Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID AND d.constraint_column_id = x.constraint_column_id);
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
@@ -86,14 +85,14 @@ BEGIN;
           , x.referenced_object_id = d.referenced_object_id
           , x.referenced_column_id = d.referenced_column_id
         FROM dbo._foreign_key_columns x
-            JOIN #tmp_Dataset d ON d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID AND d.constraint_column_id = x.constraint_column_id
+            JOIN #Dataset d ON d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID AND d.constraint_column_id = x.constraint_column_id
         WHERE x._RowHash <> d._RowHash;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
         INSERT dbo._foreign_key_columns (_DatabaseID, _ObjectID, _ParentObjectID, _ParentColumnID, _ReferencedObjectID, _ReferencedColumnID, _RowHash, constraint_object_id, constraint_column_id, parent_object_id, parent_column_id, referenced_object_id, referenced_column_id)
         SELECT d._DatabaseID, d._ObjectID, d._ParentObjectID, d._ParentColumnID, d._ReferencedObjectID, d._ReferencedColumnID, d._RowHash, d.constraint_object_id, d.constraint_column_id, d.parent_object_id, d.parent_column_id, d.referenced_object_id, d.referenced_column_id
-        FROM #tmp_Dataset d
+        FROM #Dataset d
         WHERE NOT EXISTS (SELECT * FROM dbo._foreign_key_columns x WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID AND d.constraint_column_id = x.constraint_column_id);
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
     COMMIT;

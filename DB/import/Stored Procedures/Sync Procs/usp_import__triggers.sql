@@ -36,17 +36,19 @@ BEGIN;
     INSERT @parent (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
 
-    SELECT _DatabaseID    = @DatabaseID
-        , _ObjectID       = o._ObjectID
-        , _ParentObjectID = p._ObjectID
-        , d._RowHash, d.[name], d.[object_id], d.parent_class, d.parent_class_desc, d.parent_id, d.[type], d.[type_desc], d.create_date, d.modify_date, d.is_ms_shipped, d.is_disabled, d.is_not_for_replication, d.is_instead_of_trigger
-    INTO #tmp_Dataset
+    SELECT TOP (0) * INTO #Dataset FROM dbo._triggers;
+    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate;
+    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ModifyDate;
+    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidFrom;
+    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidTo;
+    CREATE CLUSTERED INDEX CIX ON #Dataset (_DatabaseID, _ObjectID);
+
+    INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _ParentObjectID, _RowHash, [name], [object_id], parent_class, parent_class_desc, parent_id, [type], [type_desc], create_date, modify_date, is_ms_shipped, is_disabled, is_not_for_replication, is_instead_of_trigger)
+    SELECT @DatabaseID, o._ObjectID, p._ObjectID, d._RowHash, d.[name], d.[object_id], d.parent_class, d.parent_class_desc, d.parent_id, d.[type], d.[type_desc], d.create_date, d.modify_date, d.is_ms_shipped, d.is_disabled, d.is_not_for_replication, d.is_instead_of_trigger
     FROM @Dataset d
         JOIN @output o ON o.ID = d.__ID
         LEFT JOIN @parent p ON p.ID = d.__ID;
-
-    CREATE INDEX IX ON #tmp_Dataset (_DatabaseID, _ObjectID);
-    ------------------------------------------------------------------------------
+------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
     BEGIN TRAN;
@@ -55,7 +57,7 @@ BEGIN;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
         DELETE x FROM dbo._triggers x
         WHERE x._DatabaseID = @DatabaseID
-            AND NOT EXISTS (SELECT * FROM #tmp_Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID);
+            AND NOT EXISTS (SELECT * FROM #Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID);
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
@@ -77,14 +79,14 @@ BEGIN;
           , x.is_not_for_replication = d.is_not_for_replication
           , x.is_instead_of_trigger  = d.is_instead_of_trigger
         FROM dbo._triggers x
-            JOIN #tmp_Dataset d ON d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID
+            JOIN #Dataset d ON d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID
         WHERE x._RowHash <> d._RowHash;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
         INSERT dbo._triggers (_DatabaseID, _ObjectID, _ParentObjectID, _RowHash, [name], [object_id], parent_class, parent_class_desc, parent_id, [type], [type_desc], create_date, modify_date, is_ms_shipped, is_disabled, is_not_for_replication, is_instead_of_trigger)
         SELECT d._DatabaseID, d._ObjectID, d._ParentObjectID, d._RowHash, d.[name], d.[object_id], d.parent_class, d.parent_class_desc, d.parent_id, d.[type], d.[type_desc], d.create_date, d.modify_date, d.is_ms_shipped, d.is_disabled, d.is_not_for_replication, d.is_instead_of_trigger
-        FROM #tmp_Dataset d
+        FROM #Dataset d
         WHERE NOT EXISTS (SELECT * FROM dbo._triggers x WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID);
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
     COMMIT;

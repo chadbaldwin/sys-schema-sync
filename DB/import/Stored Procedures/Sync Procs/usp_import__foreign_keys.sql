@@ -46,19 +46,19 @@ BEGIN;
     INSERT @reference (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
 
-    SELECT _DatabaseID        = @DatabaseID
-        , _ObjectID           = o._ObjectID
-        , _ParentObjectID     = p._ObjectID
-        , _ReferencedObjectID = r._ObjectID
-        , _ReferencedIndexID  = r._IndexID
-        , d._RowHash, d.[name], d.[object_id], d.principal_id, d.[schema_id], d.parent_object_id, d.[type], d.[type_desc], d.create_date, d.modify_date, d.is_ms_shipped, d.is_published, d.is_schema_published, d.referenced_object_id, d.key_index_id, d.is_disabled, d.is_not_for_replication, d.is_not_trusted, d.delete_referential_action, d.delete_referential_action_desc, d.update_referential_action, d.update_referential_action_desc, d.is_system_named
-    INTO #tmp_Dataset
+    SELECT TOP (0) * INTO #Dataset FROM dbo._foreign_keys;
+    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate;
+    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ModifyDate;
+    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidFrom;
+    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidTo;
+    CREATE CLUSTERED INDEX CIX ON #Dataset (_DatabaseID, _ObjectID);
+
+    INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _ParentObjectID, _ReferencedObjectID, _ReferencedIndexID, _RowHash, [name], [object_id], principal_id, [schema_id], parent_object_id, [type], [type_desc], create_date, modify_date, is_ms_shipped, is_published, is_schema_published, referenced_object_id, key_index_id, is_disabled, is_not_for_replication, is_not_trusted, delete_referential_action, delete_referential_action_desc, update_referential_action, update_referential_action_desc, is_system_named)
+    SELECT @DatabaseID, o._ObjectID, p._ObjectID, r._ObjectID, r._IndexID, d._RowHash, d.[name], d.[object_id], d.principal_id, d.[schema_id], d.parent_object_id, d.[type], d.[type_desc], d.create_date, d.modify_date, d.is_ms_shipped, d.is_published, d.is_schema_published, d.referenced_object_id, d.key_index_id, d.is_disabled, d.is_not_for_replication, d.is_not_trusted, d.delete_referential_action, d.delete_referential_action_desc, d.update_referential_action, d.update_referential_action_desc, d.is_system_named
     FROM @Dataset d
         JOIN @output o ON o.ID = d.__ID
         JOIN @parent p ON p.ID = d.__ID
         JOIN @reference r ON r.ID = d.__ID;
-
-    CREATE INDEX IX ON #tmp_Dataset (_DatabaseID, _ObjectID);
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
@@ -68,7 +68,7 @@ BEGIN;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
         DELETE x FROM dbo._foreign_keys x
         WHERE x._DatabaseID = @DatabaseID
-            AND NOT EXISTS (SELECT * FROM #tmp_Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID);
+            AND NOT EXISTS (SELECT * FROM #Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID);
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
@@ -101,14 +101,14 @@ BEGIN;
           , x.update_referential_action_desc = d.update_referential_action_desc
           , x.is_system_named                = d.is_system_named
         FROM dbo._foreign_keys x
-            JOIN #tmp_Dataset d ON d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID
+            JOIN #Dataset d ON d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID
         WHERE x._RowHash <> d._RowHash;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
         INSERT dbo._foreign_keys (_DatabaseID, _ObjectID, _ParentObjectID, _ReferencedObjectID, _ReferencedIndexID, _RowHash, [name], [object_id], principal_id, [schema_id], parent_object_id, [type], [type_desc], create_date, modify_date, is_ms_shipped, is_published, is_schema_published, referenced_object_id, key_index_id, is_disabled, is_not_for_replication, is_not_trusted, delete_referential_action, delete_referential_action_desc, update_referential_action, update_referential_action_desc, is_system_named)
         SELECT d._DatabaseID, d._ObjectID, d._ParentObjectID, d._ReferencedObjectID, d._ReferencedIndexID, d._RowHash, d.[name], d.[object_id], d.principal_id, d.[schema_id], d.parent_object_id, d.[type], d.[type_desc], d.create_date, d.modify_date, d.is_ms_shipped, d.is_published, d.is_schema_published, d.referenced_object_id, d.key_index_id, d.is_disabled, d.is_not_for_replication, d.is_not_trusted, d.delete_referential_action, d.delete_referential_action_desc, d.update_referential_action, d.update_referential_action_desc, d.is_system_named
-        FROM #tmp_Dataset d
+        FROM #Dataset d
         WHERE NOT EXISTS (SELECT * FROM dbo._foreign_keys x WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID);
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
     COMMIT;

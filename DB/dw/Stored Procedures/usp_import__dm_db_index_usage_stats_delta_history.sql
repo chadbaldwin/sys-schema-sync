@@ -1,7 +1,5 @@
 CREATE PROCEDURE dw.usp_import__dm_db_index_usage_stats_delta_history (
     @DatabaseID int,
-    @Dataset    import.import__dm_db_index_usage_stats READONLY,
-    @ItemName   import.ItemName READONLY,
     @Verbose    bit = 0
 )
 AS
@@ -14,11 +12,19 @@ BEGIN;
     IF (@Verbose = 1) RAISERROR('[%s] Start',0,1,@ProcName) WITH NOWAIT;
 
     IF (@DatabaseID IS NULL) BEGIN; RAISERROR('[%s] ERROR: Required parameter @DatabaseID is NULL',16,1,@ProcName) WITH NOWAIT; END;
+
+    DECLARE @tableName nvarchar(128) = N'dw._dm_db_index_usage_stats_delta_history';
+
+    IF (OBJECT_ID('tempdb..#Dataset') IS NULL)
+    BEGIN;
+        SELECT x = 1 INTO #Dataset;
+    END;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
     -- Insert stats deltas
     ------------------------------------------------------------------------------
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
         INSERT dw._dm_db_index_usage_stats_delta_history (
               _DatabaseID, _ObjectID, _IndexID
             , EstimatedStatsBeginTime, StatsEndTime
@@ -74,8 +80,7 @@ BEGIN;
                 , last_system_lookup_utc  = COALESCE(s.last_system_lookup_utc, t.last_system_lookup_utc)
                 , last_system_update_utc  = COALESCE(s.last_system_update_utc, t.last_system_update_utc)
             FROM dbo._dm_db_index_usage_stats t -- Previous snapshot
-                JOIN @ItemName i ON i._IndexID = t._IndexID
-                JOIN @Dataset s ON s.__ID = i.ID -- New snapshot
+                JOIN #Dataset s ON s._DatabaseID = t._DatabaseID AND s._IndexID = t._IndexID
                 CROSS APPLY (
                     SELECT
                         /*  If the new EstimatedStatsBeginTime is higher than the last snapshot time (StatsEndTime), then we know something was reset.
@@ -99,9 +104,9 @@ BEGIN;
                 ) x
                 /* If it appears that the stats were not reset, then we want to use the StatsEndTime value from the previous snapshot */
                 CROSS APPLY (SELECT EstimatedStatsBeginTime = IIF(x.WereStatsReset = 1 OR x.WereIdxStatsReset = 1, s.EstimatedStatsBeginTime, t.StatsEndTime)) y
-            WHERE t._DatabaseID = @DatabaseID
-                AND s.StatsEndTime > t.StatsEndTime
+            WHERE s.StatsEndTime > t.StatsEndTime
         ) x;
+        IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------

@@ -9,18 +9,17 @@ CREATE TYPE import.import__dm_db_index_operational_stats AS TABLE (
     EstimatedStatsBeginTime            datetime2     NOT NULL,
     StatsEndTime                       datetime2     NOT NULL,
     --
-    __database_id                      smallint          NULL,
-    __object_id                        int               NULL,
-    __index_id                         int               NULL,
-    __partition_number                 int               NULL,
-    __hobt_id                          bigint            NULL,
+    __database_id                      smallint      NOT NULL,
+    __object_id                        int           NOT NULL,
+    __index_id                         int           NOT NULL,
+    __partition_number                 int           NOT NULL,
+    __hobt_id                          bigint        NOT NULL,
     --
     database_id                        smallint          NULL,
     [object_id]                        int               NULL,
     index_id                           int               NULL,
     partition_number                   int               NULL,
     hobt_id                            bigint            NULL,
-    --
     leaf_insert_count                  bigint            NULL,
     leaf_delete_count                  bigint            NULL,
     leaf_update_count                  bigint            NULL,

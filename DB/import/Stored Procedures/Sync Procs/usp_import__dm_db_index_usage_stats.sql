@@ -16,48 +16,45 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    -- Need to do some quick transformations of the incoming data to adjust for things like UTC conversions and handling nulls
-    -- Doing this here instead of on export allows for keeping the export query simpler.
-    DECLARE @DatasetTransformed import.import__dm_db_index_usage_stats;
-    INSERT @DatasetTransformed (
-          __ID, _SchemaName, _ObjectName,  _ObjectType, _IndexName, EstimatedStatsBeginTime, StatsEndTime, InstanceTimeZone, database_id, [object_id], index_id
-        , user_seeks, user_scans, user_lookups, user_updates, system_seeks, system_scans, system_lookups, system_updates
-        , last_user_seek_utc, last_user_scan_utc, last_user_lookup_utc, last_user_update_utc, last_system_seek_utc, last_system_scan_utc, last_system_lookup_utc, last_system_update_utc
-    )
-    SELECT __ID, _SchemaName, _ObjectName,  _ObjectType, _IndexName, EstimatedStatsBeginTime, StatsEndTime, InstanceTimeZone, database_id, [object_id], index_id
-        , COALESCE(user_seeks, 0), COALESCE(user_scans, 0), COALESCE(user_lookups, 0), COALESCE(user_updates, 0)
-        , COALESCE(system_seeks, 0), COALESCE(system_scans, 0), COALESCE(system_lookups, 0), COALESCE(system_updates, 0)
-        , last_user_seek_utc     AT TIME ZONE InstanceTimeZone AT TIME ZONE 'UTC'
-        , last_user_scan_utc     AT TIME ZONE InstanceTimeZone AT TIME ZONE 'UTC'
-        , last_user_lookup_utc   AT TIME ZONE InstanceTimeZone AT TIME ZONE 'UTC'
-        , last_user_update_utc   AT TIME ZONE InstanceTimeZone AT TIME ZONE 'UTC'
-        , last_system_seek_utc   AT TIME ZONE InstanceTimeZone AT TIME ZONE 'UTC'
-        , last_system_scan_utc   AT TIME ZONE InstanceTimeZone AT TIME ZONE 'UTC'
-        , last_system_lookup_utc AT TIME ZONE InstanceTimeZone AT TIME ZONE 'UTC'
-        , last_system_update_utc AT TIME ZONE InstanceTimeZone AT TIME ZONE 'UTC'
-    FROM @Dataset;
-    ------------------------------------------------------------------------------
-
-    ------------------------------------------------------------------------------
     DECLARE @input  import.ItemName,
             @output import.ItemName;
 
     -- object
     INSERT @input (ID, SchemaName, ObjectName, ObjectType, IndexName)
-    SELECT __ID, _SchemaName, _ObjectName, _ObjectType, _IndexName FROM @DatasetTransformed;
+    SELECT __ID, _SchemaName, _ObjectName, _ObjectType, _IndexName FROM @Dataset;
 
     INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
     EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
 
-    SELECT _DatabaseID = @DatabaseID
-        , _ObjectID    = o._ObjectID
-        , _IndexID     = o._IndexID
-        , d.EstimatedStatsBeginTime, d.StatsEndTime, d.database_id, d.[object_id], d.index_id, d.user_seeks, d.user_scans, d.user_lookups, d.user_updates, d.last_user_seek_utc, d.last_user_scan_utc, d.last_user_lookup_utc, d.last_user_update_utc, d.system_seeks, d.system_scans, d.system_lookups, d.system_updates, d.last_system_seek_utc, d.last_system_scan_utc, d.last_system_lookup_utc, d.last_system_update_utc
-    INTO #tmp_Dataset
-    FROM @DatasetTransformed d
-        JOIN @output o ON o.ID = d.__ID;
+    SELECT TOP (0) * INTO #Dataset FROM dbo._dm_db_index_usage_stats;
+    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate;
+    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ModifyDate;
+    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidFrom;
+    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidTo;
+    CREATE CLUSTERED INDEX CIX ON #Dataset (_DatabaseID, _IndexID);
 
-    CREATE INDEX IX ON #tmp_Dataset (_DatabaseID, _ObjectID);
+    INSERT #Dataset WITH(TABLOCK) (
+          _DatabaseID, _ObjectID, _IndexID, EstimatedStatsBeginTime, StatsEndTime
+        , database_id, [object_id], index_id
+        , user_seeks, user_scans, user_lookups, user_updates
+        , last_user_seek_utc, last_user_scan_utc, last_user_lookup_utc, last_user_update_utc
+        , system_seeks, system_scans, system_lookups, system_updates
+        , last_system_seek_utc, last_system_scan_utc, last_system_lookup_utc, last_system_update_utc
+    )
+    SELECT @DatabaseID, o._ObjectID, o._IndexID, d.EstimatedStatsBeginTime, d.StatsEndTime
+        , d.__database_id, d.__object_id, d.__index_id
+        , COALESCE(d.user_seeks, 0), COALESCE(d.user_scans, 0), COALESCE(d.user_lookups, 0), COALESCE(d.user_updates, 0)
+        , d.last_user_seek     AT TIME ZONE d.InstanceTimeZone AT TIME ZONE 'UTC'
+        , d.last_user_scan     AT TIME ZONE d.InstanceTimeZone AT TIME ZONE 'UTC'
+        , d.last_user_lookup   AT TIME ZONE d.InstanceTimeZone AT TIME ZONE 'UTC'
+        , d.last_user_update   AT TIME ZONE d.InstanceTimeZone AT TIME ZONE 'UTC'
+        , COALESCE(d.system_seeks, 0), COALESCE(d.system_scans, 0), COALESCE(d.system_lookups, 0), COALESCE(d.system_updates, 0)
+        , d.last_system_seek   AT TIME ZONE d.InstanceTimeZone AT TIME ZONE 'UTC'
+        , d.last_system_scan   AT TIME ZONE d.InstanceTimeZone AT TIME ZONE 'UTC'
+        , d.last_system_lookup AT TIME ZONE d.InstanceTimeZone AT TIME ZONE 'UTC'
+        , d.last_system_update AT TIME ZONE d.InstanceTimeZone AT TIME ZONE 'UTC'
+    FROM @Dataset d
+        JOIN @output o ON o.ID = d.__ID;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
@@ -65,7 +62,7 @@ BEGIN;
         -- Kick off pre-merge tasks - tasks that need to be able to compare the old data with the new data before the merge occurs
 
         -- Record delta history before updating table
-        EXEC dw.usp_import__dm_db_index_usage_stats_delta_history @DatabaseID = @DatabaseID, @Dataset = @DatasetTransformed, @ItemName = @output, @Verbose = @Verbose;
+        EXEC dw.usp_import__dm_db_index_usage_stats_delta_history @DatabaseID = @DatabaseID, @Verbose = @Verbose;
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------
@@ -77,7 +74,7 @@ BEGIN;
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
         DELETE x FROM dbo._dm_db_index_usage_stats x
         WHERE x._DatabaseID = @DatabaseID
-            AND NOT EXISTS (SELECT * FROM #tmp_Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID);
+            AND NOT EXISTS (SELECT * FROM #Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID);
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
@@ -105,13 +102,13 @@ BEGIN;
           , x.last_system_lookup_utc  = COALESCE(d.last_system_lookup_utc, x.last_system_lookup_utc)
           , x.last_system_update_utc  = COALESCE(d.last_system_update_utc, x.last_system_update_utc)
         FROM dbo._dm_db_index_usage_stats x
-            JOIN #tmp_Dataset d ON d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID
+            JOIN #Dataset d ON d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
 
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
         INSERT dbo._dm_db_index_usage_stats (_DatabaseID, _ObjectID, _IndexID, EstimatedStatsBeginTime, StatsEndTime, database_id, [object_id], index_id, user_seeks, user_scans, user_lookups, user_updates, last_user_seek_utc, last_user_scan_utc, last_user_lookup_utc, last_user_update_utc, system_seeks, system_scans, system_lookups, system_updates, last_system_seek_utc, last_system_scan_utc, last_system_lookup_utc, last_system_update_utc)
         SELECT d._DatabaseID, d._ObjectID, d._IndexID, d.EstimatedStatsBeginTime, d.StatsEndTime, d.database_id, d.[object_id], d.index_id, d.user_seeks, d.user_scans, d.user_lookups, d.user_updates, d.last_user_seek_utc, d.last_user_scan_utc, d.last_user_lookup_utc, d.last_user_update_utc, d.system_seeks, d.system_scans, d.system_lookups, d.system_updates, d.last_system_seek_utc, d.last_system_scan_utc, d.last_system_lookup_utc, d.last_system_update_utc
-        FROM #tmp_Dataset d
+        FROM #Dataset d
         WHERE NOT EXISTS (SELECT * FROM dbo._dm_db_index_usage_stats x WHERE d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID);
         IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
     COMMIT;

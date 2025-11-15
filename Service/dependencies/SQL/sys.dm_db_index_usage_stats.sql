@@ -49,6 +49,11 @@ SELECT _SchemaName            = s.[name]
     , EstimatedStatsBeginTime = r.BeginDate
     , StatsEndTime            = @CollectionTime
     , InstanceTimeZone        = @LocalTZ
+    /* Set aside values to be used for filling in NULLs.
+       Doing it this way so we can stick with the x.* logic to make supporting multiple versions of SQL Server easier */
+    , __database_id           = DB_ID()
+    , __object_id             = o.[object_id]
+    , __index_id              = i.index_id
     /*--*/
     , x.*
 FROM sys.schemas s
