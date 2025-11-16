@@ -9,4 +9,5 @@ FROM sys.dm_db_partition_stats x -- Be careful with this view, it seems to have 
     JOIN sys.objects o ON o.[object_id] = x.[object_id]
     JOIN sys.schemas s ON s.[schema_id] = o.[schema_id]
     JOIN sys.indexes i ON i.[object_id] = x.[object_id] AND i.index_id = x.index_id
-WHERE o.is_ms_shipped = 0;
+WHERE o.is_ms_shipped = 0
+OPTION (RECOMPILE, USE HINT ('FORCE_LEGACY_CARDINALITY_ESTIMATION'), LOOP JOIN);
