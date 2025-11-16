@@ -16,15 +16,13 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    DECLARE @input  import.ItemName,
-            @output import.ItemName;
-
     -- object
-    INSERT @input (ID, SchemaName, ObjectName, ObjectType)
-    SELECT __ID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
+    DECLARE @ProcessKey uniqueidentifier = NEWID();
 
-    INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
-    EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @FullImport_Object = 1, @Verbose = @Verbose;
+    INSERT import.ItemNameProcess (ProcessKey, ID, _DatabaseID, SchemaName, ObjectName, ObjectType)
+    SELECT @ProcessKey, __ID, @DatabaseID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
+
+    EXEC import.usp_CreateItems_Test @DatabaseID = @DatabaseID, @ProcessKey = @ProcessKey, @FullImport_Object = 1, @Verbose = @Verbose;
 
     SELECT TOP (0) * INTO #Dataset FROM dbo._objects;
     ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate;
@@ -36,7 +34,9 @@ BEGIN;
     INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _SchemaName, _RowHash, [name], [object_id], principal_id, [schema_id], parent_object_id, [type], [type_desc], create_date, is_ms_shipped, is_published, is_schema_published)
     SELECT @DatabaseID, o._ObjectID, d._SchemaName, d._RowHash, d.[name], d.[object_id], d.principal_id, d.[schema_id], d.parent_object_id, d.[type], d.[type_desc], d.create_date, d.is_ms_shipped, d.is_published, d.is_schema_published
     FROM @Dataset d
-        JOIN @output o ON o.ID = d.__ID;
+        JOIN import.ItemNameProcess o ON o.ProcessKey = @ProcessKey AND o.ID = d.__ID;
+
+    DELETE import.ItemNameProcess WHERE ProcessKey = @ProcessKey;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------

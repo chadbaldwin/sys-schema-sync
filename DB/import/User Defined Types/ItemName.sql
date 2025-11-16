@@ -10,9 +10,10 @@ CREATE TYPE import.ItemName AS TABLE (
     _ColumnID     int                  NULL,
 
     INDEX CIX_ItemName_ID CLUSTERED (ID),
-    INDEX IX_ItemName_SchemaName_ObjectName_ObjectType__ObjectID NONCLUSTERED (SchemaName, ObjectName, ObjectType, _ObjectID),
-    INDEX IX_ItemName__ObjectID_IndexName NONCLUSTERED (_ObjectID, IndexName),
-    INDEX IX_ItemName__ObjectID_ColumnName NONCLUSTERED (_ObjectID, ColumnName),
-    INDEX IX_ItemName__IndexID NONCLUSTERED (_IndexID),
-    INDEX IX_ItemName__ColumnID NONCLUSTERED (_ColumnID)
+    -- Indexes for supporting usp_CreateItems
+    INDEX IX_ItemName_SchemaName_ObjectName_ObjectType NONCLUSTERED (SchemaName, ObjectName, ObjectType), -- Supports inserting and updating dbo.[Object]
+    INDEX IX_ItemName__ObjectID_IndexName              NONCLUSTERED (_ObjectID, IndexName),               -- Supports inserting and updating dbo.[Index]
+    INDEX IX_ItemName__ObjectID_ColumnName             NONCLUSTERED (_ObjectID, ColumnName),              -- Supports inserting and updating dbo.[Column]
+    INDEX IX_ItemName__IndexID                         NONCLUSTERED (_IndexID),                           -- Supports dbo.[Index] updates for IsDeleted
+    INDEX IX_ItemName__ColumnID                        NONCLUSTERED (_ColumnID)                           -- Supports dbo.[Column] updates for IsDeleted
 );

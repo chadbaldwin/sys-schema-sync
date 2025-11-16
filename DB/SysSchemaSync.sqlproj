@@ -246,6 +246,8 @@
     <Build Include="dw\Stored Procedures\usp_import__dm_db_index_operational_stats_delta.sql" />
     <Build Include="dbo\Functions\udf_GetTextAsXml.sql" />
     <Build Include="dbo\Stored Procedures\usp_Raiserror.sql" />
+    <Build Include="import\Stored Procedures\usp_CreateItems_Test.sql" />
+    <Build Include="import\Tables\ItemNameProcess.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="StaticCodeAnalysis.SuppressMessages.xml" />
