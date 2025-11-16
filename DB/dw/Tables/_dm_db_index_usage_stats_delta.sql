@@ -4,32 +4,32 @@ CREATE TABLE dw._dm_db_index_usage_stats_delta (
     --
     EstimatedStatsBeginTime datetime2  NOT NULL,
     StatsEndTime            datetime2  NOT NULL,
-    StatsAgeMS              bigint     NOT NULL,
+    StatsAgeMS              AS (DATEDIFF_BIG(MILLISECOND, EstimatedStatsBeginTime, StatsEndTime)) PERSISTED NOT NULL,
     WereStatsReset          bit        NOT NULL,
     --
     user_seeks              bigint     NOT NULL,
     user_scans              bigint     NOT NULL,
     user_lookups            bigint     NOT NULL,
     user_updates            bigint     NOT NULL,
-    user_reads              bigint     NOT NULL,
+    user_reads              AS (user_seeks + user_scans + user_lookups) PERSISTED NOT NULL,
     --
     last_user_seek_utc      datetime       NULL,
     last_user_scan_utc      datetime       NULL,
     last_user_lookup_utc    datetime       NULL,
     last_user_update_utc    datetime       NULL,
-    last_user_read_utc      datetime       NULL,
+    last_user_read_utc      AS (GREATEST(last_user_seek_utc, last_user_scan_utc, last_user_lookup_utc)) PERSISTED,
     --
     system_seeks            bigint     NOT NULL,
     system_scans            bigint     NOT NULL,
     system_lookups          bigint     NOT NULL,
     system_updates          bigint     NOT NULL,
-    system_reads            bigint     NOT NULL,
+    system_reads            AS (system_seeks + system_scans + system_lookups) PERSISTED NOT NULL,
     --
     last_system_seek_utc    datetime       NULL,
     last_system_scan_utc    datetime       NULL,
     last_system_lookup_utc  datetime       NULL,
     last_system_update_utc  datetime       NULL,
-    last_system_read_utc    datetime       NULL,
+    last_system_read_utc    AS (GREATEST(last_system_seek_utc, last_system_scan_utc, last_system_lookup_utc)) PERSISTED,
 
     ValidFrom               datetime2(7) GENERATED ALWAYS AS ROW START NOT NULL,
     ValidTo                 datetime2(7) GENERATED ALWAYS AS ROW END   NOT NULL,

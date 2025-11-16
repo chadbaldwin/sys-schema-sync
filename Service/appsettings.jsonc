@@ -8,9 +8,9 @@
   "QueueProcessingBatchSize": 500,
 
   // How many instances do we want to run syncs against in parallel
-  "InstanceConcurrencyLimit": 10,
+  "InstanceConcurrencyLimit": 5,
   // How many databases PER INSTANCE do we want to run syncs against in parallel?
-  "DatabaseConcurrencyLimit": 3,
+  "DatabaseConcurrencyLimit": 1,
   // If Instance is set to 10 and Database is set to 3, then the highest number of concurrent processes possible is 30
 
   // Connection string pointing to where the SysSchemaSync database was deployed

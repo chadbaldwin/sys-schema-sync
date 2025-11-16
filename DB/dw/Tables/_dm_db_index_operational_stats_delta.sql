@@ -6,7 +6,7 @@ CREATE TABLE dw._dm_db_index_operational_stats_delta (
     --
     EstimatedStatsBeginTime            datetime2     NOT NULL,
     StatsEndTime                       datetime2     NOT NULL,
-    StatsAgeMS                         bigint        NOT NULL,
+    StatsAgeMS                         AS (DATEDIFF_BIG(MILLISECOND, EstimatedStatsBeginTime, StatsEndTime)) PERSISTED NOT NULL,
     WereStatsReset                     bit           NOT NULL,
 
     -- Since this is a custom table for history, changing the column order to use a more logical grouping made sense.

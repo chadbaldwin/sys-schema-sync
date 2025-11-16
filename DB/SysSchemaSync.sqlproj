@@ -72,6 +72,8 @@
   <Import Condition="'$(SQLDBExtensionsRefPath)' == ''" Project="$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets" />
   <ItemGroup>
     <Folder Include="dbo\" />
+    <Folder Include="dbo\Functions" />
+    <Folder Include="dbo\Stored Procedures" />
     <Folder Include="dbo\Tables\" />
     <Folder Include="dbo\Tables\Sync Tables" />
     <Folder Include="dbo\Views" />
@@ -87,10 +89,10 @@
     <Folder Include="import\Views" />
     <Folder Include="Properties" />
     <Folder Include="Security" />
-    <Folder Include="dbo\Functions" />
-    <Folder Include="dbo\Stored Procedures" />
   </ItemGroup>
   <ItemGroup>
+    <Build Include="dbo\Functions\udf_GetTextAsXml.sql" />
+    <Build Include="dbo\Stored Procedures\usp_Raiserror.sql" />
     <Build Include="dbo\Tables\Column.sql" />
     <Build Include="dbo\Tables\Database.sql" />
     <Build Include="dbo\Tables\Index.sql" />
@@ -110,6 +112,7 @@
     <Build Include="dbo\Tables\Sync Tables\_databases.sql" />
     <Build Include="dbo\Tables\Sync Tables\_default_constraints.sql" />
     <Build Include="dbo\Tables\Sync Tables\_destination_data_spaces.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_dm_db_index_operational_stats.sql" />
     <Build Include="dbo\Tables\Sync Tables\_dm_db_index_usage_stats.sql" />
     <Build Include="dbo\Tables\Sync Tables\_dm_db_log_space_usage.sql" />
     <Build Include="dbo\Tables\Sync Tables\_dm_db_partition_stats.sql" />
@@ -164,7 +167,9 @@
     <Build Include="dbo\Views\vw_Index.sql" />
     <Build Include="dbo\Views\vw_Instance.sql" />
     <Build Include="dbo\Views\vw_Object.sql" />
+    <Build Include="dw\Stored Procedures\usp_import__dm_db_index_operational_stats_delta.sql" />
     <Build Include="dw\Stored Procedures\usp_import__dm_db_index_usage_stats_delta.sql" />
+    <Build Include="dw\Tables\_dm_db_index_operational_stats_delta.sql" />
     <Build Include="dw\Tables\_dm_db_index_usage_stats_delta.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__check_constraints.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__columns.sql" />
@@ -173,6 +178,7 @@
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__database_automatic_tuning_options.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__databases.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__default_constraints.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__dm_db_index_operational_stats.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__dm_db_index_usage_stats.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__dm_db_partition_stats.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__dm_db_stats_properties.sql" />
@@ -194,6 +200,7 @@
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__tables.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__triggers.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__views.sql" />
+    <Build Include="import\Stored Procedures\usp_CreateItems_Test.sql" />
     <Build Include="import\Stored Procedures\usp_CreateItems.sql" />
     <Build Include="import\Stored Procedures\usp_DatabaseSyncObjectStatus_Reset_Friendly.sql" />
     <Build Include="import\Stored Procedures\usp_DatabaseSyncObjectStatus_Reset.sql" />
@@ -204,6 +211,7 @@
     <Build Include="import\Stored Procedures\usp_UpdateTargets.sql" />
     <Build Include="import\Stored Procedures\usp_ValidateSchema.sql" />
     <Build Include="import\Tables\DatabaseSyncObjectStatus.sql" />
+    <Build Include="import\Tables\ItemNameProcess.sql" />
     <Build Include="import\Tables\SyncObject.sql" />
     <Build Include="import\Tables\SyncObjectLevel.sql" />
     <Build Include="import\User Defined Types\ItemName.sql" />
@@ -214,6 +222,7 @@
     <Build Include="import\User Defined Types\Sync Types\import__database_automatic_tuning_options.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__databases.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__default_constraints.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__dm_db_index_operational_stats.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__dm_db_index_usage_stats.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__dm_db_partition_stats.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__dm_db_stats_properties.sql" />
@@ -239,15 +248,6 @@
     <Build Include="Security\dw.sql" />
     <Build Include="Security\ext.sql" />
     <Build Include="Security\import.sql" />
-    <Build Include="dbo\Tables\Sync Tables\_dm_db_index_operational_stats.sql" />
-    <Build Include="import\User Defined Types\Sync Types\import__dm_db_index_operational_stats.sql" />
-    <Build Include="import\Stored Procedures\Sync Procs\usp_import__dm_db_index_operational_stats.sql" />
-    <Build Include="dw\Tables\_dm_db_index_operational_stats_delta.sql" />
-    <Build Include="dw\Stored Procedures\usp_import__dm_db_index_operational_stats_delta.sql" />
-    <Build Include="dbo\Functions\udf_GetTextAsXml.sql" />
-    <Build Include="dbo\Stored Procedures\usp_Raiserror.sql" />
-    <Build Include="import\Stored Procedures\usp_CreateItems_Test.sql" />
-    <Build Include="import\Tables\ItemNameProcess.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="StaticCodeAnalysis.SuppressMessages.xml" />
