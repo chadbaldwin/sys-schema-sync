@@ -7,49 +7,52 @@ AS
 BEGIN;
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
+    EXEC sp_set_session_context N'Verbose', @Verbose;
 
-    DECLARE @sw datetime2 = SYSUTCDATETIME();
+    DECLARE @sw datetime2 = SYSUTCDATETIME(), @rc bigint;
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
-    IF (@Verbose = 1) RAISERROR('[%s] Start',0,1,@ProcName) WITH NOWAIT;
+    EXEC dbo.usp_Raiserror '[%s] Start', @s1 = @ProcName;
 
     IF (@DatabaseID IS NULL) BEGIN; RAISERROR('[%s] ERROR: Required parameter @DatabaseID is NULL',16,1,@ProcName) WITH NOWAIT; END;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    DECLARE @input  import.ItemName,
-            @output import.ItemName;
+    BEGIN;
+        DECLARE @input  import.ItemName,
+                @output import.ItemName;
 
-    -- object
-    INSERT @input (ID, SchemaName, ObjectName, ObjectType)
-    SELECT __ID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
+        -- object
+        INSERT @input (ID, SchemaName, ObjectName, ObjectType)
+        SELECT __ID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
 
-    INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
-    EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
+        INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
+        EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
 
-    SELECT TOP (0) * INTO #Dataset FROM dbo._sysarticles;
-    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate;
-    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ModifyDate;
-    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidFrom;
-    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidTo;
-    CREATE CLUSTERED INDEX CIX ON #Dataset (_DatabaseID, _ObjectID, artid);
+        SELECT TOP (0) * INTO #Dataset FROM dbo._sysarticles;
+        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate;
+        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ModifyDate;
+        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidFrom;
+        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidTo;
+        CREATE CLUSTERED INDEX CIX ON #Dataset (_DatabaseID, _ObjectID, artid);
 
-    INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _RowHash, artid, creation_script, del_cmd, [description], dest_table, [filter], filter_clause, ins_cmd, [name], [objid], pubid, pre_creation_cmd, [status], sync_objid, [type], upd_cmd, schema_option, dest_owner, ins_scripting_proc, del_scripting_proc, upd_scripting_proc, custom_script, fire_triggers_on_snapshot)
-    SELECT @DatabaseID, o._ObjectID, d._RowHash, d.artid, d.creation_script, d.del_cmd, d.[description], d.dest_table, d.[filter], d.filter_clause, d.ins_cmd, d.[name], d.[objid], d.pubid, d.pre_creation_cmd, d.[status], d.sync_objid, d.[type], d.upd_cmd, d.schema_option, d.dest_owner, d.ins_scripting_proc, d.del_scripting_proc, d.upd_scripting_proc, d.custom_script, d.fire_triggers_on_snapshot
-    FROM @Dataset d
-        JOIN @output o ON o.ID = d.__ID;
+        INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _RowHash, artid, creation_script, del_cmd, [description], dest_table, [filter], filter_clause, ins_cmd, [name], [objid], pubid, pre_creation_cmd, [status], sync_objid, [type], upd_cmd, schema_option, dest_owner, ins_scripting_proc, del_scripting_proc, upd_scripting_proc, custom_script, fire_triggers_on_snapshot)
+        SELECT @DatabaseID, o._ObjectID, d._RowHash, d.artid, d.creation_script, d.del_cmd, d.[description], d.dest_table, d.[filter], d.filter_clause, d.ins_cmd, d.[name], d.[objid], d.pubid, d.pre_creation_cmd, d.[status], d.sync_objid, d.[type], d.upd_cmd, d.schema_option, d.dest_owner, d.ins_scripting_proc, d.del_scripting_proc, d.upd_scripting_proc, d.custom_script, d.fire_triggers_on_snapshot
+        FROM @Dataset d
+            JOIN @output o ON o.ID = d.__ID;
+    END;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
     BEGIN TRAN;
         DECLARE @tableName nvarchar(128) = N'dbo._sysarticles';
 
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Start', @s1 = @ProcName, @s2 = @tableName;
         DELETE x FROM dbo._sysarticles x
         WHERE x._DatabaseID = @DatabaseID
             AND NOT EXISTS (SELECT * FROM #Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID AND d.artid = x.artid);
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
 
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Start', @s1 = @ProcName, @s2 = @tableName;
         UPDATE x
         SET x._ModifyDate               = SYSUTCDATETIME()
           , x._RowHash                  = d._RowHash
@@ -78,19 +81,18 @@ BEGIN;
         FROM dbo._sysarticles x
             JOIN #Dataset d ON d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID AND d.artid = x.artid
         WHERE x._RowHash <> d._RowHash;
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
 
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Start', @s1 = @ProcName, @s2 = @tableName;
         INSERT dbo._sysarticles (_DatabaseID, _ObjectID, _RowHash, artid, creation_script, del_cmd, [description], dest_table, [filter], filter_clause, ins_cmd, [name], [objid], pubid, pre_creation_cmd, [status], sync_objid, [type], upd_cmd, schema_option, dest_owner, ins_scripting_proc, del_scripting_proc, upd_scripting_proc, custom_script, fire_triggers_on_snapshot)
         SELECT d._DatabaseID, d._ObjectID, d._RowHash, d.artid, d.creation_script, d.del_cmd, d.[description], d.dest_table, d.[filter], d.filter_clause, d.ins_cmd, d.[name], d.[objid], d.pubid, d.pre_creation_cmd, d.[status], d.sync_objid, d.[type], d.upd_cmd, d.schema_option, d.dest_owner, d.ins_scripting_proc, d.del_scripting_proc, d.upd_scripting_proc, d.custom_script, d.fire_triggers_on_snapshot
         FROM #Dataset d
         WHERE NOT EXISTS (SELECT * FROM dbo._sysarticles x WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID AND d.artid = x.artid);
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
     COMMIT;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    DECLARE @duration varchar(15) = FORMAT(DATEADD(microsecond, DATEDIFF(microsecond, @sw, SYSUTCDATETIME()), CONVERT(datetime2, '0001-01-01')), 'HH:mm:ss.fffffff');
-    IF (@Verbose = 1) RAISERROR('[%s] Done [%s]',0,1,@ProcName, @duration) WITH NOWAIT;
+    EXEC dbo.usp_Raiserror '[%s] Done', @ts = @sw, @s1 = @ProcName;
 END;
 GO

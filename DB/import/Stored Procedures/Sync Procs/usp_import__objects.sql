@@ -7,49 +7,52 @@ AS
 BEGIN;
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
+    EXEC sp_set_session_context N'Verbose', @Verbose;
 
-    DECLARE @sw datetime2 = SYSUTCDATETIME();
+    DECLARE @sw datetime2 = SYSUTCDATETIME(), @rc bigint;
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
-    IF (@Verbose = 1) RAISERROR('[%s] Start',0,1,@ProcName) WITH NOWAIT;
+    EXEC dbo.usp_Raiserror '[%s] Start', @s1 = @ProcName;
 
     IF (@DatabaseID IS NULL) BEGIN; RAISERROR('[%s] ERROR: Required parameter @DatabaseID is NULL',16,1,@ProcName) WITH NOWAIT; END;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    -- object
-    DECLARE @ProcessKey uniqueidentifier = NEWID();
+    BEGIN;
+        -- object
+        DECLARE @ProcessKey uniqueidentifier = NEWID();
 
-    INSERT import.ItemNameProcess (ProcessKey, ID, _DatabaseID, SchemaName, ObjectName, ObjectType)
-    SELECT @ProcessKey, __ID, @DatabaseID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
+        INSERT import.ItemNameProcess (ProcessKey, ID, _DatabaseID, SchemaName, ObjectName, ObjectType)
+        SELECT @ProcessKey, __ID, @DatabaseID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
 
-    EXEC import.usp_CreateItems_Test @DatabaseID = @DatabaseID, @ProcessKey = @ProcessKey, @FullImport_Object = 1, @Verbose = @Verbose;
+        EXEC import.usp_CreateItems_Test @DatabaseID = @DatabaseID, @ProcessKey = @ProcessKey, @FullImport_Object = 1;
 
-    SELECT TOP (0) * INTO #Dataset FROM dbo._objects;
-    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate;
-    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ModifyDate;
-    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidFrom;
-    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidTo;
-    CREATE CLUSTERED INDEX CIX ON #Dataset (_DatabaseID, _ObjectID);
+        SELECT TOP (0) * INTO #Dataset FROM dbo._objects;
+        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate,
+                                  COLUMN IF EXISTS _ModifyDate,
+                                  COLUMN IF EXISTS _ValidFrom,
+                                  COLUMN IF EXISTS _ValidTo;
+        CREATE CLUSTERED INDEX CIX ON #Dataset (_DatabaseID, _ObjectID);
 
-    INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _SchemaName, _RowHash, [name], [object_id], principal_id, [schema_id], parent_object_id, [type], [type_desc], create_date, is_ms_shipped, is_published, is_schema_published)
-    SELECT @DatabaseID, o._ObjectID, d._SchemaName, d._RowHash, d.[name], d.[object_id], d.principal_id, d.[schema_id], d.parent_object_id, d.[type], d.[type_desc], d.create_date, d.is_ms_shipped, d.is_published, d.is_schema_published
-    FROM @Dataset d
-        JOIN import.ItemNameProcess o ON o.ProcessKey = @ProcessKey AND o.ID = d.__ID;
+        INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _SchemaName, _RowHash, [name], [object_id], principal_id, [schema_id], parent_object_id, [type], [type_desc], create_date, is_ms_shipped, is_published, is_schema_published)
+        SELECT @DatabaseID, o._ObjectID, d._SchemaName, d._RowHash, d.[name], d.[object_id], d.principal_id, d.[schema_id], d.parent_object_id, d.[type], d.[type_desc], d.create_date, d.is_ms_shipped, d.is_published, d.is_schema_published
+        FROM @Dataset d
+            JOIN import.ItemNameProcess o ON o.ProcessKey = @ProcessKey AND o.ID = d.__ID;
 
-    DELETE import.ItemNameProcess WHERE ProcessKey = @ProcessKey;
+        DELETE import.ItemNameProcess WHERE ProcessKey = @ProcessKey;
+    END;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
     BEGIN TRAN;
         DECLARE @tableName nvarchar(128) = N'dbo._objects';
 
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Start', @s1 = @ProcName, @s2 = @tableName;
         DELETE x FROM dbo._objects x
         WHERE x._DatabaseID = @DatabaseID
             AND NOT EXISTS (SELECT * FROM #Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID);
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
 
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Start', @s1 = @ProcName, @s2 = @tableName;
         UPDATE x
         SET x._ModifyDate         = SYSUTCDATETIME()
           , x._RowHash            = d._RowHash
@@ -68,19 +71,18 @@ BEGIN;
         FROM dbo._objects x
             JOIN #Dataset d ON d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID
         WHERE x._RowHash <> d._RowHash;
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
 
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Start', @s1 = @ProcName, @s2 = @tableName;
         INSERT dbo._objects (_DatabaseID, _ObjectID, _SchemaName, _RowHash, [name], [object_id], principal_id, [schema_id], parent_object_id, [type], [type_desc], create_date, is_ms_shipped, is_published, is_schema_published)
         SELECT d._DatabaseID, d._ObjectID, d._SchemaName, d._RowHash, d.[name], d.[object_id], d.principal_id, d.[schema_id], d.parent_object_id, d.[type], d.[type_desc], d.create_date, d.is_ms_shipped, d.is_published, d.is_schema_published
         FROM #Dataset d
         WHERE NOT EXISTS (SELECT * FROM dbo._objects x WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID);
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
     COMMIT;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    DECLARE @duration varchar(15) = FORMAT(DATEADD(microsecond, DATEDIFF(microsecond, @sw, SYSUTCDATETIME()), CONVERT(datetime2, '0001-01-01')), 'HH:mm:ss.fffffff');
-    IF (@Verbose = 1) RAISERROR('[%s] Done [%s]',0,1,@ProcName, @duration) WITH NOWAIT;
+    EXEC dbo.usp_Raiserror '[%s] Done', @ts = @sw, @s1 = @ProcName;
 END;
 GO

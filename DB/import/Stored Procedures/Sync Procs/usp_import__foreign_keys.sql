@@ -7,71 +7,74 @@ AS
 BEGIN;
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
+    EXEC sp_set_session_context N'Verbose', @Verbose;
 
-    DECLARE @sw datetime2 = SYSUTCDATETIME();
+    DECLARE @sw datetime2 = SYSUTCDATETIME(), @rc bigint;
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
-    IF (@Verbose = 1) RAISERROR('[%s] Start',0,1,@ProcName) WITH NOWAIT;
+    EXEC dbo.usp_Raiserror '[%s] Start', @s1 = @ProcName;
 
     IF (@DatabaseID IS NULL) BEGIN; RAISERROR('[%s] ERROR: Required parameter @DatabaseID is NULL',16,1,@ProcName) WITH NOWAIT; END;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    DECLARE @input     import.ItemName,
-            @output    import.ItemName,
-            @parent    import.ItemName,
-            @reference import.ItemName;
+    BEGIN;
+        DECLARE @input     import.ItemName,
+                @output    import.ItemName,
+                @parent    import.ItemName,
+                @reference import.ItemName;
 
-    -- object
-    INSERT @input (ID, SchemaName, ObjectName, ObjectType)
-    SELECT __ID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
+        -- object
+        INSERT @input (ID, SchemaName, ObjectName, ObjectType)
+        SELECT __ID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
 
-    INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
-    EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
+        INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
+        EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
 
-    DELETE @input;
+        DELETE @input;
 
-    -- parent object
-    INSERT @input (ID, SchemaName, ObjectName, ObjectType)
-    SELECT __ID, _ParentSchemaName, _ParentObjectName, _ParentObjectType FROM @Dataset;
+        -- parent object
+        INSERT @input (ID, SchemaName, ObjectName, ObjectType)
+        SELECT __ID, _ParentSchemaName, _ParentObjectName, _ParentObjectType FROM @Dataset;
 
-    INSERT @parent (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
-    EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
+        INSERT @parent (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
+        EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
 
-    DELETE @input;
+        DELETE @input;
 
-    -- reference object
-    INSERT @input (ID, SchemaName, ObjectName, ObjectType, IndexName)
-    SELECT __ID, _ReferencedSchemaName, _ReferencedObjectName, _ReferencedObjectType, _ReferencedIndexName FROM @Dataset;
+        -- reference object
+        INSERT @input (ID, SchemaName, ObjectName, ObjectType, IndexName)
+        SELECT __ID, _ReferencedSchemaName, _ReferencedObjectName, _ReferencedObjectType, _ReferencedIndexName FROM @Dataset;
 
-    INSERT @reference (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
-    EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
+        INSERT @reference (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
+        EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
 
-    SELECT TOP (0) * INTO #Dataset FROM dbo._foreign_keys;
-    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate;
-    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ModifyDate;
-    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidFrom;
-    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidTo;
-    CREATE CLUSTERED INDEX CIX ON #Dataset (_DatabaseID, _ObjectID);
+        SELECT TOP (0) * INTO #Dataset FROM dbo._foreign_keys;
+        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate;
+        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ModifyDate;
+        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidFrom;
+        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidTo;
+        CREATE CLUSTERED INDEX CIX ON #Dataset (_DatabaseID, _ObjectID);
 
-    INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _ParentObjectID, _ReferencedObjectID, _ReferencedIndexID, _RowHash, [name], [object_id], principal_id, [schema_id], parent_object_id, [type], [type_desc], create_date, modify_date, is_ms_shipped, is_published, is_schema_published, referenced_object_id, key_index_id, is_disabled, is_not_for_replication, is_not_trusted, delete_referential_action, delete_referential_action_desc, update_referential_action, update_referential_action_desc, is_system_named)
-    SELECT @DatabaseID, o._ObjectID, p._ObjectID, r._ObjectID, r._IndexID, d._RowHash, d.[name], d.[object_id], d.principal_id, d.[schema_id], d.parent_object_id, d.[type], d.[type_desc], d.create_date, d.modify_date, d.is_ms_shipped, d.is_published, d.is_schema_published, d.referenced_object_id, d.key_index_id, d.is_disabled, d.is_not_for_replication, d.is_not_trusted, d.delete_referential_action, d.delete_referential_action_desc, d.update_referential_action, d.update_referential_action_desc, d.is_system_named
-    FROM @Dataset d
-        JOIN @output o ON o.ID = d.__ID
-        JOIN @parent p ON p.ID = d.__ID
-        JOIN @reference r ON r.ID = d.__ID;
+        INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _ParentObjectID, _ReferencedObjectID, _ReferencedIndexID, _RowHash, [name], [object_id], principal_id, [schema_id], parent_object_id, [type], [type_desc], create_date, modify_date, is_ms_shipped, is_published, is_schema_published, referenced_object_id, key_index_id, is_disabled, is_not_for_replication, is_not_trusted, delete_referential_action, delete_referential_action_desc, update_referential_action, update_referential_action_desc, is_system_named)
+        SELECT @DatabaseID, o._ObjectID, p._ObjectID, r._ObjectID, r._IndexID, d._RowHash, d.[name], d.[object_id], d.principal_id, d.[schema_id], d.parent_object_id, d.[type], d.[type_desc], d.create_date, d.modify_date, d.is_ms_shipped, d.is_published, d.is_schema_published, d.referenced_object_id, d.key_index_id, d.is_disabled, d.is_not_for_replication, d.is_not_trusted, d.delete_referential_action, d.delete_referential_action_desc, d.update_referential_action, d.update_referential_action_desc, d.is_system_named
+        FROM @Dataset d
+            JOIN @output o ON o.ID = d.__ID
+            JOIN @parent p ON p.ID = d.__ID
+            JOIN @reference r ON r.ID = d.__ID;
+    END;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
     BEGIN TRAN;
         DECLARE @tableName nvarchar(128) = N'dbo._foreign_keys';
 
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Start', @s1 = @ProcName, @s2 = @tableName;
         DELETE x FROM dbo._foreign_keys x
         WHERE x._DatabaseID = @DatabaseID
             AND NOT EXISTS (SELECT * FROM #Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID);
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
 
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Start', @s1 = @ProcName, @s2 = @tableName;
         UPDATE x
         SET x._ParentObjectID                = d._ParentObjectID
           , x._ReferencedObjectID            = d._ReferencedObjectID
@@ -103,19 +106,18 @@ BEGIN;
         FROM dbo._foreign_keys x
             JOIN #Dataset d ON d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID
         WHERE x._RowHash <> d._RowHash;
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
 
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Start', @s1 = @ProcName, @s2 = @tableName;
         INSERT dbo._foreign_keys (_DatabaseID, _ObjectID, _ParentObjectID, _ReferencedObjectID, _ReferencedIndexID, _RowHash, [name], [object_id], principal_id, [schema_id], parent_object_id, [type], [type_desc], create_date, modify_date, is_ms_shipped, is_published, is_schema_published, referenced_object_id, key_index_id, is_disabled, is_not_for_replication, is_not_trusted, delete_referential_action, delete_referential_action_desc, update_referential_action, update_referential_action_desc, is_system_named)
         SELECT d._DatabaseID, d._ObjectID, d._ParentObjectID, d._ReferencedObjectID, d._ReferencedIndexID, d._RowHash, d.[name], d.[object_id], d.principal_id, d.[schema_id], d.parent_object_id, d.[type], d.[type_desc], d.create_date, d.modify_date, d.is_ms_shipped, d.is_published, d.is_schema_published, d.referenced_object_id, d.key_index_id, d.is_disabled, d.is_not_for_replication, d.is_not_trusted, d.delete_referential_action, d.delete_referential_action_desc, d.update_referential_action, d.update_referential_action_desc, d.is_system_named
         FROM #Dataset d
         WHERE NOT EXISTS (SELECT * FROM dbo._foreign_keys x WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID);
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
     COMMIT;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    DECLARE @duration varchar(15) = FORMAT(DATEADD(microsecond, DATEDIFF(microsecond, @sw, SYSUTCDATETIME()), CONVERT(datetime2, '0001-01-01')), 'HH:mm:ss.fffffff');
-    IF (@Verbose = 1) RAISERROR('[%s] Done [%s]',0,1,@ProcName, @duration) WITH NOWAIT;
+    EXEC dbo.usp_Raiserror '[%s] Done', @ts = @sw, @s1 = @ProcName;
 END;
 GO

@@ -7,28 +7,34 @@ AS
 BEGIN;
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
+    EXEC sp_set_session_context N'Verbose', @Verbose;
 
-    DECLARE @sw datetime2 = SYSUTCDATETIME();
+    DECLARE @sw datetime2 = SYSUTCDATETIME(), @rc bigint;
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
-    IF (@Verbose = 1) RAISERROR('[%s] Start',0,1,@ProcName) WITH NOWAIT;
+    EXEC dbo.usp_Raiserror '[%s] Start', @s1 = @ProcName;
 
     IF (@DatabaseID IS NULL) BEGIN; RAISERROR('[%s] ERROR: Required parameter @DatabaseID is NULL',16,1,@ProcName) WITH NOWAIT; END;
+
+    DECLARE @tableName nvarchar(128);
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    DECLARE @input  import.ItemName,
-            @output import.ItemName;
+    BEGIN;
+        DECLARE @input  import.ItemName,
+                @output import.ItemName;
 
-    -- object
-    INSERT @input (ID, SchemaName, ObjectName, ObjectType)
-    SELECT __ID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
+        -- object
+        INSERT @input (ID, SchemaName, ObjectName, ObjectType)
+        SELECT __ID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
 
-    INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
-    EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
+        INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
+        EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
+    END;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    IF (@Verbose = 1) RAISERROR('[%s] Insert dbo.ObjectDefinition',0,1,@ProcName) WITH NOWAIT;
+    SET @tableName = 'dbo.ObjectDefinition'
+    EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Start', @s1 = @ProcName, @s2 = @tableName;
     WITH cte AS (
         SELECT rn = ROW_NUMBER() OVER (PARTITION BY d._ObjectDefinitionHash ORDER BY d.[object_id])
             , d._ObjectDefinitionHash, d.[definition]
@@ -43,6 +49,7 @@ BEGIN;
             FROM dbo.ObjectDefinition od WITH(TABLOCKX)
             WHERE od.ObjectDefinitionHash = d._ObjectDefinitionHash
         );
+    EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
@@ -52,7 +59,7 @@ BEGIN;
 
         The normal undelete process isn't affected though since they are still created/imported the same way.
     */
-    IF (@Verbose = 1) RAISERROR('[%s] [dbo.Object] Find deleted database level items: Start',0,1,@ProcName) WITH NOWAIT;
+    EXEC dbo.usp_Raiserror '[%s] [dbo.Object] Find deleted database level items: Start', @s1 = @ProcName;
     SELECT x._ObjectID
     INTO #del_Object
     FROM dbo.[Object] x
@@ -60,30 +67,29 @@ BEGIN;
         AND x.SchemaName = '<<DB>>' -- Limit to database level items - e.g. database triggers
         AND NOT EXISTS (SELECT * FROM @output d WHERE d._ObjectID = x._ObjectID)
         AND x.IsDeleted = 0;
-    IF (@Verbose = 1) RAISERROR('[%s] [dbo.Object] Find deleted database level items: Done (%i)',0,1,@ProcName,@@ROWCOUNT) WITH NOWAIT;
+    EXEC dbo.usp_Raiserror '[%s] [dbo.Object] Find deleted database level items: Done', @s1 = @ProcName, @rc = @@ROWCOUNT;
 
-    IF (@Verbose = 1) RAISERROR('[%s] [dbo.Object] Mark deleted database level items: Start',0,1,@ProcName) WITH NOWAIT;
+    EXEC dbo.usp_Raiserror '[%s] [dbo.Object] Mark deleted database level items: Start', @s1 = @ProcName;
     UPDATE x WITH(ROWLOCK)
     SET x.IsDeleted = 1, x.DeleteDate = SYSUTCDATETIME()
     FROM dbo.[Object] x
     WHERE x._DatabaseID = @DatabaseID
         AND EXISTS (SELECT * FROM #del_Object do WHERE do._ObjectID = x._ObjectID);
-    IF (@Verbose = 1) RAISERROR('[%s] [dbo.Object] Mark deleted database level items: Done (%i)',0,1,@ProcName,@@ROWCOUNT) WITH NOWAIT;
+    EXEC dbo.usp_Raiserror '[%s] [dbo.Object] Mark deleted database level items: Done', @s1 = @ProcName, @rc = @@ROWCOUNT;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
+    SET @tableName = 'dbo._sql_modules'
     BEGIN TRAN;
-        DECLARE @tableName nvarchar(128) = N'dbo._sql_modules';
-
         /* -- Turning off delete logic; rely on soft delete logic instead by joining to vw_Object
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Start', @s1 = @ProcName, @s2 = @tableName;
         DELETE x FROM dbo._sql_modules x
         WHERE x._DatabaseID = @DatabaseID
             AND NOT EXISTS (SELECT * FROM @output o WHERE o._ObjectID = x._ObjectID);
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
         */
 
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Start', @s1 = @ProcName, @s2 = @tableName;
         UPDATE x
         SET   x._ModifyDate             = SYSUTCDATETIME()
             , x._RowHash                = d._RowHash
@@ -106,9 +112,9 @@ BEGIN;
             JOIN dbo.ObjectDefinition od ON od.ObjectDefinitionHash = d._ObjectDefinitionHash
         WHERE x._DatabaseID = @DatabaseID
             AND (x._RowHash <> d._RowHash OR x._ObjectDefinitionID <> od._ObjectDefinitionID);
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
 
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Start', @s1 = @ProcName, @s2 = @tableName;
         INSERT dbo._sql_modules (_DatabaseID, _ObjectID, _RowHash
             , [object_id], _ObjectDefinitionID, uses_ansi_nulls, uses_quoted_identifier, is_schema_bound, uses_database_collation, is_recompiled, null_on_null_input, execute_as_principal_id, uses_native_compilation, inline_type, is_inlineable)
         SELECT @DatabaseID, y._ObjectID, d._RowHash
@@ -122,12 +128,11 @@ BEGIN;
                 WHERE x._DatabaseID = @DatabaseID
                     AND x._ObjectID = y._ObjectID
             );
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
     COMMIT;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    DECLARE @duration varchar(15) = FORMAT(DATEADD(microsecond, DATEDIFF(microsecond, @sw, SYSUTCDATETIME()), CONVERT(datetime2, '0001-01-01')), 'HH:mm:ss.fffffff');
-    IF (@Verbose = 1) RAISERROR('[%s] Done [%s]',0,1,@ProcName, @duration) WITH NOWAIT;
+    EXEC dbo.usp_Raiserror '[%s] Done', @ts = @sw, @s1 = @ProcName;
 END;
 GO

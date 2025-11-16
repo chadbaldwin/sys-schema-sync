@@ -7,24 +7,27 @@ AS
 BEGIN;
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
+    EXEC sp_set_session_context N'Verbose', @Verbose;
 
-    DECLARE @sw datetime2 = SYSUTCDATETIME();
+    DECLARE @sw datetime2 = SYSUTCDATETIME(), @rc bigint;
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
-    IF (@Verbose = 1) RAISERROR('[%s] Start',0,1,@ProcName) WITH NOWAIT;
+    EXEC dbo.usp_Raiserror '[%s] Start', @s1 = @ProcName;
 
     IF (@DatabaseID IS NULL) BEGIN; RAISERROR('[%s] ERROR: Required parameter @DatabaseID is NULL',16,1,@ProcName) WITH NOWAIT; END;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    DECLARE @input  import.ItemName,
-            @output import.ItemName;
+    BEGIN;
+        DECLARE @input  import.ItemName,
+                @output import.ItemName;
 
-    -- object
-    INSERT @input (ID, SchemaName, ObjectName, ObjectType)
-    SELECT __ID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
+        -- object
+        INSERT @input (ID, SchemaName, ObjectName, ObjectType)
+        SELECT __ID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
 
-    INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
-    EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
+        INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
+        EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
+    END;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
@@ -32,7 +35,7 @@ BEGIN;
         DECLARE @tableName nvarchar(128) = N'dbo._missing_indexes';
 
         /* -- Not doing standard delete for now
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Start', @s1 = @ProcName, @s2 = @tableName;
         DELETE x FROM dbo._missing_indexes x
         WHERE x._DatabaseID = @DatabaseID
             AND NOT EXISTS (
@@ -42,10 +45,10 @@ BEGIN;
                 WHERE o._ObjectID = x._ObjectID
                     AND x.missing_index_hash = d.missing_index_hash
             );
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
         */
 
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Start', @s1 = @ProcName, @s2 = @tableName;
         UPDATE x
         SET   x._ModifyDate         = SYSUTCDATETIME()
             , x._RowHash            = d._RowHash
@@ -67,9 +70,9 @@ BEGIN;
             JOIN @Dataset d ON d.__ID = y.ID AND d.missing_index_hash = x.missing_index_hash
         WHERE x._DatabaseID = @DatabaseID
             AND x._RowHash <> d._RowHash;
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
 
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Start', @s1 = @ProcName, @s2 = @tableName;
         INSERT dbo._missing_indexes (_DatabaseID, _ObjectID, _RowHash
             , missing_index_hash, unique_compiles, user_seeks, user_scans, last_user_seek_utc, last_user_scan_utc, avg_total_user_cost, avg_user_impact, equality_columns, inequality_columns, included_columns, column_data)
         SELECT @DatabaseID, y._ObjectID, d._RowHash
@@ -83,20 +86,19 @@ BEGIN;
                     AND x._ObjectID = y._ObjectID
                     AND x.missing_index_hash = d.missing_index_hash
             );
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
 
         -- Instead of standard deletes, just do simple time based pruning
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Start', @s1 = @ProcName, @s2 = @tableName;
         DELETE x
         FROM dbo._missing_indexes x
         WHERE x._DatabaseID = @DatabaseID
             AND x._ModifyDate < DATEADD(DAY, -30, SYSUTCDATETIME());
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
     COMMIT;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    DECLARE @duration varchar(15) = FORMAT(DATEADD(microsecond, DATEDIFF(microsecond, @sw, SYSUTCDATETIME()), CONVERT(datetime2, '0001-01-01')), 'HH:mm:ss.fffffff');
-    IF (@Verbose = 1) RAISERROR('[%s] Done [%s]',0,1,@ProcName, @duration) WITH NOWAIT;
+    EXEC dbo.usp_Raiserror '[%s] Done', @ts = @sw, @s1 = @ProcName;
 END;
 GO

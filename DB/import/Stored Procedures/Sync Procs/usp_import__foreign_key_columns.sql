@@ -7,71 +7,74 @@ AS
 BEGIN;
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
+    EXEC sp_set_session_context N'Verbose', @Verbose;
 
-    DECLARE @sw datetime2 = SYSUTCDATETIME();
+    DECLARE @sw datetime2 = SYSUTCDATETIME(), @rc bigint;
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
-    IF (@Verbose = 1) RAISERROR('[%s] Start',0,1,@ProcName) WITH NOWAIT;
+    EXEC dbo.usp_Raiserror '[%s] Start', @s1 = @ProcName;
 
     IF (@DatabaseID IS NULL) BEGIN; RAISERROR('[%s] ERROR: Required parameter @DatabaseID is NULL',16,1,@ProcName) WITH NOWAIT; END;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    DECLARE @input     import.ItemName,
-            @output    import.ItemName,
-            @parent    import.ItemName,
-            @reference import.ItemName;
+    BEGIN;
+        DECLARE @input     import.ItemName,
+                @output    import.ItemName,
+                @parent    import.ItemName,
+                @reference import.ItemName;
 
-    -- object
-    INSERT @input (ID, SchemaName, ObjectName, ObjectType)
-    SELECT __ID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
+        -- object
+        INSERT @input (ID, SchemaName, ObjectName, ObjectType)
+        SELECT __ID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
 
-    INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
-    EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
+        INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
+        EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
 
-    DELETE @input;
+        DELETE @input;
 
-    -- parent object
-    INSERT @input (ID, SchemaName, ObjectName, ObjectType, ColumnName)
-    SELECT __ID, _ParentSchemaName, _ParentObjectName, _ParentObjectType, _ParentColumnName FROM @Dataset;
+        -- parent object
+        INSERT @input (ID, SchemaName, ObjectName, ObjectType, ColumnName)
+        SELECT __ID, _ParentSchemaName, _ParentObjectName, _ParentObjectType, _ParentColumnName FROM @Dataset;
 
-    INSERT @parent (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
-    EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
+        INSERT @parent (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
+        EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
 
-    DELETE @input;
+        DELETE @input;
 
-    -- reference object
-    INSERT @input (ID, SchemaName, ObjectName, ObjectType, ColumnName)
-    SELECT __ID, _ReferencedSchemaName, _ReferencedObjectName, _ReferencedObjectType, _ReferencedColumnName FROM @Dataset;
+        -- reference object
+        INSERT @input (ID, SchemaName, ObjectName, ObjectType, ColumnName)
+        SELECT __ID, _ReferencedSchemaName, _ReferencedObjectName, _ReferencedObjectType, _ReferencedColumnName FROM @Dataset;
 
-    INSERT @reference (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
-    EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input, @Verbose = @Verbose;
+        INSERT @reference (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
+        EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
 
-    SELECT TOP (0) * INTO #Dataset FROM dbo._foreign_key_columns;
-    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate;
-    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ModifyDate;
-    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidFrom;
-    ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidTo;
-    CREATE CLUSTERED INDEX CIX ON #Dataset (_DatabaseID, _ObjectID, constraint_column_id);
+        SELECT TOP (0) * INTO #Dataset FROM dbo._foreign_key_columns;
+        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate;
+        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ModifyDate;
+        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidFrom;
+        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidTo;
+        CREATE CLUSTERED INDEX CIX ON #Dataset (_DatabaseID, _ObjectID, constraint_column_id);
 
-    INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _ParentObjectID, _ParentColumnID, _ReferencedObjectID, _ReferencedColumnID, _RowHash, constraint_object_id, constraint_column_id, parent_object_id, parent_column_id, referenced_object_id, referenced_column_id)
-    SELECT @DatabaseID, o._ObjectID, p._ObjectID, p._ColumnID, r._ObjectID, r._ColumnID, d._RowHash, d.constraint_object_id, d.constraint_column_id, d.parent_object_id, d.parent_column_id, d.referenced_object_id, d.referenced_column_id
-    FROM @Dataset d
-        JOIN @output o ON o.ID = d.__ID
-        JOIN @parent p ON p.ID = d.__ID
-        JOIN @reference r ON r.ID = d.__ID;
+        INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _ParentObjectID, _ParentColumnID, _ReferencedObjectID, _ReferencedColumnID, _RowHash, constraint_object_id, constraint_column_id, parent_object_id, parent_column_id, referenced_object_id, referenced_column_id)
+        SELECT @DatabaseID, o._ObjectID, p._ObjectID, p._ColumnID, r._ObjectID, r._ColumnID, d._RowHash, d.constraint_object_id, d.constraint_column_id, d.parent_object_id, d.parent_column_id, d.referenced_object_id, d.referenced_column_id
+        FROM @Dataset d
+            JOIN @output o ON o.ID = d.__ID
+            JOIN @parent p ON p.ID = d.__ID
+            JOIN @reference r ON r.ID = d.__ID;
+    END;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
     BEGIN TRAN;
         DECLARE @tableName nvarchar(128) = N'dbo._foreign_key_columns';
 
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Start', @s1 = @ProcName, @s2 = @tableName;
         DELETE x FROM dbo._foreign_key_columns x
         WHERE x._DatabaseID = @DatabaseID
             AND NOT EXISTS (SELECT * FROM #Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID AND d.constraint_column_id = x.constraint_column_id);
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Delete: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
 
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Start', @s1 = @ProcName, @s2 = @tableName;
         UPDATE x
         SET x._ParentObjectID      = d._ParentObjectID
           , x._ParentColumnID      = d._ParentColumnID
@@ -87,19 +90,18 @@ BEGIN;
         FROM dbo._foreign_key_columns x
             JOIN #Dataset d ON d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID AND d.constraint_column_id = x.constraint_column_id
         WHERE x._RowHash <> d._RowHash;
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Update: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
 
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Start',0,1,@ProcName,@tableName) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Start', @s1 = @ProcName, @s2 = @tableName;
         INSERT dbo._foreign_key_columns (_DatabaseID, _ObjectID, _ParentObjectID, _ParentColumnID, _ReferencedObjectID, _ReferencedColumnID, _RowHash, constraint_object_id, constraint_column_id, parent_object_id, parent_column_id, referenced_object_id, referenced_column_id)
         SELECT d._DatabaseID, d._ObjectID, d._ParentObjectID, d._ParentColumnID, d._ReferencedObjectID, d._ReferencedColumnID, d._RowHash, d.constraint_object_id, d.constraint_column_id, d.parent_object_id, d.parent_column_id, d.referenced_object_id, d.referenced_column_id
         FROM #Dataset d
         WHERE NOT EXISTS (SELECT * FROM dbo._foreign_key_columns x WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID AND d.constraint_column_id = x.constraint_column_id);
-        IF (@Verbose = 1) RAISERROR('[%s] [%s] Insert: Done (%i)',0,1,@ProcName,@tableName,@@ROWCOUNT) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
     COMMIT;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    DECLARE @duration varchar(15) = FORMAT(DATEADD(microsecond, DATEDIFF(microsecond, @sw, SYSUTCDATETIME()), CONVERT(datetime2, '0001-01-01')), 'HH:mm:ss.fffffff');
-    IF (@Verbose = 1) RAISERROR('[%s] Done [%s]',0,1,@ProcName, @duration) WITH NOWAIT;
+    EXEC dbo.usp_Raiserror '[%s] Done', @ts = @sw, @s1 = @ProcName;
 END;
 GO

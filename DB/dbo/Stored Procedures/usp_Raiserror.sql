@@ -7,6 +7,7 @@ CREATE PROC dbo.usp_Raiserror (
 )
 AS
 BEGIN;
+	IF (SESSION_CONTEXT(N'Verbose') = 0) RETURN;
 	SET @msg = @msg
 		+ IIF(@rc IS NOT NULL, CONCAT(' (',FORMAT(@rc,'N0'),' rows)'), '')
 		+ IIF(@ts IS NOT NULL, CONCAT(' [',FORMAT(DATEADD(MICROSECOND, DATEDIFF(MICROSECOND, @ts, SYSUTCDATETIME()), CONVERT(datetime2, '0001-01-01')), 'HH:mm:ss.fffffff'),']'), '')

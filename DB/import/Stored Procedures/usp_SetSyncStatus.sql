@@ -7,11 +7,14 @@ CREATE PROCEDURE import.usp_SetSyncStatus (
     @Verbose        bit = 0
 )
 AS
-BEGIN
+BEGIN;
     SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    EXEC sp_set_session_context N'Verbose', @Verbose;
 
+    DECLARE @sw datetime2 = SYSUTCDATETIME(), @rc bigint = 0;
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
-    IF (@Verbose = 1) RAISERROR('[%s] Start',0,1,@ProcName) WITH NOWAIT;
+    EXEC dbo.usp_Raiserror '[%s] Start', @s1 = @ProcName;
 
     DECLARE @CurrentTime datetime2 = SYSUTCDATETIME();
 
@@ -34,14 +37,12 @@ BEGIN
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    DECLARE @rc int = 0;
-
     IF (@SyncObjectID IS NOT NULL)
     BEGIN;
-        IF (@Verbose = 1) RAISERROR('[%s] Attempting to update status record',0,1,@ProcName) WITH NOWAIT;
+        EXEC dbo.usp_Raiserror '[%s] Attempting to update status record', @s1 = @ProcName;
         IF (@ErrorMessage IS NULL)
         BEGIN;
-            IF (@Verbose = 1) RAISERROR('[%s] Attempting to update status record as a successful sync',0,1,@ProcName) WITH NOWAIT;
+            EXEC dbo.usp_Raiserror '[%s] Attempting to update status record as a successful sync', @s1 = @ProcName;
             UPDATE x
             SET x.LastSyncChecksum  = @Checksum,
                 /*  '=' logic handles NULL's, be careful changing
@@ -63,7 +64,7 @@ BEGIN
         END;
         ELSE
         BEGIN
-            IF (@Verbose = 1) RAISERROR('[%s] Attempting to update status record as a failed sync with error message',0,1,@ProcName) WITH NOWAIT;
+            EXEC dbo.usp_Raiserror '[%s] Attempting to update status record as a failed sync with error message', @s1 = @ProcName;
             UPDATE x
             SET x.LastSyncCheck         = @CurrentTime,
                 x.LastSyncError         = @CurrentTime,
@@ -82,16 +83,16 @@ BEGIN
         ------------------------------------------------------------------------------
         IF (@rc = 0)
         BEGIN;
-            IF (@Verbose = 1) RAISERROR('[%s] Status record doesn''t exist, creating a new one',0,1,@ProcName) WITH NOWAIT;
+            EXEC dbo.usp_Raiserror '[%s] Status record doesn''t exist, creating a new one', @s1 = @ProcName;
             IF (@ErrorMessage IS NULL)
             BEGIN;
-                IF (@Verbose = 1) RAISERROR('[%s] Creating new status record as a successful sync',0,1,@ProcName) WITH NOWAIT;
+                EXEC dbo.usp_Raiserror '[%s] Creating new status record as a successful sync', @s1 = @ProcName;
                 INSERT import.DatabaseSyncObjectStatus (_InstanceID, _DatabaseID, SyncObjectID, LastSyncChecksum)
                 VALUES (@InstanceID, @DatabaseID, @SyncObjectID, @Checksum);
             END;
             ELSE
             BEGIN;
-                IF (@Verbose = 1) RAISERROR('[%s] Creating new status record with error',0,1,@ProcName) WITH NOWAIT;
+                EXEC dbo.usp_Raiserror '[%s] Creating new status record with error', @s1 = @ProcName;
                 INSERT import.DatabaseSyncObjectStatus (_InstanceID, _DatabaseID, SyncObjectID, LastSyncChecksum, LastSyncTime, LastSyncError, LastSyncErrorMessage, LastSyncWasError)
                 VALUES (@InstanceID, @DatabaseID, @SyncObjectID, @Checksum, NULL, @CurrentTime, @ErrorMessage, 1);
             END;
@@ -101,7 +102,7 @@ BEGIN
     BEGIN;
         IF (@ErrorMessage IS NOT NULL)
         BEGIN;
-            IF (@Verbose = 1) RAISERROR('[%s] A database wide error has occured, pushing back all syncs for database',0,1,@ProcName) WITH NOWAIT;
+            EXEC dbo.usp_Raiserror '[%s] A database wide error has occured, pushing back all syncs for database', @s1 = @ProcName;
             /*  In this case, a database wide error is being logged which means we want to push all sync object tasks
                 to prevent them from running until their next interval.
                 
@@ -152,6 +153,6 @@ BEGIN
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    IF (@Verbose = 1) RAISERROR('[%s] Done',0,1,@ProcName) WITH NOWAIT;
+    EXEC dbo.usp_Raiserror '[%s] Done', @ts = @sw, @s1 = @ProcName;
 END;
 GO
