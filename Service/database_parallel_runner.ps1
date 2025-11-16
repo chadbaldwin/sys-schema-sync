@@ -12,9 +12,14 @@ $current_path = [string]::IsNullOrWhiteSpace($PSScriptRoot) ? $PWD.Path : $PSScr
 # Get dependencies
 $config = Get-Content -LiteralPath "${current_path}\appsettings.jsonc" -Raw | ConvertFrom-Json -AsHashtable
 
-$config.InstanceConcurrencyLimit = $config.InstanceConcurrencyLimit ?? 5
-$config.DatabaseConcurrencyLimit = $config.DatabaseConcurrencyLimit ?? 1
-$config.VerboseLog = $config.VerboseLog ?? $false
+$config.InstanceConcurrencyLimit      ??= 5
+$config.DatabaseConcurrencyLimit      ??= 1
+$config.VerboseLog                    ??= $false
+$config.EnableOpportunisticScheduling ??= $false
+$config.QueueProcessingBatchSize      ??= 100
+$config.LogDirectory                  ??= 'Logs'
+$config.LogRetentionDays              ??= 30
+
 $config.ScriptToRun = Get-Item -LiteralPath "${current_path}\dependencies\sync_objects.ps1"
 
 $logdir = mkdir "${current_path}\$($config.LogDirectory)" -Force
@@ -52,7 +57,7 @@ $PSDefaultParameterValues['Write-Log:LogDirectory'] = $logdir
 
 Write-Log 'Clean up old log files'
 Get-ChildItem -Path $logdir -Filter '*.log' -File |
-    Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-($config.LogRetentionDays ?? 30)) } |
+    Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-($config.LogRetentionDays)) } |
     Remove-Item -Force -ErrorAction SilentlyContinue
 
 #################################################
@@ -80,7 +85,10 @@ try {
 Write-Log 'Getting list of instances and databases to run against'
 try {
     $targets = Invoke-DbaQuery $conn -Query 'import.usp_GetDatabaseSyncObjectsToProcess' -CommandType StoredProcedure -As PSObject -QueryTimeout 30 `
-            -SqlParameter @{ Limit = 500 } |
+            -SqlParameter @{
+                Limit = $config.QueueProcessingBatchSize
+                EnableOpportunisticScheduling = $config.EnableOpportunisticScheduling
+            } |
         Group-Object InstanceName | ForEach-Object {
             [pscustomobject]@{
                 Instance = $_.Name
