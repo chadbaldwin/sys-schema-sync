@@ -1,6 +1,5 @@
 CREATE TABLE dbo._dm_db_index_usage_stats (
     _DatabaseID             int        NOT NULL CONSTRAINT FK__dm_db_index_usage_stats__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) INDEX IX__dm_db_index_usage_stats__DatabaseID,
-    _ObjectID               bigint     NOT NULL CONSTRAINT FK__dm_db_index_usage_stats__ObjectID   REFERENCES dbo.[Object]   (_ObjectID)   INDEX IX__dm_db_index_usage_stats__ObjectID,
     _IndexID                bigint     NOT NULL CONSTRAINT FK__dm_db_index_usage_stats__IndexID    REFERENCES dbo.[Index]    (_IndexID)    INDEX IX__dm_db_index_usage_stats__IndexID,
     --
     EstimatedStatsBeginTime datetime2  NOT NULL,

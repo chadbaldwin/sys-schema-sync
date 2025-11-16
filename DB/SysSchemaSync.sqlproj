@@ -164,8 +164,8 @@
     <Build Include="dbo\Views\vw_Index.sql" />
     <Build Include="dbo\Views\vw_Instance.sql" />
     <Build Include="dbo\Views\vw_Object.sql" />
-    <Build Include="dw\Stored Procedures\usp_import__dm_db_index_usage_stats_delta_history.sql" />
-    <Build Include="dw\Tables\_dm_db_index_usage_stats_delta_history.sql" />
+    <Build Include="dw\Stored Procedures\usp_import__dm_db_index_usage_stats_delta.sql" />
+    <Build Include="dw\Tables\_dm_db_index_usage_stats_delta.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__check_constraints.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__columns.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__computed_columns.sql" />
