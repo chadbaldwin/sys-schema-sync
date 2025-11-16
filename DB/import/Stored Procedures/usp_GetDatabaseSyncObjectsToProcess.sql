@@ -8,6 +8,15 @@ BEGIN;
     SET NOCOUNT ON;
     DECLARE @ts datetime2 = SYSUTCDATETIME();
 
+    /* Clear out old checksums to force a full re-sync on any syncs that haven't run in a while.
+       Cannot set to NULL because that would be seen as an error for any syncs which have a
+       CHecksumQueryText configured. Setting to -1 instead, whcih is a valid checksum value
+       but it's harmless risk and low chances of a collision anyway */
+    UPDATE import.DatabaseSyncObjectStatus
+        SET LastSyncChecksum = -1
+    WHERE LastSyncTime < DATEADD(DAY, -7, @ts)
+        AND LastSyncChecksum <> -1; -- Implicitly excluding NULLs
+
     /* Lets make things more complicated than they need to be just for fun.... 
 
       Implementing a priority system:
@@ -47,10 +56,10 @@ BEGIN;
                 CROSS APPLY (SELECT NextCheckTime = DATEADD(MINUTE, so.SyncStaleAgeMinutes, so.LastSyncCheck)) n
                 CROSS APPLY (
                     SELECT [priority] = CASE
-                                            WHEN so.LastSyncCheck = '1900-01-01 00:00:00.0000000' THEN 0 -- Manual resets - status record exists, but the date was reset
-                                            WHEN so.DatabaseSyncObjectID IS NULL                  THEN 1 -- Brand new syncs - status record does not exist, so it has never run before, or was deleted
-                                            WHEN n.NextCheckTime < @ts                            THEN 2 -- Aging syncs
-                                            WHEN so.LastSyncTime < DATEADD(DAY, -7, @ts)          THEN 3 -- Force refresh syncs that haven't updated in a while
+                                            WHEN so.LastSyncCheck = '1900-01-01' THEN 0 -- Manual resets - status record exists, but the date was reset
+                                            WHEN so.DatabaseSyncObjectID IS NULL THEN 1 -- Brand new syncs - status record does not exist, so it has never run before, or was deleted
+                                            WHEN n.NextCheckTime < @ts           THEN 2 -- Aging syncs
+                                            WHEN so.LastSyncChecksum = -1        THEN 3 -- Force refresh syncs that haven't updated in a while
                                             WHEN @EnableOpportunisticScheduling = 1               -- Opportunistic scheduling control at the proc level
                                                 AND so.OpportunisticSchedulingEnabled = 1         -- Opportunistic scheduling control at the sync object level
                                                 AND so.LastSyncWasError = 0                       -- Errored syncs should just wait their normal turn to run
@@ -73,7 +82,7 @@ BEGIN;
     OPTION (RECOMPILE);
 
     SELECT so._InstanceID, so._DatabaseID, so.InstanceName, so.DatabaseName
-        , so.SyncObjectID, so.SyncObjectName, so.SyncObjectLevelID, so.LastSyncTime, LastSyncChecksum = IIF(l.[priority] = 3, NULL, so.LastSyncChecksum)
+        , so.SyncObjectID, so.SyncObjectName, so.SyncObjectLevelID, so.LastSyncTime, so.LastSyncChecksum
         , so.ImportTable, so.ImportProc, so.ImportType, so.ExportQueryPath, so.SyncOnZeroChecksum, so.ChecksumQueryText, l.PriorityDescription
     FROM import.vw_DatabaseSyncObject so
         JOIN #tmp_limit l ON EXISTS (

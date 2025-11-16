@@ -1,7 +1,9 @@
 CREATE PROC import.usp_DatabaseSyncObjectStatus_Reset_Friendly (
     @SyncObjectName nvarchar(128) = NULL,
     @InstanceName nvarchar(257) = NULL,
-    @DatabaseName nvarchar(128) = NULL
+    @DatabaseName nvarchar(128) = NULL,
+    @ResetChecksum bit = 0,
+    @ResetErrors bit = 0
 )
 AS
 BEGIN;
@@ -35,5 +37,7 @@ BEGIN;
 
     EXEC import.usp_DatabaseSyncObjectStatus_Reset @SyncObjectID = @SyncObjectID,
                                                    @InstanceID = @InstanceID,
-                                                   @DatabaseID = @DatabaseID;
+                                                   @DatabaseID = @DatabaseID,
+                                                   @ResetChecksum = @ResetChecksum,
+                                                   @ResetErrors = @ResetErrors;
 END;

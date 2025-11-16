@@ -1,4 +1,5 @@
 -- TODO: Eventually convert to a memory-optimized table
+-- https://www.sommarskog.se/share_data.html#usingtable
 CREATE TABLE import.ItemNameProcess (
     ProcessKey    uniqueidentifier NOT NULL,
     ID            int              NOT NULL,
