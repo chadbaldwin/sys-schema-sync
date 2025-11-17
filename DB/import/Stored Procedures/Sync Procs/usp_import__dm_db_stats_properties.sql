@@ -18,15 +18,14 @@ BEGIN;
 
     ------------------------------------------------------------------------------
     BEGIN;
-        DECLARE @input  import.ItemName,
-                @output import.ItemName;
+         EXEC dbo.usp_Raiserror '[%s] Get IDs: Start', NULL, NULL, @ProcName; SET @sw2 = SYSUTCDATETIME();
 
         -- object
-        INSERT @input (ID, SchemaName, ObjectName, ObjectType, IndexName)
-        SELECT __ID, _SchemaName, _ObjectName, _ObjectType, _IndexName FROM @Dataset;
+        DECLARE @ProcessKey1 uniqueidentifier = NEWID();
+        INSERT import.ItemNameProcess (ProcessKey, ID, _DatabaseID, SchemaName, ObjectName, ObjectType, IndexName)
+        SELECT @ProcessKey1, __ID, @DatabaseID, _SchemaName, _ObjectName, _ObjectType, _IndexName FROM @Dataset;
 
-        INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
-        EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
+        EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @ProcessKey = @ProcessKey1;
 
         SELECT TOP (0) * INTO #Dataset FROM dbo._dm_db_stats_properties;
         EXEC sys.sp_executesql @stmt = N'ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate, COLUMN IF EXISTS _ModifyDate, COLUMN IF EXISTS _ValidFrom, COLUMN IF EXISTS _ValidTo';
@@ -35,7 +34,11 @@ BEGIN;
         INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _IndexID, _RowHash, [object_id], stats_id, last_updated, [rows], rows_sampled, steps, unfiltered_rows, modification_counter, persisted_sample_percent)
         SELECT @DatabaseID, o._ObjectID, o._IndexID, d._RowHash, d.[object_id], d.stats_id, d.last_updated, d.[rows], d.rows_sampled, d.steps, d.unfiltered_rows, d.modification_counter, d.persisted_sample_percent
         FROM @Dataset d
-            JOIN @output o ON o.ID = d.__ID;
+            JOIN import.ItemNameProcess o ON o.ProcessKey = @ProcessKey1 AND o.ID = d.__ID;
+
+        DELETE import.ItemNameProcess WHERE ProcessKey = @ProcessKey1;
+
+        EXEC dbo.usp_Raiserror '[%s] Get IDs: Done', @sw2, @@ROWCOUNT, @ProcName;
     END;
     ------------------------------------------------------------------------------
 

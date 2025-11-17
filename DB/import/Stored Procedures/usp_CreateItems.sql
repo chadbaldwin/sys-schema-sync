@@ -1,9 +1,9 @@
 CREATE PROCEDURE import.usp_CreateItems (
     @DatabaseID         int,
+    @ProcessKey         uniqueidentifier,
     @FullImport_Object  bit = 0,
     @FullImport_Index   bit = 0,
-    @FullImport_Column  bit = 0,
-    @Dataset            import.ItemName READONLY
+    @FullImport_Column  bit = 0
 )
 AS
 BEGIN;
@@ -15,13 +15,6 @@ BEGIN;
 
     DECLARE @sw2 datetime2 = SYSUTCDATETIME();
     DECLARE @rc bigint = 0;
-
-
-    DECLARE @DataSet2 import.ItemName;
-
-    INSERT @DataSet2 (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
-    SELECT ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID
-    FROM @Dataset;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
@@ -29,64 +22,70 @@ BEGIN;
     ------------------------------------------------------------------------------
     IF (1=1)
     BEGIN;
-        IF EXISTS (SELECT * FROM @DataSet2 WHERE ObjectName IS NOT NULL)
+        IF EXISTS (SELECT * FROM import.ItemNameProcess WHERE ProcessKey = @ProcessKey AND ObjectName IS NOT NULL)
         BEGIN;
             EXEC dbo.usp_Raiserror '[%s] [dbo.Object] Insert: Start', @s1 = @ProcName; SET @sw2 = SYSUTCDATETIME();
             INSERT dbo.[Object] (_DatabaseID, SchemaName, ObjectName, ObjectType)
-            SELECT @DatabaseID, SchemaName, ObjectName, ObjectType FROM @DataSet2
+            SELECT _DatabaseID, SchemaName, ObjectName, ObjectType FROM import.ItemNameProcess WHERE ProcessKey = @ProcessKey
             EXCEPT
             SELECT _DatabaseID, SchemaName, ObjectName, ObjectType FROM dbo.[Object] WHERE _DatabaseID = @DatabaseID;
             EXEC dbo.usp_Raiserror '[%s] [dbo.Object] Insert: Done', @sw2, @@ROWCOUNT, @ProcName;
 
             UPDATE x SET x._ObjectID = o._ObjectID
-            FROM @DataSet2 x
-                JOIN dbo.[Object] o ON o._DatabaseID = @DatabaseID
+            FROM import.ItemNameProcess x
+                JOIN dbo.[Object] o ON o._DatabaseID = x._DatabaseID
                                    AND o.SchemaName  = x.SchemaName
                                    AND o.ObjectName  = x.ObjectName
-                                   AND o.ObjectType  = x.ObjectType;
+                                   AND o.ObjectType  = x.ObjectType
+            WHERE x.ProcessKey = @ProcessKey;
         END;
         -------------------------------------
 
         -------------------------------------
-        IF EXISTS (SELECT * FROM @DataSet2 WHERE IndexName IS NOT NULL)
+        IF EXISTS (SELECT * FROM import.ItemNameProcess WHERE ProcessKey = @ProcessKey AND IndexName IS NOT NULL)
         BEGIN;
             EXEC dbo.usp_Raiserror '[%s] [dbo.Index] Insert: Start', @s1 = @ProcName; SET @sw2 = SYSUTCDATETIME();
             INSERT dbo.[Index] (_DatabaseID, _ObjectID, IndexName)
-            SELECT o._DatabaseID, o._ObjectID, d.IndexName
-            FROM dbo.[Object] o
-                JOIN @DataSet2 d ON d._ObjectID = o._ObjectID
-            WHERE o._DatabaseID = @DatabaseID
-                AND d.IndexName IS NOT NULL
+            SELECT d._DatabaseID, d._ObjectID, d.IndexName FROM import.ItemNameProcess d WHERE d.ProcessKey = @ProcessKey AND d.IndexName IS NOT NULL
             EXCEPT
             SELECT _DatabaseID, _ObjectID, IndexName FROM dbo.[Index] WHERE _DatabaseID = @DatabaseID;
             EXEC dbo.usp_Raiserror '[%s] [dbo.Index] Insert: Done', @sw2, @@ROWCOUNT, @ProcName;
 
             UPDATE x SET x._IndexID = i._IndexID
-            FROM @DataSet2 x
-                JOIN dbo.[Index] i ON i._DatabaseID = @DatabaseID
+            FROM import.ItemNameProcess x
+                JOIN dbo.[Index] i ON i._DatabaseID = x._DatabaseID
                                   AND i._ObjectID   = x._ObjectID
-                                  AND i.IndexName   = x.IndexName;
+                                  AND i.IndexName   = x.IndexName
+            WHERE x.ProcessKey = @ProcessKey;
         END;
         -------------------------------------
-                -------------------------------------
-        IF EXISTS (SELECT * FROM @DataSet2 WHERE ColumnName IS NOT NULL)
+
+        -------------------------------------
+        IF EXISTS (SELECT * FROM import.ItemNameProcess WHERE ProcessKey = @ProcessKey AND ColumnName IS NOT NULL)
         BEGIN;
             EXEC dbo.usp_Raiserror '[%s] [dbo.Column] Insert: Start', @s1 = @ProcName; SET @sw2 = SYSUTCDATETIME();
             INSERT dbo.[Column] (_DatabaseID, _ObjectID, ColumnName)
-            SELECT o._DatabaseID, o._ObjectID, d.ColumnName
-            FROM dbo.[Object] o
-                JOIN @DataSet2 d ON d._ObjectID = o._ObjectID
-            WHERE o._DatabaseID = @DatabaseID
-                AND d.ColumnName IS NOT NULL
+            SELECT d._DatabaseID, d._ObjectID, d.ColumnName FROM import.ItemNameProcess d WHERE d.ProcessKey = @ProcessKey AND d.ColumnName IS NOT NULL
             EXCEPT
             SELECT _DatabaseID, _ObjectID, ColumnName FROM dbo.[Column] WHERE _DatabaseID = @DatabaseID;
             EXEC dbo.usp_Raiserror '[%s] [dbo.Column] Insert: Done', @sw2, @@ROWCOUNT, @ProcName;
 
             UPDATE x SET x._ColumnID = c._ColumnID
-            FROM @DataSet2 x
-                JOIN dbo.[Column] c ON c._DatabaseID = @DatabaseID
+            FROM import.ItemNameProcess x
+                JOIN dbo.[Column] c ON c._DatabaseID = x._DatabaseID
                                    AND c._ObjectID   = x._ObjectID
-                                   AND c.ColumnName  = x.ColumnName;
+                                   AND c.ColumnName  = x.ColumnName
+            WHERE x.ProcessKey = @ProcessKey;
+        END;
+        -------------------------------------
+
+        -------------------------------------
+        IF EXISTS (SELECT * FROM import.ItemNameProcess WHERE ProcessKey = @ProcessKey AND ObjectDefinitionHash IS NOT NULL)
+        BEGIN;
+            UPDATE x SET x._ObjectDefinitionID = od._ObjectDefinitionID
+            FROM import.ItemNameProcess x
+                JOIN dbo.ObjectDefinition od ON od.ObjectDefinitionHash = x.ObjectDefinitionHash
+            WHERE x.ProcessKey = @ProcessKey;
         END;
     END;
     ------------------------------------------------------------------------------
@@ -96,100 +95,76 @@ BEGIN;
     ------------------------------------------------------------------------------
     IF (1=1)
     BEGIN;
-        IF EXISTS (SELECT * FROM @DataSet2 WHERE ObjectName IS NOT NULL)
+        IF EXISTS (SELECT * FROM import.ItemNameProcess WHERE ProcessKey = @ProcessKey AND ObjectName IS NOT NULL)
         BEGIN;
             IF (@FullImport_Object = 1)
             BEGIN;
-                EXEC dbo.usp_Raiserror '[%s] [dbo.Object] Find deleted: Start', @s1 = @ProcName; SET @sw2 = SYSUTCDATETIME();
-                SELECT x._ObjectID
-                INTO #del_Object
-                FROM dbo.[Object] x
-                WHERE x._DatabaseID = @DatabaseID
-                    AND x.SchemaName <> '<<DB>>' -- Ignore database level items - e.g. database triggers
-                    AND NOT EXISTS (SELECT * FROM @DataSet2 d WHERE d._ObjectID = x._ObjectID)
-                    AND x.IsDeleted = 0;
-                EXEC dbo.usp_Raiserror '[%s] [dbo.Object] Find deleted: Done', @sw2, @@ROWCOUNT, @ProcName;
-
                 EXEC dbo.usp_Raiserror '[%s] [dbo.Object] Mark deleted: Start', @s1 = @ProcName; SET @sw2 = SYSUTCDATETIME();
-                UPDATE x WITH(ROWLOCK)
+                UPDATE x
                 SET x.IsDeleted = 1, x.DeleteDate = SYSUTCDATETIME()
                 FROM dbo.[Object] x
-                WHERE EXISTS (SELECT * FROM #del_Object do WHERE do._ObjectID = x._ObjectID);
+                WHERE x._DatabaseID = @DatabaseID
+                    AND NOT EXISTS (SELECT * FROM import.ItemNameProcess p WHERE p.ProcessKey = @ProcessKey AND p._DatabaseID = x._DatabaseID AND p._ObjectID   = x._ObjectID)
+                    AND x.IsDeleted = 0
+                    AND x.SchemaName <> '<<DB>>'
                 EXEC dbo.usp_Raiserror '[%s] [dbo.Object] Mark deleted: Done', @sw2, @@ROWCOUNT, @ProcName;
             END;
 
             EXEC dbo.usp_Raiserror '[%s] [dbo.Object] Mark undeleted: Start', @s1 = @ProcName; SET @sw2 = SYSUTCDATETIME();
-            UPDATE x WITH(ROWLOCK)
+            UPDATE x
             SET x.IsDeleted = 0, x.DeleteDate = NULL
             FROM dbo.[Object] x
-            WHERE x._DatabaseID = @DatabaseID
-                AND EXISTS (SELECT * FROM @DataSet2 d WHERE d._ObjectID = x._ObjectID)
+            WHERE EXISTS (SELECT * FROM import.ItemNameProcess d WHERE d.ProcessKey = @ProcessKey AND d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID)
                 AND x.IsDeleted = 1;
             EXEC dbo.usp_Raiserror '[%s] [dbo.Object] Mark undeleted: Done', @sw2, @@ROWCOUNT, @ProcName;
         END;
         -------------------------------------
 
         -------------------------------------
-        IF EXISTS (SELECT * FROM @DataSet2 WHERE IndexName IS NOT NULL)
+        IF EXISTS (SELECT * FROM import.ItemNameProcess WHERE ProcessKey = @ProcessKey AND IndexName IS NOT NULL)
         BEGIN;
             IF (@FullImport_Index = 1)
             BEGIN;
-                EXEC dbo.usp_Raiserror '[%s] [dbo.Index] Find deleted: Start', @s1 = @ProcName; SET @sw2 = SYSUTCDATETIME();
-                SELECT x._IndexID
-                INTO #del_Index
-                FROM dbo.[Index] x
-                WHERE x._DatabaseID = @DatabaseID
-                    AND NOT EXISTS (SELECT * FROM @DataSet2 d WHERE d._IndexID = x._IndexID)
-                    AND x.IsDeleted = 0;
-                EXEC dbo.usp_Raiserror '[%s] [dbo.Index] Find deleted: Done', @sw2, @@ROWCOUNT, @ProcName;
-
                 EXEC dbo.usp_Raiserror '[%s] [dbo.Index] Mark deleted: Start', @s1 = @ProcName; SET @sw2 = SYSUTCDATETIME();
-                UPDATE x WITH(ROWLOCK)
+                UPDATE x
                 SET x.IsDeleted = 1, x.DeleteDate = SYSUTCDATETIME()
                 FROM dbo.[Index] x
-                WHERE EXISTS (SELECT * FROM #del_Index do WHERE do._IndexID = x._IndexID);
+                WHERE x._DatabaseID = @DatabaseID
+                    AND NOT EXISTS (SELECT * FROM import.ItemNameProcess d WHERE d.ProcessKey = @ProcessKey AND d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID)
+                    AND x.IsDeleted = 0;
                 EXEC dbo.usp_Raiserror '[%s] [dbo.Index] Mark deleted: Done', @sw2, @@ROWCOUNT, @ProcName;
             END;
 
             EXEC dbo.usp_Raiserror '[%s] [dbo.Index] Mark undeleted: Start', @s1 = @ProcName; SET @sw2 = SYSUTCDATETIME();
-            UPDATE x WITH(UPDLOCK)
+            UPDATE x
             SET x.IsDeleted = 0, x.DeleteDate = NULL
             FROM dbo.[Index] x
-            WHERE x._DatabaseID = @DatabaseID
-                AND EXISTS (SELECT * FROM @DataSet2 d WHERE d._IndexID = x._IndexID)
+            WHERE EXISTS (SELECT * FROM import.ItemNameProcess d WHERE d.ProcessKey = @ProcessKey AND d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID)
                 AND x.IsDeleted = 1;
             EXEC dbo.usp_Raiserror '[%s] [dbo.Index] Mark undeleted: Done', @sw2, @@ROWCOUNT, @ProcName;
         END;
         -------------------------------------
 
         -------------------------------------
-        IF EXISTS (SELECT * FROM @DataSet2 WHERE ColumnName IS NOT NULL)
+        IF EXISTS (SELECT * FROM import.ItemNameProcess WHERE ProcessKey = @ProcessKey AND ColumnName IS NOT NULL)
         BEGIN;
             IF (@FullImport_Column = 1)
             BEGIN;
-                EXEC dbo.usp_Raiserror '[%s] [dbo.Column] Find deleted: Start', @s1 = @ProcName; SET @sw2 = SYSUTCDATETIME();
-                SELECT x._ColumnID
-                INTO #del_Column
-                FROM dbo.[Column] x
-                WHERE x._DatabaseID = @DatabaseID
-                    AND NOT EXISTS (SELECT * FROM @DataSet2 d WHERE d._ColumnID = x._ColumnID)
-                    AND x.IsDeleted = 0;
-                EXEC dbo.usp_Raiserror '[%s] [dbo.Column] Find deleted: Done', @sw2, @@ROWCOUNT, @ProcName;
-
                 EXEC dbo.usp_Raiserror '[%s] [dbo.Column] Mark deleted: Start', @s1 = @ProcName; SET @sw2 = SYSUTCDATETIME();
-                UPDATE x WITH(ROWLOCK)
+                UPDATE x
                 SET x.IsDeleted = 1, x.DeleteDate = SYSUTCDATETIME()
                 FROM dbo.[Column] x
-                WHERE EXISTS (SELECT * FROM #del_Column do WHERE do._ColumnID = x._ColumnID);
+                WHERE x._DatabaseID = @DatabaseID
+                    AND NOT EXISTS (SELECT * FROM import.ItemNameProcess d WHERE d.ProcessKey = @ProcessKey AND d._DatabaseID = x._DatabaseID AND d._ColumnID = x._ColumnID)
+                    AND x.IsDeleted = 0;
                 EXEC dbo.usp_Raiserror '[%s] [dbo.Column] Mark deleted: Done', @sw2, @@ROWCOUNT, @ProcName;
             END;
 
             EXEC dbo.usp_Raiserror '[%s] [dbo.Column] Mark undeleted: Start', @s1 = @ProcName; SET @sw2 = SYSUTCDATETIME();
-            UPDATE x WITH(UPDLOCK)
+            UPDATE x
             SET x.IsDeleted = 0, x.DeleteDate = NULL
             FROM dbo.[Column] x
-            WHERE x._DatabaseID = @DatabaseID
-                AND EXISTS (SELECT * FROM @DataSet2 d WHERE d._ColumnID = x._ColumnID)
+            WHERE EXISTS (SELECT * FROM import.ItemNameProcess d WHERE d.ProcessKey = @ProcessKey AND d._DatabaseID = x._DatabaseID AND d._ColumnID = x._ColumnID)
                 AND x.IsDeleted = 1;
             EXEC dbo.usp_Raiserror '[%s] [dbo.Column] Mark undeleted: Done', @sw2, @@ROWCOUNT, @ProcName;
         END;
@@ -197,11 +172,6 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    SELECT ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID
-    FROM @DataSet2;
-    ------------------------------------------------------------------------------
-
-    ------------------------------------------------------------------------------
-    EXEC dbo.usp_Raiserror '[%s] Done', @sw, @s1 = @ProcName;
+    EXEC dbo.usp_Raiserror '[%s] Done', @sw, NULL, @ProcName;
 END;
 GO

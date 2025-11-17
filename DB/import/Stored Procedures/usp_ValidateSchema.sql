@@ -126,7 +126,7 @@ BEGIN;
         JOIN sys.columns c ON c.[object_id] = t.[object_id]
     WHERE t.is_ms_shipped = 0 AND t.[schema_id] <> SCHEMA_ID('ext') AND t.temporal_type_desc <> 'HISTORY_TABLE'
         AND c.[name] IN ('_ColumnID','_DatabaseID','_IndexID','_InstanceID','_ObjectDefinitionID','_ObjectID','_ParentColumnID','_ParentObjectID','_ReferencedColumnID','_ReferencedIndexID','_ReferencedObjectID')
-        AND (SCHEMA_NAME(t.[schema_id]) = 'import' AND t.[name] NOT IN ('Instance','Database','Object','ObjectDefinition','Index','Column'))
+        AND (SCHEMA_NAME(t.[schema_id]) = 'import' AND t.[name] NOT IN ('Instance','Database','Object','ObjectDefinition','Index','Column','ItemNameProcess'))
         AND NOT EXISTS (
             SELECT *
             FROM sys.foreign_key_columns fkc

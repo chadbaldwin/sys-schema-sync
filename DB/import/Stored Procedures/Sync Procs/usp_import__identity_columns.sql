@@ -18,15 +18,14 @@ BEGIN;
 
     ------------------------------------------------------------------------------
     BEGIN;
-        DECLARE @input  import.ItemName,
-                @output import.ItemName;
+         EXEC dbo.usp_Raiserror '[%s] Get IDs: Start', NULL, NULL, @ProcName; SET @sw2 = SYSUTCDATETIME();
 
         -- object
-        INSERT @input (ID, SchemaName, ObjectName, ObjectType, ColumnName)
-        SELECT __ID, _SchemaName, _ObjectName, _ObjectType, _ColumnName FROM @Dataset;
+        DECLARE @ProcessKey1 uniqueidentifier = NEWID();
+        INSERT import.ItemNameProcess (ProcessKey, ID, _DatabaseID, SchemaName, ObjectName, ObjectType, ColumnName)
+        SELECT @ProcessKey1, __ID, @DatabaseID, _SchemaName, _ObjectName, _ObjectType, _ColumnName FROM @Dataset;
 
-        INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
-        EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
+        EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @ProcessKey = @ProcessKey1;
 
         SELECT TOP (0) * INTO #Dataset FROM dbo._identity_columns;
         EXEC sys.sp_executesql @stmt = N'ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate, COLUMN IF EXISTS _ModifyDate, COLUMN IF EXISTS _ValidFrom, COLUMN IF EXISTS _ValidTo';
@@ -35,7 +34,11 @@ BEGIN;
         INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _ColumnID, _RowHash, [object_id], [name], column_id, system_type_id, user_type_id, max_length, [precision], scale, collation_name, is_nullable, is_ansi_padded, is_rowguidcol, is_identity, is_filestream, is_replicated, is_non_sql_subscribed, is_merge_published, is_dts_replicated, is_xml_document, xml_collection_id, default_object_id, rule_object_id, seed_value, increment_value, last_value, is_not_for_replication, is_computed, is_sparse, is_column_set, generated_always_type, generated_always_type_desc, [encryption_type], encryption_type_desc, encryption_algorithm_name, column_encryption_key_id, column_encryption_key_database_name, is_hidden, is_masked, graph_type, graph_type_desc, is_data_deletion_filter_column, ledger_view_column_type, ledger_view_column_type_desc, is_dropped_ledger_column)
         SELECT @DatabaseID, o._ObjectID, o._ColumnID, d._RowHash, d.[object_id], d.[name], d.column_id, d.system_type_id, d.user_type_id, d.max_length, d.[precision], d.scale, d.collation_name, d.is_nullable, d.is_ansi_padded, d.is_rowguidcol, d.is_identity, d.is_filestream, d.is_replicated, d.is_non_sql_subscribed, d.is_merge_published, d.is_dts_replicated, d.is_xml_document, d.xml_collection_id, d.default_object_id, d.rule_object_id, d.seed_value, d.increment_value, d.last_value, d.is_not_for_replication, d.is_computed, d.is_sparse, d.is_column_set, d.generated_always_type, d.generated_always_type_desc, d.[encryption_type], d.encryption_type_desc, d.encryption_algorithm_name, d.column_encryption_key_id, d.column_encryption_key_database_name, d.is_hidden, d.is_masked, d.graph_type, d.graph_type_desc, d.is_data_deletion_filter_column, d.ledger_view_column_type, d.ledger_view_column_type_desc, d.is_dropped_ledger_column
         FROM @Dataset d
-            JOIN @output o ON o.ID = d.__ID;
+            JOIN import.ItemNameProcess o ON o.ProcessKey = @ProcessKey1 AND o.ID = d.__ID;
+
+        DELETE import.ItemNameProcess WHERE ProcessKey = @ProcessKey1;
+
+        EXEC dbo.usp_Raiserror '[%s] Get IDs: Done', @sw2, @@ROWCOUNT, @ProcName;
     END;
     ------------------------------------------------------------------------------
 

@@ -18,35 +18,26 @@ BEGIN;
 
     ------------------------------------------------------------------------------
     BEGIN;
-        DECLARE @input     import.ItemName,
-                @output    import.ItemName,
-                @parent    import.ItemName,
-                @reference import.ItemName;
+         EXEC dbo.usp_Raiserror '[%s] Get IDs: Start', NULL, NULL, @ProcName; SET @sw2 = SYSUTCDATETIME();
 
         -- object
-        INSERT @input (ID, SchemaName, ObjectName, ObjectType)
-        SELECT __ID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
-
-        INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
-        EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
-
-        DELETE @input;
+        DECLARE @ProcessKey1 uniqueidentifier = NEWID();
+        INSERT import.ItemNameProcess (ProcessKey, ID, _DatabaseID, SchemaName, ObjectName, ObjectType)
+        SELECT @ProcessKey1, __ID, @DatabaseID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
 
         -- parent object
-        INSERT @input (ID, SchemaName, ObjectName, ObjectType, ColumnName)
-        SELECT __ID, _ParentSchemaName, _ParentObjectName, _ParentObjectType, _ParentColumnName FROM @Dataset;
+        DECLARE @ProcessKey2 uniqueidentifier = NEWID();
+        INSERT import.ItemNameProcess (ProcessKey, ID, _DatabaseID, SchemaName, ObjectName, ObjectType, ColumnName)
+        SELECT @ProcessKey2, __ID, @DatabaseID, _ParentSchemaName, _ParentObjectName, _ParentObjectType, _ParentColumnName FROM @Dataset;
 
-        INSERT @parent (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
-        EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
+        -- referenced object
+        DECLARE @ProcessKey3 uniqueidentifier = NEWID();
+        INSERT import.ItemNameProcess (ProcessKey, ID, _DatabaseID, SchemaName, ObjectName, ObjectType, ColumnName)
+        SELECT @ProcessKey3, __ID, @DatabaseID, _ReferencedSchemaName, _ReferencedObjectName, _ReferencedObjectType, _ReferencedColumnName FROM @Dataset;
 
-        DELETE @input;
-
-        -- reference object
-        INSERT @input (ID, SchemaName, ObjectName, ObjectType, ColumnName)
-        SELECT __ID, _ReferencedSchemaName, _ReferencedObjectName, _ReferencedObjectType, _ReferencedColumnName FROM @Dataset;
-
-        INSERT @reference (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
-        EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
+        EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @ProcessKey = @ProcessKey1;
+        EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @ProcessKey = @ProcessKey2;
+        EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @ProcessKey = @ProcessKey3;
 
         SELECT TOP (0) * INTO #Dataset FROM dbo._foreign_key_columns;
         EXEC sys.sp_executesql @stmt = N'ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate, COLUMN IF EXISTS _ModifyDate, COLUMN IF EXISTS _ValidFrom, COLUMN IF EXISTS _ValidTo';
@@ -55,9 +46,13 @@ BEGIN;
         INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _ParentObjectID, _ParentColumnID, _ReferencedObjectID, _ReferencedColumnID, _RowHash, constraint_object_id, constraint_column_id, parent_object_id, parent_column_id, referenced_object_id, referenced_column_id)
         SELECT @DatabaseID, o._ObjectID, p._ObjectID, p._ColumnID, r._ObjectID, r._ColumnID, d._RowHash, d.constraint_object_id, d.constraint_column_id, d.parent_object_id, d.parent_column_id, d.referenced_object_id, d.referenced_column_id
         FROM @Dataset d
-            JOIN @output o ON o.ID = d.__ID
-            JOIN @parent p ON p.ID = d.__ID
-            JOIN @reference r ON r.ID = d.__ID;
+            JOIN import.ItemNameProcess o ON o.ProcessKey = @ProcessKey1 AND o.ID = d.__ID
+            JOIN import.ItemNameProcess p ON p.ProcessKey = @ProcessKey2 AND p.ID = d.__ID
+            JOIN import.ItemNameProcess r ON r.ProcessKey = @ProcessKey3 AND r.ID = d.__ID;
+
+        DELETE import.ItemNameProcess WHERE ProcessKey IN (@ProcessKey1, @ProcessKey2, @ProcessKey3);
+
+        EXEC dbo.usp_Raiserror '[%s] Get IDs: Done', @sw2, @@ROWCOUNT, @ProcName;
     END;
     ------------------------------------------------------------------------------
 

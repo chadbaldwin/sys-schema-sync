@@ -18,15 +18,14 @@ BEGIN;
 
     ------------------------------------------------------------------------------
     BEGIN;
-        DECLARE @input  import.ItemName,
-                @output import.ItemName;
+         EXEC dbo.usp_Raiserror '[%s] Get IDs: Start', NULL, NULL, @ProcName; SET @sw2 = SYSUTCDATETIME();
 
         -- object
-        INSERT @input (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName)
-        SELECT __ID, _SchemaName, _ObjectName, _ObjectType, _IndexName, _ColumnName FROM @Dataset;
+        DECLARE @ProcessKey1 uniqueidentifier = NEWID();
+        INSERT import.ItemNameProcess (ProcessKey, ID, _DatabaseID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName)
+        SELECT @ProcessKey1, __ID, @DatabaseID, _SchemaName, _ObjectName, _ObjectType, _IndexName, _ColumnName FROM @Dataset;
 
-        INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
-        EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
+        EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @ProcessKey = @ProcessKey1;
 
         SELECT TOP (0) * INTO #Dataset FROM dbo._index_columns;
         EXEC sys.sp_executesql @stmt = N'ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate, COLUMN IF EXISTS _ModifyDate, COLUMN IF EXISTS _ValidFrom, COLUMN IF EXISTS _ValidTo';
@@ -35,7 +34,11 @@ BEGIN;
         INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _IndexID, _ColumnID, _RowHash, [object_id], index_id, index_column_id, column_id, key_ordinal, partition_ordinal, is_descending_key, is_included_column, column_store_order_ordinal, data_clustering_ordinal)
         SELECT @DatabaseID, o._ObjectID, o._IndexID, o._ColumnID, d._RowHash, d.[object_id], d.index_id, d.index_column_id, d.column_id, d.key_ordinal, d.partition_ordinal, d.is_descending_key, d.is_included_column, d.column_store_order_ordinal, d.data_clustering_ordinal
         FROM @Dataset d
-            JOIN @output o ON o.ID = d.__ID;
+            JOIN import.ItemNameProcess o ON o.ProcessKey = @ProcessKey1 AND o.ID = d.__ID;
+
+        DELETE import.ItemNameProcess WHERE ProcessKey = @ProcessKey1;
+
+        EXEC dbo.usp_Raiserror '[%s] Get IDs: Done', @sw2, @@ROWCOUNT, @ProcName;
     END;
     ------------------------------------------------------------------------------
 

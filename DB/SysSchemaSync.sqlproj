@@ -200,7 +200,6 @@
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__tables.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__triggers.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__views.sql" />
-    <Build Include="import\Stored Procedures\usp_CreateItems_Test.sql" />
     <Build Include="import\Stored Procedures\usp_CreateItems.sql" />
     <Build Include="import\Stored Procedures\usp_DatabaseSyncObjectStatus_Reset_Friendly.sql" />
     <Build Include="import\Stored Procedures\usp_DatabaseSyncObjectStatus_Reset.sql" />
@@ -214,7 +213,6 @@
     <Build Include="import\Tables\ItemNameProcess.sql" />
     <Build Include="import\Tables\SyncObject.sql" />
     <Build Include="import\Tables\SyncObjectLevel.sql" />
-    <Build Include="import\User Defined Types\ItemName.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__check_constraints.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__columns.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__computed_columns.sql" />

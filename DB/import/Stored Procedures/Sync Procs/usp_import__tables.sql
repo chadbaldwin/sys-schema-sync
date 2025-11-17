@@ -18,15 +18,14 @@ BEGIN;
 
     ------------------------------------------------------------------------------
     BEGIN;
-        DECLARE @input  import.ItemName,
-                @output import.ItemName;
+         EXEC dbo.usp_Raiserror '[%s] Get IDs: Start', NULL, NULL, @ProcName; SET @sw2 = SYSUTCDATETIME();
 
         -- object
-        INSERT @input (ID, SchemaName, ObjectName, ObjectType)
-        SELECT __ID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
+        DECLARE @ProcessKey1 uniqueidentifier = NEWID();
+        INSERT import.ItemNameProcess (ProcessKey, ID, _DatabaseID, SchemaName, ObjectName, ObjectType)
+        SELECT @ProcessKey1, __ID, @DatabaseID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
 
-        INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
-        EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
+        EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @ProcessKey = @ProcessKey1;
 
         SELECT TOP (0) * INTO #Dataset FROM dbo._tables;
         EXEC sys.sp_executesql @stmt = N'ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate, COLUMN IF EXISTS _ModifyDate, COLUMN IF EXISTS _ValidFrom, COLUMN IF EXISTS _ValidTo';
@@ -35,7 +34,11 @@ BEGIN;
         INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _RowHash, [name], [object_id], principal_id, [schema_id], parent_object_id, [type], [type_desc], create_date, is_ms_shipped, is_published, is_schema_published, lob_data_space_id, filestream_data_space_id, max_column_id_used, lock_on_bulk_load, uses_ansi_nulls, is_replicated, has_replication_filter, is_merge_published, is_sync_tran_subscribed, has_unchecked_assembly_data, text_in_row_limit, large_value_types_out_of_row, is_tracked_by_cdc, [lock_escalation], lock_escalation_desc, is_filetable, is_memory_optimized, [durability], durability_desc, temporal_type, temporal_type_desc, history_table_id, is_remote_data_archive_enabled, is_external, history_retention_period, history_retention_period_unit, history_retention_period_unit_desc, is_node, is_edge, data_retention_period, data_retention_period_unit, data_retention_period_unit_desc, ledger_type, ledger_type_desc, ledger_view_id, is_dropped_ledger_table)
         SELECT @DatabaseID, o._ObjectID, d._RowHash, d.[name], d.[object_id], d.principal_id, d.[schema_id], d.parent_object_id, d.[type], d.[type_desc], d.create_date, d.is_ms_shipped, d.is_published, d.is_schema_published, d.lob_data_space_id, d.filestream_data_space_id, d.max_column_id_used, d.lock_on_bulk_load, d.uses_ansi_nulls, d.is_replicated, d.has_replication_filter, d.is_merge_published, d.is_sync_tran_subscribed, d.has_unchecked_assembly_data, d.text_in_row_limit, d.large_value_types_out_of_row, d.is_tracked_by_cdc, d.[lock_escalation], d.lock_escalation_desc, d.is_filetable, d.is_memory_optimized, d.[durability], d.durability_desc, d.temporal_type, d.temporal_type_desc, d.history_table_id, d.is_remote_data_archive_enabled, d.is_external, d.history_retention_period, d.history_retention_period_unit, d.history_retention_period_unit_desc, d.is_node, d.is_edge, d.data_retention_period, d.data_retention_period_unit, d.data_retention_period_unit_desc, d.ledger_type, d.ledger_type_desc, d.ledger_view_id, d.is_dropped_ledger_table
         FROM @Dataset d
-            JOIN @output o ON o.ID = d.__ID;
+            JOIN import.ItemNameProcess o ON o.ProcessKey = @ProcessKey1 AND o.ID = d.__ID;
+
+        DELETE import.ItemNameProcess WHERE ProcessKey = @ProcessKey1;
+
+        EXEC dbo.usp_Raiserror '[%s] Get IDs: Done', @sw2, @@ROWCOUNT, @ProcName;
     END;
     ------------------------------------------------------------------------------
 

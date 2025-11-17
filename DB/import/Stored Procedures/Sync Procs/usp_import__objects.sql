@@ -18,13 +18,14 @@ BEGIN;
 
     ------------------------------------------------------------------------------
     BEGIN;
+         EXEC dbo.usp_Raiserror '[%s] Get IDs: Start', NULL, NULL, @ProcName; SET @sw2 = SYSUTCDATETIME();
+
         -- object
-        DECLARE @ProcessKey uniqueidentifier = NEWID();
-
+        DECLARE @ProcessKey1 uniqueidentifier = NEWID();
         INSERT import.ItemNameProcess (ProcessKey, ID, _DatabaseID, SchemaName, ObjectName, ObjectType)
-        SELECT @ProcessKey, __ID, @DatabaseID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
+        SELECT @ProcessKey1, __ID, @DatabaseID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
 
-        EXEC import.usp_CreateItems_Test @DatabaseID = @DatabaseID, @ProcessKey = @ProcessKey, @FullImport_Object = 1;
+        EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @ProcessKey = @ProcessKey1, @FullImport_Object = 1;
 
         SELECT TOP (0) * INTO #Dataset FROM dbo._objects;
         EXEC sys.sp_executesql @stmt = N'ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate, COLUMN IF EXISTS _ModifyDate, COLUMN IF EXISTS _ValidFrom, COLUMN IF EXISTS _ValidTo';
@@ -33,9 +34,11 @@ BEGIN;
         INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _SchemaName, _RowHash, [name], [object_id], principal_id, [schema_id], parent_object_id, [type], [type_desc], create_date, is_ms_shipped, is_published, is_schema_published)
         SELECT @DatabaseID, o._ObjectID, d._SchemaName, d._RowHash, d.[name], d.[object_id], d.principal_id, d.[schema_id], d.parent_object_id, d.[type], d.[type_desc], d.create_date, d.is_ms_shipped, d.is_published, d.is_schema_published
         FROM @Dataset d
-            JOIN import.ItemNameProcess o ON o.ProcessKey = @ProcessKey AND o.ID = d.__ID;
+            JOIN import.ItemNameProcess o ON o.ProcessKey = @ProcessKey1 AND o.ID = d.__ID;
 
-        DELETE import.ItemNameProcess WHERE ProcessKey = @ProcessKey;
+        DELETE import.ItemNameProcess WHERE ProcessKey = @ProcessKey1;
+
+        EXEC dbo.usp_Raiserror '[%s] Get IDs: Done', @sw2, @@ROWCOUNT, @ProcName;
     END;
     ------------------------------------------------------------------------------
 

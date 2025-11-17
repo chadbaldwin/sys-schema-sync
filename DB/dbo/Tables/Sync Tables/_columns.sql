@@ -1,5 +1,5 @@
 CREATE TABLE dbo._columns (
-    _DatabaseID                         int           NOT NULL CONSTRAINT FK__columns__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) INDEX IX__columns__DatabaseID,
+    _DatabaseID                         int           NOT NULL CONSTRAINT FK__columns__DatabaseID REFERENCES dbo.[Database] (_DatabaseID), --INDEX IX__columns__DatabaseID,
     _ObjectID                           bigint        NOT NULL CONSTRAINT FK__columns__ObjectID   REFERENCES dbo.[Object]   (_ObjectID)   INDEX IX__columns__ObjectID,
     _ColumnID                           bigint        NOT NULL CONSTRAINT FK__columns__ColumnID   REFERENCES dbo.[Column]   (_ColumnID)   INDEX IX__columns__ColumnID,
     --
@@ -55,7 +55,6 @@ CREATE TABLE dbo._columns (
 
     PERIOD FOR SYSTEM_TIME (_ValidFrom, _ValidTo),
     CONSTRAINT CPK__columns__DatabaseID__ColumnID PRIMARY KEY CLUSTERED (_DatabaseID, _ColumnID) WITH (DATA_COMPRESSION = PAGE),
-    CONSTRAINT UQ__columns__ObjectID_name UNIQUE (_ObjectID, [name]),
 ) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo._columns_history, DATA_CONSISTENCY_CHECK = ON, HISTORY_RETENTION_PERIOD = 6 MONTH));
 GO
 

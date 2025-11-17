@@ -19,20 +19,6 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    BEGIN;
-        DECLARE @input  import.ItemName,
-                @output import.ItemName;
-
-        -- object
-        INSERT @input (ID, SchemaName, ObjectName, ObjectType)
-        SELECT __ID, _SchemaName, _ObjectName, _ObjectType FROM @Dataset;
-
-        INSERT @output (ID, SchemaName, ObjectName, ObjectType, IndexName, ColumnName, _ObjectID, _IndexID, _ColumnID)
-        EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
-    END;
-    ------------------------------------------------------------------------------
-
-    ------------------------------------------------------------------------------
     SET @tableName = 'dbo.ObjectDefinition'
     EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Start', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
     WITH cte AS (
@@ -53,6 +39,32 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
+    BEGIN;
+         EXEC dbo.usp_Raiserror '[%s] Get IDs: Start', NULL, NULL, @ProcName; SET @sw2 = SYSUTCDATETIME();
+
+        -- object
+        DECLARE @ProcessKey1 uniqueidentifier = NEWID();
+        INSERT import.ItemNameProcess (ProcessKey, ID, _DatabaseID, SchemaName, ObjectName, ObjectType, ObjectDefinitionHash)
+        SELECT @ProcessKey1, __ID, @DatabaseID, _SchemaName, _ObjectName, _ObjectType, _ObjectDefinitionHash FROM @Dataset;
+
+        EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @ProcessKey = @ProcessKey1, @FullImport_Object = 1;
+
+        SELECT TOP (0) * INTO #Dataset FROM dbo._sql_modules;
+        EXEC sys.sp_executesql @stmt = N'ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate, COLUMN IF EXISTS _ModifyDate, COLUMN IF EXISTS _ValidFrom, COLUMN IF EXISTS _ValidTo';
+        CREATE CLUSTERED INDEX CIX ON #Dataset (_DatabaseID, _ObjectID);
+
+        INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _RowHash, [object_id], _ObjectDefinitionID, uses_ansi_nulls, uses_quoted_identifier, is_schema_bound, uses_database_collation, is_recompiled, null_on_null_input, execute_as_principal_id, uses_native_compilation, inline_type, is_inlineable)
+        SELECT @DatabaseID, o._ObjectID, d._RowHash, d.[object_id], o._ObjectDefinitionID, d.uses_ansi_nulls, d.uses_quoted_identifier, d.is_schema_bound, d.uses_database_collation, d.is_recompiled, d.null_on_null_input, d.execute_as_principal_id, d.uses_native_compilation, d.inline_type, d.is_inlineable
+        FROM @Dataset d
+            JOIN import.ItemNameProcess o ON o.ProcessKey = @ProcessKey1 AND o.ID = d.__ID;
+
+        DELETE import.ItemNameProcess WHERE ProcessKey = @ProcessKey1;
+
+        EXEC dbo.usp_Raiserror '[%s] Get IDs: Done', @sw2, @@ROWCOUNT, @ProcName;
+    END;
+    ------------------------------------------------------------------------------
+
+    ------------------------------------------------------------------------------
     /*  For some reason, SQL Server stores database level items, like database triggers, in sys.sql_modules
         Because of this, when the full import for sys.objects runs, it sees those as missing and marks them
         as deleted. So instead, we exclude them from the normal delete process and handle them here.
@@ -65,7 +77,7 @@ BEGIN;
     FROM dbo.[Object] x
     WHERE x._DatabaseID = @DatabaseID
         AND x.SchemaName = '<<DB>>' -- Limit to database level items - e.g. database triggers
-        AND NOT EXISTS (SELECT * FROM @output d WHERE d._ObjectID = x._ObjectID)
+        AND NOT EXISTS (SELECT * FROM #Dataset d WHERE d._ObjectID = x._ObjectID)
         AND x.IsDeleted = 0;
     EXEC dbo.usp_Raiserror '[%s] [dbo.Object] Find deleted database level items: Done', @s1 = @ProcName, @rc = @@ROWCOUNT;
 
@@ -85,7 +97,7 @@ BEGIN;
         EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Start', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
         DELETE x FROM dbo._sql_modules x
         WHERE x._DatabaseID = @DatabaseID
-            AND NOT EXISTS (SELECT * FROM @output o WHERE o._ObjectID = x._ObjectID);
+            AND NOT EXISTS (SELECT * FROM #Dataset d WHERE x._DatabaseID = d._DatabaseID AND x._ObjectID = d._ObjectID);
         EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Done', @sw2, @@ROWCOUNT, @ProcName, @tableName;
         */
 
@@ -93,9 +105,8 @@ BEGIN;
         UPDATE x
         SET   x._ModifyDate             = SYSUTCDATETIME()
             , x._RowHash                = d._RowHash
-            --
             , x.[object_id]             = d.[object_id]
-            , x._ObjectDefinitionID     = od._ObjectDefinitionID
+            , x._ObjectDefinitionID     = d._ObjectDefinitionID
             , x.uses_ansi_nulls         = d.uses_ansi_nulls
             , x.uses_quoted_identifier  = d.uses_quoted_identifier
             , x.is_schema_bound         = d.is_schema_bound
@@ -107,27 +118,15 @@ BEGIN;
             , x.inline_type             = d.inline_type
             , x.is_inlineable           = d.is_inlineable
         FROM dbo._sql_modules x
-            JOIN @output o ON o._ObjectID = x._ObjectID
-            JOIN @Dataset d ON d.__ID = o.ID
-            JOIN dbo.ObjectDefinition od ON od.ObjectDefinitionHash = d._ObjectDefinitionHash
-        WHERE x._DatabaseID = @DatabaseID
-            AND (x._RowHash <> d._RowHash OR x._ObjectDefinitionID <> od._ObjectDefinitionID);
+            JOIN #Dataset d ON d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID
+        WHERE (x._RowHash <> d._RowHash OR x._ObjectDefinitionID <> d._ObjectDefinitionID);
         EXEC dbo.usp_Raiserror '[%s] [%s] Update: Done', @sw2, @@ROWCOUNT, @ProcName, @tableName;
 
         EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Start', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
-        INSERT dbo._sql_modules (_DatabaseID, _ObjectID, _RowHash
-            , [object_id], _ObjectDefinitionID, uses_ansi_nulls, uses_quoted_identifier, is_schema_bound, uses_database_collation, is_recompiled, null_on_null_input, execute_as_principal_id, uses_native_compilation, inline_type, is_inlineable)
-        SELECT @DatabaseID, y._ObjectID, d._RowHash
-            , d.[object_id], od._ObjectDefinitionID, d.uses_ansi_nulls, d.uses_quoted_identifier, d.is_schema_bound, d.uses_database_collation, d.is_recompiled, d.null_on_null_input, d.execute_as_principal_id, d.uses_native_compilation, d.inline_type, d.is_inlineable
-        FROM @Dataset d
-            JOIN @output y ON y.ID = d.__ID
-            JOIN dbo.ObjectDefinition od ON od.ObjectDefinitionHash = d._ObjectDefinitionHash
-        WHERE NOT EXISTS (
-                SELECT *
-                FROM dbo._sql_modules x
-                WHERE x._DatabaseID = @DatabaseID
-                    AND x._ObjectID = y._ObjectID
-            );
+        INSERT dbo._sql_modules (_DatabaseID, _ObjectID, _RowHash, [object_id], _ObjectDefinitionID, uses_ansi_nulls, uses_quoted_identifier, is_schema_bound, uses_database_collation, is_recompiled, null_on_null_input, execute_as_principal_id, uses_native_compilation, inline_type, is_inlineable)
+        SELECT d._DatabaseID, d._ObjectID, d._RowHash, d.[object_id], d._ObjectDefinitionID, d.uses_ansi_nulls, d.uses_quoted_identifier, d.is_schema_bound, d.uses_database_collation, d.is_recompiled, d.null_on_null_input, d.execute_as_principal_id, d.uses_native_compilation, d.inline_type, d.is_inlineable
+        FROM #Dataset d
+        WHERE NOT EXISTS (SELECT * FROM dbo._sql_modules x WHERE x._DatabaseID = d._DatabaseID AND x._ObjectID = d._ObjectID);
         EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Done', @sw2, @@ROWCOUNT, @ProcName, @tableName;
     COMMIT;
     ------------------------------------------------------------------------------

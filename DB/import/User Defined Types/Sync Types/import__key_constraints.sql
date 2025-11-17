@@ -3,8 +3,8 @@ CREATE TYPE import.import__key_constraints AS TABLE (
     _SchemaName         nvarchar(128) NOT NULL,
     _ObjectName         nvarchar(128) NOT NULL,
     _ObjectType         char(2)       NOT NULL,
-    _ParentObjectName   nvarchar(128)     NULL,
-    _ParentObjectType   char(2)           NULL,
+    _ParentObjectName   nvarchar(128) NOT NULL,
+    _ParentObjectType   char(2)       NOT NULL,
     _UniqueIndexName    nvarchar(128) NOT NULL,
     _RowHash            binary(32)    NOT NULL,
     --
