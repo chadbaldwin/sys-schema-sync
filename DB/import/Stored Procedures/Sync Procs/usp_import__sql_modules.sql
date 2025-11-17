@@ -9,7 +9,7 @@ BEGIN;
     SET XACT_ABORT ON;
     EXEC sp_set_session_context N'Verbose', @Verbose;
 
-    DECLARE @sw datetime2 = SYSUTCDATETIME(), @rc bigint;
+    DECLARE @sw datetime2 = SYSUTCDATETIME(), @sw2 datetime2;
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
     EXEC dbo.usp_Raiserror '[%s] Start', @s1 = @ProcName;
 
@@ -34,7 +34,7 @@ BEGIN;
 
     ------------------------------------------------------------------------------
     SET @tableName = 'dbo.ObjectDefinition'
-    EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Start', @s1 = @ProcName, @s2 = @tableName;
+    EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Start', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
     WITH cte AS (
         SELECT rn = ROW_NUMBER() OVER (PARTITION BY d._ObjectDefinitionHash ORDER BY d.[object_id])
             , d._ObjectDefinitionHash, d.[definition]
@@ -49,7 +49,7 @@ BEGIN;
             FROM dbo.ObjectDefinition od WITH(TABLOCKX)
             WHERE od.ObjectDefinitionHash = d._ObjectDefinitionHash
         );
-    EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
+    EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Done', @sw2, @@ROWCOUNT, @ProcName, @tableName;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
@@ -82,14 +82,14 @@ BEGIN;
     SET @tableName = 'dbo._sql_modules'
     BEGIN TRAN;
         /* -- Turning off delete logic; rely on soft delete logic instead by joining to vw_Object
-        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Start', @s1 = @ProcName, @s2 = @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Start', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
         DELETE x FROM dbo._sql_modules x
         WHERE x._DatabaseID = @DatabaseID
             AND NOT EXISTS (SELECT * FROM @output o WHERE o._ObjectID = x._ObjectID);
-        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Done', @sw2, @@ROWCOUNT, @ProcName, @tableName;
         */
 
-        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Start', @s1 = @ProcName, @s2 = @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Start', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
         UPDATE x
         SET   x._ModifyDate             = SYSUTCDATETIME()
             , x._RowHash                = d._RowHash
@@ -112,9 +112,9 @@ BEGIN;
             JOIN dbo.ObjectDefinition od ON od.ObjectDefinitionHash = d._ObjectDefinitionHash
         WHERE x._DatabaseID = @DatabaseID
             AND (x._RowHash <> d._RowHash OR x._ObjectDefinitionID <> od._ObjectDefinitionID);
-        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Done', @sw2, @@ROWCOUNT, @ProcName, @tableName;
 
-        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Start', @s1 = @ProcName, @s2 = @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Start', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
         INSERT dbo._sql_modules (_DatabaseID, _ObjectID, _RowHash
             , [object_id], _ObjectDefinitionID, uses_ansi_nulls, uses_quoted_identifier, is_schema_bound, uses_database_collation, is_recompiled, null_on_null_input, execute_as_principal_id, uses_native_compilation, inline_type, is_inlineable)
         SELECT @DatabaseID, y._ObjectID, d._RowHash
@@ -128,11 +128,11 @@ BEGIN;
                 WHERE x._DatabaseID = @DatabaseID
                     AND x._ObjectID = y._ObjectID
             );
-        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Done', @sw2, @@ROWCOUNT, @ProcName, @tableName;
     COMMIT;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    EXEC dbo.usp_Raiserror '[%s] Done', @ts = @sw, @s1 = @ProcName;
+    EXEC dbo.usp_Raiserror '[%s] Done', @sw, NULL, @ProcName;
 END;
 GO

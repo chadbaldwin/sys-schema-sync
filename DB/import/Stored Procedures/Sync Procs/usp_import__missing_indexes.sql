@@ -9,7 +9,7 @@ BEGIN;
     SET XACT_ABORT ON;
     EXEC sp_set_session_context N'Verbose', @Verbose;
 
-    DECLARE @sw datetime2 = SYSUTCDATETIME(), @rc bigint;
+    DECLARE @sw datetime2 = SYSUTCDATETIME(), @sw2 datetime2;
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
     EXEC dbo.usp_Raiserror '[%s] Start', @s1 = @ProcName;
 
@@ -35,7 +35,7 @@ BEGIN;
         DECLARE @tableName nvarchar(128) = N'dbo._missing_indexes';
 
         /* -- Not doing standard delete for now
-        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Start', @s1 = @ProcName, @s2 = @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Start', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
         DELETE x FROM dbo._missing_indexes x
         WHERE x._DatabaseID = @DatabaseID
             AND NOT EXISTS (
@@ -45,10 +45,10 @@ BEGIN;
                 WHERE o._ObjectID = x._ObjectID
                     AND x.missing_index_hash = d.missing_index_hash
             );
-        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Done', @sw2, @@ROWCOUNT, @ProcName, @tableName;
         */
 
-        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Start', @s1 = @ProcName, @s2 = @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Start', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
         UPDATE x
         SET   x._ModifyDate         = SYSUTCDATETIME()
             , x._RowHash            = d._RowHash
@@ -70,9 +70,9 @@ BEGIN;
             JOIN @Dataset d ON d.__ID = y.ID AND d.missing_index_hash = x.missing_index_hash
         WHERE x._DatabaseID = @DatabaseID
             AND x._RowHash <> d._RowHash;
-        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Done', @sw2, @@ROWCOUNT, @ProcName, @tableName;
 
-        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Start', @s1 = @ProcName, @s2 = @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Start', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
         INSERT dbo._missing_indexes (_DatabaseID, _ObjectID, _RowHash
             , missing_index_hash, unique_compiles, user_seeks, user_scans, last_user_seek_utc, last_user_scan_utc, avg_total_user_cost, avg_user_impact, equality_columns, inequality_columns, included_columns, column_data)
         SELECT @DatabaseID, y._ObjectID, d._RowHash
@@ -86,19 +86,19 @@ BEGIN;
                     AND x._ObjectID = y._ObjectID
                     AND x.missing_index_hash = d.missing_index_hash
             );
-        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Done', @sw2, @@ROWCOUNT, @ProcName, @tableName;
 
         -- Instead of standard deletes, just do simple time based pruning
-        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Start', @s1 = @ProcName, @s2 = @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Start', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
         DELETE x
         FROM dbo._missing_indexes x
         WHERE x._DatabaseID = @DatabaseID
             AND x._ModifyDate < DATEADD(DAY, -30, SYSUTCDATETIME());
-        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Done', @rc = @@ROWCOUNT, @s1 = @ProcName, @s2 = @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Done', @sw2, @@ROWCOUNT, @ProcName, @tableName;
     COMMIT;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    EXEC dbo.usp_Raiserror '[%s] Done', @ts = @sw, @s1 = @ProcName;
+    EXEC dbo.usp_Raiserror '[%s] Done', @sw, NULL, @ProcName;
 END;
 GO
