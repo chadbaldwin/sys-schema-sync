@@ -5,6 +5,9 @@ CREATE PROCEDURE import.usp_import__dm_db_partition_stats (
 )
 AS
 BEGIN;
+    -- TODO: Add _BoundaryValue and supporting logic since partition_number is not sticky, but boundary values are.
+    -- TODO: Convert to similar setup as sys.dm_db_index_usage_stats using delta table with temporal history.
+
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
     EXEC sp_set_session_context N'Verbose', @Verbose;

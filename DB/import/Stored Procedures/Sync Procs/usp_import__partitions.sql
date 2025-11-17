@@ -5,6 +5,8 @@ CREATE PROCEDURE import.usp_import__partitions (
 )
 AS
 BEGIN;
+    -- TODO: Add _BoundaryValue and supporting logic since partition_number is not sticky, but boundary values are.
+
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
     EXEC sp_set_session_context N'Verbose', @Verbose;

@@ -7,6 +7,9 @@ CREATE PROC import.usp_DatabaseSyncObjectStatus_Reset_Friendly (
 )
 AS
 BEGIN;
+    -- TODO: Add support for filters resulting in multiple matches. Currently, only the first match is executed.
+    -- Easiest solution might be to just run through a cursor.
+
     IF (COALESCE(@SyncObjectName, @InstanceName, @DatabaseName) IS NULL)
     BEGIN;
         THROW 51000, 'At least 1 paramerter needs to be populated as a filter', 1;

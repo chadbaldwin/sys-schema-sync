@@ -12,6 +12,7 @@ BEGIN;
        Cannot set to NULL because that would be seen as an error for any syncs which have a
        CHecksumQueryText configured. Setting to -1 instead, whcih is a valid checksum value
        but it's harmless risk and low chances of a collision anyway */
+    -- TODO: Move this to a nightly job since this is a "Get" proc, it doesn't make sense to have side effects here and doesn't need to run often anyway.
     UPDATE import.DatabaseSyncObjectStatus
         SET LastSyncChecksum = -1
     WHERE LastSyncTime < DATEADD(DAY, -7, @ts)
