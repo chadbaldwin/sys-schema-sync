@@ -10,4 +10,4 @@ FROM dbo.Instance i
     JOIN dbo.[Object] o ON o._DatabaseID = d._DatabaseID
 WHERE i.IsEnabled = 1 AND d.IsEnabled = 1 AND o.IsDeleted = 0;
 GO
-CREATE UNIQUE CLUSTERED INDEX CIX_vw_Object__DatabaseID__ObjectID ON dbo.vw_Object (_DatabaseID, _ObjectID);
+CREATE UNIQUE CLUSTERED INDEX CIX_vw_Object__DatabaseID__ObjectID ON dbo.vw_Object (_DatabaseID, _ObjectID) WITH (DATA_COMPRESSION = PAGE);
