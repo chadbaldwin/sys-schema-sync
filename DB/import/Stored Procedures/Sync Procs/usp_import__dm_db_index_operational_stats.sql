@@ -29,10 +29,7 @@ BEGIN;
         EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
 
         SELECT TOP (0) * INTO #Dataset FROM dbo._dm_db_index_operational_stats;
-        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate;
-        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ModifyDate;
-        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidFrom;
-        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidTo;
+        EXEC sys.sp_executesql @stmt = N'ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate, COLUMN IF EXISTS _ModifyDate, COLUMN IF EXISTS _ValidFrom, COLUMN IF EXISTS _ValidTo';
         CREATE CLUSTERED INDEX CIX ON #Dataset (_DatabaseID, _IndexID, _BoundaryValue);
 
         INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _IndexID, _BoundaryValue, EstimatedStatsBeginTime, StatsEndTime, database_id, [object_id], index_id, partition_number, hobt_id, leaf_insert_count, leaf_delete_count, leaf_update_count, leaf_ghost_count, nonleaf_insert_count, nonleaf_delete_count, nonleaf_update_count, leaf_allocation_count, nonleaf_allocation_count, leaf_page_merge_count, nonleaf_page_merge_count, range_scan_count, singleton_lookup_count, forwarded_fetch_count, lob_fetch_in_pages, lob_fetch_in_bytes, lob_orphan_create_count, lob_orphan_insert_count, row_overflow_fetch_in_pages, row_overflow_fetch_in_bytes, column_value_push_off_row_count, column_value_pull_in_row_count, row_lock_count, row_lock_wait_count, row_lock_wait_in_ms, page_lock_count, page_lock_wait_count, page_lock_wait_in_ms, index_lock_promotion_attempt_count, index_lock_promotion_count, page_latch_wait_count, page_latch_wait_in_ms, page_io_latch_wait_count, page_io_latch_wait_in_ms, tree_page_latch_wait_count, tree_page_latch_wait_in_ms, tree_page_io_latch_wait_count, tree_page_io_latch_wait_in_ms, page_compression_attempt_count, page_compression_success_count, version_generated_inrow, version_generated_offrow, ghost_version_inrow, ghost_version_offrow, insert_over_ghost_version_inrow, insert_over_ghost_version_offrow)

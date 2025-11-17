@@ -39,10 +39,7 @@ BEGIN;
         EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
 
         SELECT TOP (0) * INTO #Dataset FROM dbo._triggers;
-        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate;
-        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ModifyDate;
-        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidFrom;
-        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidTo;
+        EXEC sys.sp_executesql @stmt = N'ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate, COLUMN IF EXISTS _ModifyDate, COLUMN IF EXISTS _ValidFrom, COLUMN IF EXISTS _ValidTo';
         CREATE CLUSTERED INDEX CIX ON #Dataset (_DatabaseID, _ObjectID);
 
         INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _ParentObjectID, _RowHash, [name], [object_id], parent_class, parent_class_desc, parent_id, [type], [type_desc], create_date, modify_date, is_ms_shipped, is_disabled, is_not_for_replication, is_instead_of_trigger)

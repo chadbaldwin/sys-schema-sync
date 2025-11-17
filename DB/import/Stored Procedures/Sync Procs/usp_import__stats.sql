@@ -29,10 +29,7 @@ BEGIN;
         EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
 
         SELECT TOP (0) * INTO #Dataset FROM dbo._stats;
-        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate;
-        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ModifyDate;
-        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidFrom;
-        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidTo;
+        EXEC sys.sp_executesql @stmt = N'ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate, COLUMN IF EXISTS _ModifyDate, COLUMN IF EXISTS _ValidFrom, COLUMN IF EXISTS _ValidTo';
         CREATE CLUSTERED INDEX CIX ON #Dataset (_DatabaseID, _IndexID);
 
         INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _IndexID, _RowHash, [object_id], [name], stats_id, auto_created, user_created, no_recompute, has_filter, filter_definition, is_temporary, is_incremental, has_persisted_sample, stats_generation_method, stats_generation_method_desc, auto_drop, replica_role_id, replica_role_desc, replica_name)

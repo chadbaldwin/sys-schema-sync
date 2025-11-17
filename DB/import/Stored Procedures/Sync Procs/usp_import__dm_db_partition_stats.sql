@@ -29,10 +29,7 @@ BEGIN;
         EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
 
         SELECT TOP (0) * INTO #Dataset FROM dbo._dm_db_partition_stats;
-        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate;
-        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ModifyDate;
-        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidFrom;
-        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidTo;
+        EXEC sys.sp_executesql @stmt = N'ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate, COLUMN IF EXISTS _ModifyDate, COLUMN IF EXISTS _ValidFrom, COLUMN IF EXISTS _ValidTo';
         CREATE CLUSTERED INDEX CIX ON #Dataset (_DatabaseID, _IndexID, partition_number);
 
         INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _IndexID, _RowHash, [partition_id], [object_id], index_id, partition_number, in_row_data_page_count, in_row_used_page_count, in_row_reserved_page_count, lob_used_page_count, lob_reserved_page_count, row_overflow_used_page_count, row_overflow_reserved_page_count, used_page_count, reserved_page_count, row_count)

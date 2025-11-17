@@ -29,10 +29,7 @@ BEGIN;
         EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @Dataset = @input;
 
         SELECT TOP (0) * INTO #Dataset FROM dbo._tables;
-        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate;
-        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ModifyDate;
-        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidFrom;
-        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _ValidTo;
+        EXEC sys.sp_executesql @stmt = N'ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate, COLUMN IF EXISTS _ModifyDate, COLUMN IF EXISTS _ValidFrom, COLUMN IF EXISTS _ValidTo';
         CREATE CLUSTERED INDEX CIX ON #Dataset (_DatabaseID, _ObjectID);
 
         INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _RowHash, [name], [object_id], principal_id, [schema_id], parent_object_id, [type], [type_desc], create_date, is_ms_shipped, is_published, is_schema_published, lob_data_space_id, filestream_data_space_id, max_column_id_used, lock_on_bulk_load, uses_ansi_nulls, is_replicated, has_replication_filter, is_merge_published, is_sync_tran_subscribed, has_unchecked_assembly_data, text_in_row_limit, large_value_types_out_of_row, is_tracked_by_cdc, [lock_escalation], lock_escalation_desc, is_filetable, is_memory_optimized, [durability], durability_desc, temporal_type, temporal_type_desc, history_table_id, is_remote_data_archive_enabled, is_external, history_retention_period, history_retention_period_unit, history_retention_period_unit_desc, is_node, is_edge, data_retention_period, data_retention_period_unit, data_retention_period_unit_desc, ledger_type, ledger_type_desc, ledger_view_id, is_dropped_ledger_table)

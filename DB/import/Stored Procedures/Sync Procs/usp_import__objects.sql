@@ -27,10 +27,7 @@ BEGIN;
         EXEC import.usp_CreateItems_Test @DatabaseID = @DatabaseID, @ProcessKey = @ProcessKey, @FullImport_Object = 1;
 
         SELECT TOP (0) * INTO #Dataset FROM dbo._objects;
-        ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate,
-                                  COLUMN IF EXISTS _ModifyDate,
-                                  COLUMN IF EXISTS _ValidFrom,
-                                  COLUMN IF EXISTS _ValidTo;
+        EXEC sys.sp_executesql @stmt = N'ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate, COLUMN IF EXISTS _ModifyDate, COLUMN IF EXISTS _ValidFrom, COLUMN IF EXISTS _ValidTo';
         CREATE CLUSTERED INDEX CIX ON #Dataset (_DatabaseID, _ObjectID);
 
         INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _SchemaName, _RowHash, [name], [object_id], principal_id, [schema_id], parent_object_id, [type], [type_desc], create_date, is_ms_shipped, is_published, is_schema_published)
