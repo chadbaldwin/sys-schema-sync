@@ -85,7 +85,7 @@ BEGIN;
                                                a bit of processing time due to saved network IO.
         */
 
-        IF OBJECT_ID('tempdb..#tmp_SyncObject','U') IS NOT NULL DROP TABLE #tmp_SyncObject; --SELECT * FROM #tmp_SyncObject
+        --DROP TABLE IF EXISTS #tmp_SyncObject; --SELECT * FROM #tmp_SyncObject
         SELECT n.SyncObjectID, n.SyncObjectName, n.SyncObjectLevelID, n.SyncStaleAgeMinutes, n.ImportTable, n.ImportProc, n.ExportQueryPath, n.ChecksumQueryText
         INTO #tmp_SyncObject
         FROM ( --               SyncObjectName                                         ImportTable                                 ImportProc                                              ExportQueryPath                              ChecksumQueryText
@@ -196,7 +196,7 @@ BEGIN;
     ------------------------------------------------------------------------------
     -- Perform checks against SyncObject configuration
     ------------------------------------------------------------------------------
-        IF OBJECT_ID('tempdb..#issues','U') IS NOT NULL DROP TABLE #issues; --SELECT * FROM #issues
+        --DROP TABLE IF EXISTS #issues; --SELECT * FROM #issues
         CREATE TABLE #issues (
             SyncObjectID    int             NOT NULL,
             IssueDesc       nvarchar(128)   NOT NULL,
