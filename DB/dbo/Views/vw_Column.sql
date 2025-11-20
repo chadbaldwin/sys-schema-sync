@@ -1,5 +1,4 @@
 CREATE VIEW dbo.vw_Column
-WITH SCHEMABINDING
 AS
 SELECT i._InstanceID, i.InstanceName
     , d._DatabaseID, d.DatabaseName
@@ -11,4 +10,3 @@ FROM dbo.Instance i
     JOIN dbo.[Column] c ON c._DatabaseID = o._DatabaseID AND c._ObjectID = o._ObjectID
 WHERE i.IsEnabled = 1 AND d.IsEnabled = 1 AND o.IsDeleted = 0 AND c.IsDeleted = 0;
 GO
-CREATE UNIQUE CLUSTERED INDEX CIX_vw_Column__DatabaseID__ColumnID ON dbo.vw_Column (_DatabaseID, _ColumnID) WITH (DATA_COMPRESSION = PAGE);
