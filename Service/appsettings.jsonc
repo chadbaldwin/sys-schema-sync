@@ -2,7 +2,7 @@
   // For now, this is simply the NAME of the folder to create within the "Service" folder to use for logs
   "LogDirectory": "Logs",
   "LogRetentionDays": 30,
-  "VerboseLog": false,
+  "VerboseLog": true,
 
   "EnableOpportunisticScheduling": true,
   "QueueProcessingBatchSize": 500,

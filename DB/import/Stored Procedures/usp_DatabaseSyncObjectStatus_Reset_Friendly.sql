@@ -44,3 +44,4 @@ BEGIN;
                                                    @ResetChecksum = @ResetChecksum,
                                                    @ResetErrors = @ResetErrors;
 END;
+GO

@@ -37,7 +37,7 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    EXEC dbo.usp_Raiserror '[%s] Merge Instance: Start', NULL, NULL, @ProcName; SET @sw2 = SYSUTCDATETIME();
+    EXEC dbo.usp_Raiserror '[%s] Start: Merge Instance', NULL, NULL, @ProcName; SET @sw2 = SYSUTCDATETIME();
     MERGE INTO dbo.Instance o
     USING (SELECT DISTINCT InstanceName FROM #tmp_db) AS n ON n.InstanceName = o.InstanceName
     WHEN MATCHED AND o.IsEnabled = 0               THEN UPDATE SET o.IsEnabled = 1, o.DisableDate = NULL -- Re-enable
@@ -46,11 +46,11 @@ BEGIN;
     OUTPUT $action AS MergeAction
         , DELETED._InstanceID  AS d__InstanceID, DELETED.InstanceName  AS d_InstanceName, DELETED.InsertDate  AS d_InsertDate, DELETED.IsEnabled  AS d_IsEnabled
         , INSERTED._InstanceID AS i__InstanceID, INSERTED.InstanceName AS i_InstanceName, INSERTED.InsertDate AS i_InsertDate, INSERTED.IsEnabled AS i_IsEnabled;
-    EXEC dbo.usp_Raiserror '[%s] Merge Instance: Done', @sw2, NULL, @ProcName;
+    EXEC dbo.usp_Raiserror '[%s] Done: Merge Instance', @sw2, NULL, @ProcName;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    EXEC dbo.usp_Raiserror '[%s] Merge Database: Start', NULL, NULL, @ProcName; SET @sw2 = SYSUTCDATETIME();
+    EXEC dbo.usp_Raiserror '[%s] Start: Merge Database', NULL, NULL, @ProcName; SET @sw2 = SYSUTCDATETIME();
     MERGE INTO dbo.[Database] o
     USING (
         SELECT DISTINCT i._InstanceID, t.DatabaseName
@@ -64,7 +64,7 @@ BEGIN;
     OUTPUT $action AS MergeAction
         , DELETED._DatabaseID  AS d__DatabaseID, DELETED._InstanceID  AS d__InstanceID, DELETED.DatabaseName  AS d_DatabaseName, DELETED.InsertDate  AS d_InsertDate, DELETED.IsEnabled  AS d_IsEnabled
         , INSERTED._DatabaseID AS i__DatabaseID, INSERTED._InstanceID AS i__InstanceID, INSERTED.DatabaseName AS i_DatabaseName, INSERTED.InsertDate AS i_InsertDate, INSERTED.IsEnabled AS i_IsEnabled;
-    EXEC dbo.usp_Raiserror '[%s] Merge Database: Done', @sw2, NULL, @ProcName;
+    EXEC dbo.usp_Raiserror '[%s] Done: Merge Database', @sw2, NULL, @ProcName;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------

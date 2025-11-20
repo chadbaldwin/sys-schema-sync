@@ -14,6 +14,7 @@ $ErrorActionPreference = 'Stop'
 $PSDefaultParameterValues= @{
     'Invoke-DbaQuery:EnableException' = $true
     'Invoke-DbaQuery:QueryTimeout' = 30
+    'Connect-DbaInstance:ConnectTimeout' = 30
     'Invoke-DbaQuery:MessagesToOutput' = $true
 }
 
@@ -22,12 +23,14 @@ $script_to_run = Get-Item -LiteralPath (Join-Path $PSScriptRoot 'sync_object_pro
 
 ##################################################
 try {
+    if ($VerboseLog) { Write-Output "Attempting to connect to repository database" }
     $ts = Measure-Command {
         $conn_dst = Connect-DbaInstance -ConnectionString $Config.RepositoryDatabaseConnectionString
     }
     if ($VerboseLog) { Write-Output "Connected to destination database [${ts}]" }
 
     try {
+        if ($VerboseLog) { Write-Output "Attempting to connect to source database [${SqlInstance}].[${SqlDatabase}]" }
         $ts = Measure-Command {
             $conn_src = Connect-DbaInstance $SqlInstance -Database $SqlDatabase -MultiSubnetFailover
         }

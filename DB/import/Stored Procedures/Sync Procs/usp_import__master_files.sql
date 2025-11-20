@@ -20,13 +20,13 @@ BEGIN;
     BEGIN TRAN;
         DECLARE @tableName nvarchar(128) = N'dbo._master_files';
 
-        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Start', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
+        EXEC dbo.usp_Raiserror '[%s] [%s] Start: Delete', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
         DELETE x FROM dbo._master_files x
         WHERE x._InstanceID = @InstanceID
             AND NOT EXISTS (SELECT * FROM @Dataset d WHERE d._DatabaseName = x._DatabaseName AND d.[file_id] = x.[file_id]);
-        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Done', @sw2, @@ROWCOUNT, @ProcName, @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Done: Delete', @sw2, @@ROWCOUNT, @ProcName, @tableName;
 
-        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Start', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
+        EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
         UPDATE x
         SET   x._DatabaseID              = sd._DatabaseID
             , x._ModifyDate              = SYSUTCDATETIME()
@@ -70,9 +70,9 @@ BEGIN;
             LEFT JOIN dbo.[Database] sd ON sd._InstanceID = @InstanceID AND sd.DatabaseName = d._DatabaseName -- Get _DatabaseID for ones we do sync
         WHERE x._InstanceID = @InstanceID
             AND x._RowHash <> d._RowHash;
-        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Done', @sw2, @@ROWCOUNT, @ProcName, @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update', @sw2, @@ROWCOUNT, @ProcName, @tableName;
 
-        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Start', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
+        EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
         INSERT dbo._master_files (_InstanceID, _DatabaseID, _RowHash, _DatabaseName, database_id, [file_id], file_guid, [type], [type_desc], data_space_id, [name], physical_name, [state], state_desc, size, max_size, growth, is_media_read_only, is_read_only, is_sparse, is_percent_growth, is_name_reserved, is_persistent_log_buffer, create_lsn, drop_lsn, read_only_lsn, read_write_lsn, differential_base_lsn, differential_base_guid, differential_base_time, redo_start_lsn, redo_start_fork_guid, redo_target_lsn, redo_target_fork_guid, backup_lsn, credential_id)
         SELECT @InstanceID, sd._DatabaseID, d._RowHash, d._DatabaseName, d.database_id, d.[file_id], d.file_guid, d.[type], d.[type_desc], d.data_space_id, d.[name], d.physical_name, d.[state], d.state_desc, d.size, d.max_size, d.growth, d.is_media_read_only, d.is_read_only, d.is_sparse, d.is_percent_growth, d.is_name_reserved, d.is_persistent_log_buffer, d.create_lsn, d.drop_lsn, d.read_only_lsn, d.read_write_lsn, d.differential_base_lsn, d.differential_base_guid, d.differential_base_time, d.redo_start_lsn, d.redo_start_fork_guid, d.redo_target_lsn, d.redo_target_fork_guid, d.backup_lsn, d.credential_id
         FROM @Dataset d
@@ -83,7 +83,7 @@ BEGIN;
                 WHERE x._InstanceID = @InstanceID
                     AND x._DatabaseName = d._DatabaseName AND x.[file_id] = d.[file_id]
             );
-        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Done', @sw2, @@ROWCOUNT, @ProcName, @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @tableName;
     COMMIT;
     ------------------------------------------------------------------------------
 

@@ -22,7 +22,7 @@ BEGIN;
     BEGIN TRAN;
         DECLARE @tableName nvarchar(128) = N'dbo._dm_os_wait_stats';
 
-        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Start', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
+        EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
         UPDATE x
         SET   x._ModifyDate         = SYSUTCDATETIME()
             --
@@ -33,9 +33,9 @@ BEGIN;
         FROM dbo._dm_os_wait_stats x
             LEFT JOIN @Dataset d ON d.wait_type = x.wait_type
         WHERE x._InstanceID = @InstanceID;
-        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Done', @sw2, @@ROWCOUNT, @ProcName, @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update', @sw2, @@ROWCOUNT, @ProcName, @tableName;
 
-        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Start', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
+        EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
         INSERT dbo._dm_os_wait_stats (_InstanceID, wait_type, waiting_tasks_count, wait_time_ms, max_wait_time_ms, signal_wait_time_ms)
         SELECT @InstanceID, wait_type, waiting_tasks_count, wait_time_ms, max_wait_time_ms, signal_wait_time_ms
         FROM @Dataset d
@@ -45,7 +45,7 @@ BEGIN;
                 WHERE x._InstanceID = @InstanceID
                     AND x.wait_type = d.wait_type
             );
-        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Done', @sw2, @@ROWCOUNT, @ProcName, @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @tableName;
     COMMIT;
     ------------------------------------------------------------------------------
 

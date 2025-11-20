@@ -20,13 +20,13 @@ BEGIN;
     BEGIN TRAN;
         DECLARE @tableName nvarchar(128) = N'dw._dm_db_index_usage_stats_delta';
 
-        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Start', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
+        EXEC dbo.usp_Raiserror '[%s] [%s] Start: Delete', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
         DELETE s FROM dw._dm_db_index_usage_stats_delta s
         WHERE s._DatabaseID = @DatabaseID
             AND NOT EXISTS (SELECT * FROM #Dataset d WHERE d._DatabaseID = s._DatabaseID AND d._IndexID = s._IndexID);
-        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Done', @sw2, @@ROWCOUNT, @ProcName, @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Done: Delete', @sw2, @@ROWCOUNT, @ProcName, @tableName;
 
-        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Start', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
+        EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
         -- Calcualted fields are being handled here because the destination table is a clustered columnstore index, which currently do not support computed columns
         UPDATE t
         SET t.EstimatedStatsBeginTime = IIF(x.WereStatsReset = 1, n.EstimatedStatsBeginTime, p.StatsEndTime) /* If it appears that the stats were not reset, then we want to use the StatsEndTime value from the previous snapshot */
@@ -85,14 +85,14 @@ BEGIN;
                                         END
             ) x
         WHERE n.StatsEndTime > p.StatsEndTime;
-        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Done', @sw2, @@ROWCOUNT, @ProcName, @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update', @sw2, @@ROWCOUNT, @ProcName, @tableName;
 
-        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Start', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
+        EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
         INSERT dw._dm_db_index_usage_stats_delta (_DatabaseID, _IndexID, EstimatedStatsBeginTime, StatsEndTime, WereStatsReset, user_seeks, user_scans, user_lookups, user_updates, last_user_seek_utc, last_user_scan_utc, last_user_lookup_utc, last_user_update_utc, system_seeks, system_scans, system_lookups, system_updates, last_system_seek_utc, last_system_scan_utc, last_system_lookup_utc, last_system_update_utc)
         SELECT s._DatabaseID, s._IndexID, s.EstimatedStatsBeginTime, s.StatsEndTime, 0, s.user_seeks, s.user_scans, s.user_lookups, s.user_updates, s.last_user_seek_utc, s.last_user_scan_utc, s.last_user_lookup_utc, s.last_user_update_utc, s.system_seeks, s.system_scans, s.system_lookups, s.system_updates, s.last_system_seek_utc, s.last_system_scan_utc, s.last_system_lookup_utc, s.last_system_update_utc
         FROM #Dataset s
         WHERE NOT EXISTS (SELECT * FROM dw._dm_db_index_usage_stats_delta t WHERE t._DatabaseID = s._DatabaseID AND t._IndexID = s._IndexID);
-        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Done', @sw2, @@ROWCOUNT, @ProcName, @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @tableName;
     COMMIT;
     ------------------------------------------------------------------------------
 

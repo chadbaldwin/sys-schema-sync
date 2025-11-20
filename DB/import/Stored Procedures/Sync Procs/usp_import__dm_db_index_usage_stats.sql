@@ -18,7 +18,7 @@ BEGIN;
 
     ------------------------------------------------------------------------------
     BEGIN;
-         EXEC dbo.usp_Raiserror '[%s] Get IDs: Start', NULL, NULL, @ProcName; SET @sw2 = SYSUTCDATETIME();
+         EXEC dbo.usp_Raiserror '[%s] Start: Get IDs', NULL, NULL, @ProcName; SET @sw2 = SYSUTCDATETIME();
 
         -- object
         DECLARE @ProcessKey1 uniqueidentifier = NEWID();
@@ -56,7 +56,7 @@ BEGIN;
 
         DELETE import.ItemNameProcess WHERE ProcessKey = @ProcessKey1;
 
-        EXEC dbo.usp_Raiserror '[%s] Get IDs: Done', @sw2, @@ROWCOUNT, @ProcName;
+        EXEC dbo.usp_Raiserror '[%s] Done: Get IDs', @sw2, @@ROWCOUNT, @ProcName;
     END;
     ------------------------------------------------------------------------------
 
@@ -74,13 +74,13 @@ BEGIN;
         /*  Deletes here are okay because the export query left joins to sys.dm_db_index_usage_stats
             so it will always return every index. The only time indexes will be deleted is when
             they have been completely dropped from the database and never re-created. */
-        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Start', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
+        EXEC dbo.usp_Raiserror '[%s] [%s] Start: Delete', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
         DELETE x FROM dbo._dm_db_index_usage_stats x
         WHERE x._DatabaseID = @DatabaseID
             AND NOT EXISTS (SELECT * FROM #Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID);
-        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Done', @sw2, @@ROWCOUNT, @ProcName, @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Done: Delete', @sw2, @@ROWCOUNT, @ProcName, @tableName;
 
-        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Start', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
+        EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
         UPDATE x
         SET x.EstimatedStatsBeginTime = d.EstimatedStatsBeginTime
           , x.StatsEndTime            = d.StatsEndTime
@@ -105,14 +105,14 @@ BEGIN;
           , x.last_system_update_utc  = COALESCE(d.last_system_update_utc, x.last_system_update_utc)
         FROM dbo._dm_db_index_usage_stats x
             JOIN #Dataset d ON d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID
-        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Done', @sw2, @@ROWCOUNT, @ProcName, @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update', @sw2, @@ROWCOUNT, @ProcName, @tableName;
 
-        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Start', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
+        EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
         INSERT dbo._dm_db_index_usage_stats (_DatabaseID, _IndexID, EstimatedStatsBeginTime, StatsEndTime, database_id, [object_id], index_id, user_seeks, user_scans, user_lookups, user_updates, last_user_seek_utc, last_user_scan_utc, last_user_lookup_utc, last_user_update_utc, system_seeks, system_scans, system_lookups, system_updates, last_system_seek_utc, last_system_scan_utc, last_system_lookup_utc, last_system_update_utc)
         SELECT d._DatabaseID, d._IndexID, d.EstimatedStatsBeginTime, d.StatsEndTime, d.database_id, d.[object_id], d.index_id, d.user_seeks, d.user_scans, d.user_lookups, d.user_updates, d.last_user_seek_utc, d.last_user_scan_utc, d.last_user_lookup_utc, d.last_user_update_utc, d.system_seeks, d.system_scans, d.system_lookups, d.system_updates, d.last_system_seek_utc, d.last_system_scan_utc, d.last_system_lookup_utc, d.last_system_update_utc
         FROM #Dataset d
         WHERE NOT EXISTS (SELECT * FROM dbo._dm_db_index_usage_stats x WHERE d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID);
-        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Done', @sw2, @@ROWCOUNT, @ProcName, @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @tableName;
     COMMIT;
     ------------------------------------------------------------------------------
 

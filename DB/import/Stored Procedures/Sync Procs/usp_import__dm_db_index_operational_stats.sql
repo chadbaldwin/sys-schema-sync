@@ -18,7 +18,7 @@ BEGIN;
 
     ------------------------------------------------------------------------------
     BEGIN;
-         EXEC dbo.usp_Raiserror '[%s] Get IDs: Start', NULL, NULL, @ProcName; SET @sw2 = SYSUTCDATETIME();
+         EXEC dbo.usp_Raiserror '[%s] Start: Get IDs', NULL, NULL, @ProcName; SET @sw2 = SYSUTCDATETIME();
 
         -- object
         DECLARE @ProcessKey1 uniqueidentifier = NEWID();
@@ -87,7 +87,7 @@ BEGIN;
 
         DELETE import.ItemNameProcess WHERE ProcessKey = @ProcessKey1;
 
-        EXEC dbo.usp_Raiserror '[%s] Get IDs: Done', @sw2, @@ROWCOUNT, @ProcName;
+        EXEC dbo.usp_Raiserror '[%s] Done: Get IDs', @sw2, @@ROWCOUNT, @ProcName;
     END;
     ------------------------------------------------------------------------------
 
@@ -105,13 +105,13 @@ BEGIN;
         /*  Deletes here are okay because the export query left joins to sys.dm_db_index_usage_stats
             so it will always return every index. The only time indexes will be deleted is when
             they have been completely dropped from the database and never re-created. */
-        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Start', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
+        EXEC dbo.usp_Raiserror '[%s] [%s] Start: Delete', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
         DELETE x FROM dbo._dm_db_index_operational_stats x
         WHERE x._DatabaseID = @DatabaseID
             AND NOT EXISTS (SELECT * FROM #Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID AND d._BoundaryValue = x._BoundaryValue);
-        EXEC dbo.usp_Raiserror '[%s] [%s] Delete: Done', @sw2, @@ROWCOUNT, @ProcName, @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Done: Delete', @sw2, @@ROWCOUNT, @ProcName, @tableName;
 
-        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Start', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
+        EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
         UPDATE x
         SET x.EstimatedStatsBeginTime            = d.EstimatedStatsBeginTime
           , x.StatsEndTime                       = d.StatsEndTime
@@ -168,14 +168,14 @@ BEGIN;
           , x.insert_over_ghost_version_offrow   = d.insert_over_ghost_version_offrow
         FROM dbo._dm_db_index_operational_stats x
             JOIN #Dataset d ON d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID AND d._BoundaryValue = x._BoundaryValue;
-        EXEC dbo.usp_Raiserror '[%s] [%s] Update: Done', @sw2, @@ROWCOUNT, @ProcName, @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update', @sw2, @@ROWCOUNT, @ProcName, @tableName;
 
-        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Start', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
+        EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
         INSERT dbo._dm_db_index_operational_stats (_DatabaseID, _IndexID, _BoundaryValue, EstimatedStatsBeginTime, StatsEndTime, database_id, [object_id], index_id, partition_number, hobt_id, leaf_insert_count, leaf_delete_count, leaf_update_count, leaf_ghost_count, nonleaf_insert_count, nonleaf_delete_count, nonleaf_update_count, leaf_allocation_count, nonleaf_allocation_count, leaf_page_merge_count, nonleaf_page_merge_count, range_scan_count, singleton_lookup_count, forwarded_fetch_count, lob_fetch_in_pages, lob_fetch_in_bytes, lob_orphan_create_count, lob_orphan_insert_count, row_overflow_fetch_in_pages, row_overflow_fetch_in_bytes, column_value_push_off_row_count, column_value_pull_in_row_count, row_lock_count, row_lock_wait_count, row_lock_wait_in_ms, page_lock_count, page_lock_wait_count, page_lock_wait_in_ms, index_lock_promotion_attempt_count, index_lock_promotion_count, page_latch_wait_count, page_latch_wait_in_ms, page_io_latch_wait_count, page_io_latch_wait_in_ms, tree_page_latch_wait_count, tree_page_latch_wait_in_ms, tree_page_io_latch_wait_count, tree_page_io_latch_wait_in_ms, page_compression_attempt_count, page_compression_success_count, version_generated_inrow, version_generated_offrow, ghost_version_inrow, ghost_version_offrow, insert_over_ghost_version_inrow, insert_over_ghost_version_offrow)
         SELECT d._DatabaseID, d._IndexID, d._BoundaryValue, d.EstimatedStatsBeginTime, d.StatsEndTime, d.database_id, d.[object_id], d.index_id, d.partition_number, d.hobt_id, d.leaf_insert_count, d.leaf_delete_count, d.leaf_update_count, d.leaf_ghost_count, d.nonleaf_insert_count, d.nonleaf_delete_count, d.nonleaf_update_count, d.leaf_allocation_count, d.nonleaf_allocation_count, d.leaf_page_merge_count, d.nonleaf_page_merge_count, d.range_scan_count, d.singleton_lookup_count, d.forwarded_fetch_count, d.lob_fetch_in_pages, d.lob_fetch_in_bytes, d.lob_orphan_create_count, d.lob_orphan_insert_count, d.row_overflow_fetch_in_pages, d.row_overflow_fetch_in_bytes, d.column_value_push_off_row_count, d.column_value_pull_in_row_count, d.row_lock_count, d.row_lock_wait_count, d.row_lock_wait_in_ms, d.page_lock_count, d.page_lock_wait_count, d.page_lock_wait_in_ms, d.index_lock_promotion_attempt_count, d.index_lock_promotion_count, d.page_latch_wait_count, d.page_latch_wait_in_ms, d.page_io_latch_wait_count, d.page_io_latch_wait_in_ms, d.tree_page_latch_wait_count, d.tree_page_latch_wait_in_ms, d.tree_page_io_latch_wait_count, d.tree_page_io_latch_wait_in_ms, d.page_compression_attempt_count, d.page_compression_success_count, d.version_generated_inrow, d.version_generated_offrow, d.ghost_version_inrow, d.ghost_version_offrow, d.insert_over_ghost_version_inrow, d.insert_over_ghost_version_offrow
         FROM #Dataset d
         WHERE NOT EXISTS (SELECT * FROM dbo._dm_db_index_operational_stats x WHERE d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID AND d._BoundaryValue = x._BoundaryValue);
-        EXEC dbo.usp_Raiserror '[%s] [%s] Insert: Done', @sw2, @@ROWCOUNT, @ProcName, @tableName;
+        EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @tableName;
     COMMIT;
     ------------------------------------------------------------------------------
 
