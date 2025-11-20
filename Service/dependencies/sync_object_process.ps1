@@ -13,6 +13,7 @@ $VerboseLog = $Config.VerboseLog
 $ErrorActionPreference = 'Stop'
 $PSDefaultParameterValues= @{
     'Write-DbaDbTableData:EnableException' = $true
+    'Invoke-DbaQuery:QueryTimeout' = 30
     'Invoke-DbaQuery:EnableException' = $true
     'Invoke-DbaQuery:MessagesToOutput' = $true
 }
@@ -42,7 +43,7 @@ function Get-CleanSqlIdentifiers {
             ,  ImportProcClean     = NULLIF(CONCAT_WS('.', QUOTENAME(PARSENAME(@ImportProc    , 3)), QUOTENAME(PARSENAME(@ImportProc    , 2)), QUOTENAME(PARSENAME(@ImportProc    , 1))), '')
 '@
 
-    Invoke-DbaQuery $SqlConnection -Query $query -As PSObject -QueryTimeout 5 -SqlParameter @{
+    Invoke-DbaQuery $SqlConnection -Query $query -As PSObject -SqlParameter @{
             SyncObjectName = $SyncObject.SyncObjectName
             ImportTable    = $SyncObject.ImportTable
             ImportProc     = $SyncObject.ImportProc
@@ -63,7 +64,7 @@ function Get-TVPTypeFromProcName {
         WHERE pa.[object_id] = OBJECT_ID(@ProcName, 'P') AND pa.[name] = '@Dataset'
 '@
 
-    Invoke-DbaQuery $SqlConnection -Query $query -As SingleValue -QueryTimeout 5 -SqlParameter @{
+    Invoke-DbaQuery $SqlConnection -Query $query -As SingleValue -SqlParameter @{
             ProcName = $ProcName
         }
 }
@@ -83,7 +84,7 @@ try {
         if ($VerboseLog) { Write-Output 'Start: Checksum' } $sw.Restart()
         $oldchecksum = $SyncObject.LastSyncChecksum | ConvertFrom-DBNull
         $checksumQuery = "SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED; {0}" -f $SyncObject.ChecksumQueryText
-        $newchecksum = Invoke-DbaQuery $SourceSqlConnection -Query $checksumQuery -As SingleValue -QueryTimeout 30 `
+        $newchecksum = Invoke-DbaQuery $SourceSqlConnection -Query $checksumQuery -As SingleValue `
                                        -SqlParameter @{ LastSyncTime = $SyncObject.LastSyncTime } | ConvertFrom-DBNull
         if ($VerboseLog) { Write-Output "Old checksum: ${oldchecksum}" }
         if ($VerboseLog) { Write-Output "New checksum: ${newchecksum}" }
@@ -128,7 +129,7 @@ try {
         #>
         if ($VerboseLog) { Write-Output 'Start: Export' } $sw.Restart()
         # using DataSet here because it's easy to pull the DataTable out of it
-        $data_src = Invoke-DbaQuery $SourceSqlConnection -Query $exportQuery -As DataSet -QueryTimeout 30
+        $data_src = Invoke-DbaQuery $SourceSqlConnection -Query $exportQuery -As DataSet
         if ($VerboseLog) { Write-Output "Done: Export [$($sw.Elapsed)]" }
 
         switch ($syncType) {
@@ -136,7 +137,7 @@ try {
                 if ($data_src.Tables[0].Rows.Count -gt 0) {
                     $ImportTypeClean = Get-TVPTypeFromProcName $ImportProcClean $TargetSqlConnection
                     # Create empty datatable in the shape of the target table type, merge the source data into it, then prep the TVP
-                    $data_dst = Invoke-DbaQuery $TargetSqlConnection -Query ('DECLARE @x {0}; SELECT * FROM @x;' -f $ImportTypeClean) -As DataSet -QueryTimeout 10
+                    $data_dst = Invoke-DbaQuery $TargetSqlConnection -Query ('DECLARE @x {0}; SELECT * FROM @x;' -f $ImportTypeClean) -As DataSet
                     # If the table type contains a magic __ID column, set it to auto-increment. This way we don't have to handle it in every export query
                     # Export queries should not have an __ID column, when the merge occurs, it will fill in row numbers automatically
                     if ($data_dst.Tables[0].Columns['__ID']) {
@@ -184,12 +185,12 @@ try {
                     <# Create empty datatable in the shape of the target table, add instance/database id column, then merge the source data into it.
                        It's safe to add both columns because we're using merge with the Ignore missing schema action. If the destination datatable
                        doesn't have one of these columns, it will simply be ignored and not populated/added. #>
-                    $data_dst = Invoke-DbaQuery $TargetSqlConnection -Query ('SELECT TOP(0) * FROM {0};' -f $ImportTableClean) -As DataSet -QueryTimeout 10
+                    $data_dst = Invoke-DbaQuery $TargetSqlConnection -Query ('SELECT TOP(0) * FROM {0};' -f $ImportTableClean) -As DataSet
                     $data_src.Tables[0].Columns.Add([System.Data.DataColumn]::new('_InstanceID', [Int], $SyncObject._InstanceID))
                     $data_src.Tables[0].Columns.Add([System.Data.DataColumn]::new('_DatabaseID', [Int], $SyncObject._DatabaseID))
                     $data_dst.Tables[0].Merge($data_src.Tables[0], $false, [System.Data.MissingSchemaAction]::Ignore)
 
-                    Write-DbaDbTableData -InputObject $data_dst -SqlInstance $TargetSqlConnection -Table $ImportTableClean
+                    Write-DbaDbTableData -InputObject $data_dst -SqlInstance $TargetSqlConnection -Table $ImportTableClean -BulkCopyTimeOut 180
 
                     if ($VerboseLog) { Write-Output "Done: Write [$($sw.Elapsed)]" }
                 } else {
@@ -206,7 +207,7 @@ try {
 } finally {
     if ($VerboseLog) { Write-Output 'Checking in SyncObjectStatus' }
     if ($oldchecksum -ne $newchecksum) { if ($VerboseLog) { Write-Output "Set new checksum: ${newchecksum}" } }
-    Invoke-DbaQuery $TargetSqlConnection -CommandType StoredProcedure -Query 'import.usp_SetSyncStatus' -QueryTimeout 30 `
+    Invoke-DbaQuery $TargetSqlConnection -CommandType StoredProcedure -Query 'import.usp_SetSyncStatus' `
                     -SqlParameter @{
                         InstanceID   = $SyncObject._InstanceID
                         DatabaseID   = $SyncObject._DatabaseID
