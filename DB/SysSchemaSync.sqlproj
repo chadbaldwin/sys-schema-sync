@@ -246,6 +246,7 @@
     <Build Include="Security\dw.sql" />
     <Build Include="Security\ext.sql" />
     <Build Include="Security\import.sql" />
+    <Build Include="import\Stored Procedures\usp_DatabaseMaintenanceTasks.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="StaticCodeAnalysis.SuppressMessages.xml" />
