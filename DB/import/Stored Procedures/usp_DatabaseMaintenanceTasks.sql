@@ -1,0 +1,65 @@
+CREATE PROCEDURE import.usp_DatabaseMaintenanceTasks (
+    @Verbose bit = 0
+)
+AS
+BEGIN;
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    SET @Verbose = COALESCE(CONVERT(bit, SESSION_CONTEXT(N'Verbose')), @Verbose); EXEC sys.sp_set_session_context N'Verbose', @Verbose;
+
+    DECLARE @sw datetime2 = SYSUTCDATETIME(), @ts datetime2, @rc bigint = 0;
+    DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
+    EXEC dbo.usp_Raiserror '[%s] Start', NULL, NULL, @ProcName;
+    ------------------------------------------------------------------------------
+
+    ------------------------------------------------------------------------------
+    -- Cleanup orphaned records from ItemNameProcess table
+    ------------------------------------------------------------------------------
+    EXEC dbo.usp_Raiserror '[%s] Start: Cleanup orphaned records from ItemNameProcess table', NULL, NULL, @ProcName; SET @ts = SYSUTCDATETIME();
+    DELETE import.ItemNameProcess
+    WHERE InsertDateUTC < DATEADD(MINUTE, -15, SYSUTCDATETIME());
+    EXEC dbo.usp_Raiserror '[%s] Done: Cleanup orphaned records from ItemNameProcess table', @ts, @@ROWCOUNT, @ProcName;
+    ------------------------------------------------------------------------------
+
+    ------------------------------------------------------------------------------
+    -- Force reset old sync object statuses to trigger a full re-sync
+    ------------------------------------------------------------------------------
+    EXEC dbo.usp_Raiserror '[%s] Start: Force reset old sync object statuses to trigger a full re-sync', NULL, NULL, @ProcName; SET @ts = SYSUTCDATETIME();
+    /* Clear out old checksums to force a full re-sync on any syncs that haven't run in a while.
+       Cannot set to NULL because that would be seen as an error for any syncs which have a
+       CHecksumQueryText configured. Setting to -1 instead, whcih is a valid checksum value
+       but it's a harmless risk and low chances of a collision anyway */
+    UPDATE import.DatabaseSyncObjectStatus
+        SET LastSyncChecksum = -1
+    WHERE LastSyncTime < DATEADD(DAY, -7, SYSUTCDATETIME())
+        AND LastSyncChecksum <> -1; -- Implicitly excluding NULLs
+    EXEC dbo.usp_Raiserror '[%s] Done: Force reset old sync object statuses to trigger a full re-sync', @ts, @@ROWCOUNT, @ProcName;
+    ------------------------------------------------------------------------------
+
+    ------------------------------------------------------------------------------
+    -- Cleanup orphaned ObjectDefinition records
+    ------------------------------------------------------------------------------
+    EXEC dbo.usp_Raiserror '[%s] Start: Cleanup orphaned ObjectDefinition records', NULL, NULL, @ProcName; SET @ts = SYSUTCDATETIME();
+    DELETE od
+    FROM dbo.ObjectDefinition od
+    WHERE NOT EXISTS (
+            SELECT *
+            FROM dbo._sql_modules FOR SYSTEM_TIME ALL sm
+            WHERE sm._ObjectDefinitionID = od._ObjectDefinitionID
+        );
+    EXEC dbo.usp_Raiserror '[%s] Done: Cleanup orphaned ObjectDefinition records', @ts, @@ROWCOUNT, @ProcName;
+    ------------------------------------------------------------------------------
+
+    ------------------------------------------------------------------------------
+    -- TODO
+    ------------------------------------------------------------------------------
+    /*
+        * Soft delete cleanup (Object, Index, Column)
+        * Old database cleanup
+    */
+    ------------------------------------------------------------------------------
+
+    ------------------------------------------------------------------------------
+    EXEC dbo.usp_Raiserror '[%s] Done', @sw, NULL, @ProcName;
+END;
+GO
