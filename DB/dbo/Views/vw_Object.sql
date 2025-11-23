@@ -1,4 +1,5 @@
 CREATE VIEW dbo.vw_Object
+WITH SCHEMABINDING
 AS
 SELECT i._InstanceID, i.InstanceName
     , d._DatabaseID, d.DatabaseName
