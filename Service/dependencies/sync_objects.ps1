@@ -36,14 +36,16 @@ try {
         }
         if ($VerboseLog) { Write-Output "Connected to source database [${ts}]" }
     } catch {
-        Write-Output ("Failed to connect to [$($SqlInstance)].[$($SqlDatabase)]. Exception: " + ($_.Exception.InnerException.Errors.Message -join ' '))
+        $errorStr = Get-Error $_ | Out-String
+        $errorMsg = $_.Exception.Message
+        $errorOutput = "Error: Failed to connect to source database: [$($SqlInstance)].[$($SqlDatabase)]. Exception: ${errorMsg} ${errorStr}"
+        Write-Output $errorOutput
         # If we fail to even connect to the DB, then log an error at the DB level, thus pushing all syncs to next run interval
-        $errorMsg = Get-Error $_ | Out-String
         Invoke-DbaQuery $conn_dst -CommandType StoredProcedure -Query 'import.usp_SetSyncStatus' `
                         -SqlParameter @{
                             InstanceID   = $SyncObjects[0]._InstanceID
                             DatabaseID   = $SyncObjects[0]._DatabaseID
-                            ErrorMessage = $errorMsg
+                            ErrorMessage = $errorStr ? $errorOutput : $null
                             Verbose      = $VerboseLog
                          } | Write-Output
         return
@@ -55,8 +57,9 @@ try {
             ForEach-Object { Write-Output "${key} ${_}" }
     }
 } catch {
-    Write-Output "Exception: $(Get-Error $_ | Out-String)"
-    Write-Output ($_.Exception.InnerException.Errors.Message -join ' ')
+    $errorStr = Get-Error $_ | Out-String
+    $errorMsg = $_.Exception.Message
+    Write-Output "Error: ${errorMsg} ${errorStr}"
 } finally {
     $conn_src, $conn_dst | Disconnect-DbaInstance | Out-Null
 }

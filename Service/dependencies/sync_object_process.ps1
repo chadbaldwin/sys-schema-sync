@@ -202,8 +202,9 @@ try {
         if ($VerboseLog) { Write-Output 'Skipping sync: Checksums match' }
     }
 } catch {
-    $errorMsg = Get-Error $_ | Out-String
-    Write-Output "Error: ${errorMsg}"
+    $errorStr = Get-Error $_ | Out-String
+    $errorMsg = $_.Exception.Message
+    Write-Output "Error: ${errorMsg} ${errorStr}"
 } finally {
     if ($VerboseLog) { Write-Output 'Checking in SyncObjectStatus' }
     if ($oldchecksum -ne $newchecksum) { if ($VerboseLog) { Write-Output "Set new checksum: ${newchecksum}" } }
@@ -213,7 +214,7 @@ try {
                         DatabaseID   = $SyncObject._DatabaseID
                         SyncObjectID = $SyncObject.SyncObjectID
                         Checksum     = $newchecksum
-                        ErrorMessage = $errorMsg
+                        ErrorMessage = $errorStr ? "Error: ${errorMsg} ${errorStr}" : $null
                         Verbose      = $VerboseLog
                     } | Write-Output
 }

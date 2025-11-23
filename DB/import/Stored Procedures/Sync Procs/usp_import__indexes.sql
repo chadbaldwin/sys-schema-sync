@@ -5,96 +5,112 @@ CREATE PROCEDURE import.usp_import__indexes (
 )
 AS
 BEGIN;
-    SET NOCOUNT ON;
-    SET XACT_ABORT ON;
+    SET NOCOUNT, XACT_ABORT ON;
     EXEC sp_set_session_context N'Verbose', @Verbose;
 
-    DECLARE @sw datetime2 = SYSUTCDATETIME(), @sw2 datetime2;
+    DECLARE @sw datetime2 = SYSUTCDATETIME(), @sw2 datetime2, @TableName nvarchar(300);
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
-    EXEC dbo.usp_Raiserror '[%s] Start', NULL, NULL, @ProcName;
 
-    IF (@DatabaseID IS NULL) BEGIN; RAISERROR('[%s] ERROR: Required parameter @DatabaseID is NULL',16,1,@ProcName) WITH NOWAIT; END;
-    ------------------------------------------------------------------------------
+    BEGIN TRY
+        EXEC dbo.usp_Raiserror '[%s] Start: Import Proc', NULL, NULL, @ProcName;
+        IF (@DatabaseID IS NULL) BEGIN; THROW 51000, 'Required parameter @DatabaseID is NULL', 1; END;
+        ------------------------------------------------------------------------------
 
-    ------------------------------------------------------------------------------
-    BEGIN;
-         EXEC dbo.usp_Raiserror '[%s] Start: Get IDs', NULL, NULL, @ProcName; SET @sw2 = SYSUTCDATETIME();
+        ------------------------------------------------------------------------------
+        BEGIN;
+            -- base object
+            SET @TableName = 'import.ItemNameProcess';
+            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
+            DECLARE @ProcessKey1 uniqueidentifier = NEWID();
+            INSERT import.ItemNameProcess (ProcessKey, ID, _DatabaseID, SchemaName, ObjectName, ObjectType, IndexName)
+            SELECT @ProcessKey1, __ID, @DatabaseID, _SchemaName, _ObjectName, _ObjectType, _IndexName FROM @Dataset;
+            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
 
-        -- object
-        DECLARE @ProcessKey1 uniqueidentifier = NEWID();
-        INSERT import.ItemNameProcess (ProcessKey, ID, _DatabaseID, SchemaName, ObjectName, ObjectType, IndexName)
-        SELECT @ProcessKey1, __ID, @DatabaseID, _SchemaName, _ObjectName, _ObjectType, _IndexName FROM @Dataset;
+            EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @ProcessKey = @ProcessKey1;
+            ----------------------------------------
 
-        EXEC import.usp_CreateItems @DatabaseID = @DatabaseID, @ProcessKey = @ProcessKey1, @FullImport_Index = 1;
+            ----------------------------------------
+            SET @TableName = '#Dataset';
+            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
+            SELECT TOP (0) * INTO #Dataset FROM dbo._indexes;
+            EXEC sys.sp_executesql @stmt = N'ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate, COLUMN IF EXISTS _ModifyDate, COLUMN IF EXISTS _ValidFrom, COLUMN IF EXISTS _ValidTo;';
+            CREATE CLUSTERED INDEX CIX ON #Dataset (_DatabaseID, _IndexID);
 
-        SELECT TOP (0) * INTO #Dataset FROM dbo._indexes;
-        EXEC sys.sp_executesql @stmt = N'ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate, COLUMN IF EXISTS _ModifyDate, COLUMN IF EXISTS _ValidFrom, COLUMN IF EXISTS _ValidTo';
-        CREATE CLUSTERED INDEX CIX ON #Dataset (_DatabaseID, _IndexID);
+            INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _IndexID, _RowHash, [object_id], [name], index_id, [type], [type_desc], is_unique, data_space_id, [ignore_dup_key], is_primary_key, is_unique_constraint, fill_factor, is_padded, is_disabled, is_hypothetical, is_ignored_in_optimization, [allow_row_locks], [allow_page_locks], has_filter, filter_definition, [compression_delay], suppress_dup_key_messages, auto_created, [optimize_for_sequential_key])
+            SELECT @DatabaseID, o._ObjectID, o._IndexID, d._RowHash, d.[object_id], d.[name], d.index_id, d.[type], d.[type_desc], d.is_unique, d.data_space_id, d.[ignore_dup_key], d.is_primary_key, d.is_unique_constraint, d.fill_factor, d.is_padded, d.is_disabled, d.is_hypothetical, d.is_ignored_in_optimization, d.[allow_row_locks], d.[allow_page_locks], d.has_filter, d.filter_definition, d.[compression_delay], d.suppress_dup_key_messages, d.auto_created, d.[optimize_for_sequential_key]
+            FROM @Dataset d
+                JOIN import.ItemNameProcess o ON o.ProcessKey = @ProcessKey1 AND o.ID = d.__ID;
+            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
+            ----------------------------------------
 
-        INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _IndexID, _RowHash, [object_id], [name], index_id, [type], [type_desc], is_unique, data_space_id, [ignore_dup_key], is_primary_key, is_unique_constraint, fill_factor, is_padded, is_disabled, is_hypothetical, is_ignored_in_optimization, [allow_row_locks], [allow_page_locks], has_filter, filter_definition, [compression_delay], suppress_dup_key_messages, auto_created, [optimize_for_sequential_key])
-        SELECT @DatabaseID, o._ObjectID, o._IndexID, d._RowHash, d.[object_id], d.[name], d.index_id, d.[type], d.[type_desc], d.is_unique, d.data_space_id, d.[ignore_dup_key], d.is_primary_key, d.is_unique_constraint, d.fill_factor, d.is_padded, d.is_disabled, d.is_hypothetical, d.is_ignored_in_optimization, d.[allow_row_locks], d.[allow_page_locks], d.has_filter, d.filter_definition, d.[compression_delay], d.suppress_dup_key_messages, d.auto_created, d.[optimize_for_sequential_key]
-        FROM @Dataset d
-            JOIN import.ItemNameProcess o ON o.ProcessKey = @ProcessKey1 AND o.ID = d.__ID;
+            ----------------------------------------
+            SET @TableName = 'import.ItemNameProcess';
+            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Delete', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
+            DELETE import.ItemNameProcess WHERE ProcessKey IN (@ProcessKey1);
+            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Delete', @sw2, @@ROWCOUNT, @ProcName, @TableName;
+        END;
+        ------------------------------------------------------------------------------
 
-        DELETE import.ItemNameProcess WHERE ProcessKey = @ProcessKey1;
+        ------------------------------------------------------------------------------
+        BEGIN TRAN;
+            SET @TableName = N'dbo._indexes';
 
-        EXEC dbo.usp_Raiserror '[%s] Done: Get IDs', @sw2, @@ROWCOUNT, @ProcName;
-    END;
-    ------------------------------------------------------------------------------
+            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Delete', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
+            DELETE x FROM dbo._indexes x
+            WHERE x._DatabaseID = @DatabaseID
+                AND NOT EXISTS (SELECT * FROM #Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID);
+            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Delete', @sw2, @@ROWCOUNT, @ProcName, @TableName;
 
-    ------------------------------------------------------------------------------
-    BEGIN TRAN;
-        DECLARE @tableName nvarchar(128) = N'dbo._indexes';
+            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
+            UPDATE x
+            SET x._ObjectID                     = d._ObjectID
+              , x._ModifyDate                   = SYSUTCDATETIME()
+              , x._RowHash                      = d._RowHash
+              , x.[object_id]                   = d.[object_id]
+              , x.[name]                        = d.[name]
+              , x.index_id                      = d.index_id
+              , x.[type]                        = d.[type]
+              , x.[type_desc]                   = d.[type_desc]
+              , x.is_unique                     = d.is_unique
+              , x.data_space_id                 = d.data_space_id
+              , x.[ignore_dup_key]              = d.[ignore_dup_key]
+              , x.is_primary_key                = d.is_primary_key
+              , x.is_unique_constraint          = d.is_unique_constraint
+              , x.fill_factor                   = d.fill_factor
+              , x.is_padded                     = d.is_padded
+              , x.is_disabled                   = d.is_disabled
+              , x.is_hypothetical               = d.is_hypothetical
+              , x.is_ignored_in_optimization    = d.is_ignored_in_optimization
+              , x.[allow_row_locks]             = d.[allow_row_locks]
+              , x.[allow_page_locks]            = d.[allow_page_locks]
+              , x.has_filter                    = d.has_filter
+              , x.filter_definition             = d.filter_definition
+              , x.[compression_delay]           = d.[compression_delay]
+              , x.suppress_dup_key_messages     = d.suppress_dup_key_messages
+              , x.auto_created                  = d.auto_created
+              , x.[optimize_for_sequential_key] = d.[optimize_for_sequential_key]
+            FROM dbo._indexes x
+                JOIN #Dataset d ON d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID
+            WHERE x._RowHash <> d._RowHash;
+            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update', @sw2, @@ROWCOUNT, @ProcName, @TableName;
 
-        EXEC dbo.usp_Raiserror '[%s] [%s] Start: Delete', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
-        DELETE x FROM dbo._indexes x
-        WHERE x._DatabaseID = @DatabaseID
-            AND NOT EXISTS (SELECT * FROM #Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID);
-        EXEC dbo.usp_Raiserror '[%s] [%s] Done: Delete', @sw2, @@ROWCOUNT, @ProcName, @tableName;
+            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
+            INSERT dbo._indexes (_DatabaseID, _ObjectID, _IndexID, _RowHash, [object_id], [name], index_id, [type], [type_desc], is_unique, data_space_id, [ignore_dup_key], is_primary_key, is_unique_constraint, fill_factor, is_padded, is_disabled, is_hypothetical, is_ignored_in_optimization, [allow_row_locks], [allow_page_locks], has_filter, filter_definition, [compression_delay], suppress_dup_key_messages, auto_created, [optimize_for_sequential_key])
+            SELECT d._DatabaseID, d._ObjectID, d._IndexID, d._RowHash, d.[object_id], d.[name], d.index_id, d.[type], d.[type_desc], d.is_unique, d.data_space_id, d.[ignore_dup_key], d.is_primary_key, d.is_unique_constraint, d.fill_factor, d.is_padded, d.is_disabled, d.is_hypothetical, d.is_ignored_in_optimization, d.[allow_row_locks], d.[allow_page_locks], d.has_filter, d.filter_definition, d.[compression_delay], d.suppress_dup_key_messages, d.auto_created, d.[optimize_for_sequential_key]
+            FROM #Dataset d
+            WHERE NOT EXISTS (SELECT * FROM dbo._indexes x WHERE d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID);
+            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
+        COMMIT;
+        ------------------------------------------------------------------------------
 
-        EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
-        UPDATE x
-        SET x._ObjectID                     = d._ObjectID
-          , x._ModifyDate                   = SYSUTCDATETIME()
-          , x._RowHash                      = d._RowHash
-          , x.[object_id]                   = d.[object_id]
-          , x.[name]                        = d.[name]
-          , x.index_id                      = d.index_id
-          , x.[type]                        = d.[type]
-          , x.[type_desc]                   = d.[type_desc]
-          , x.is_unique                     = d.is_unique
-          , x.data_space_id                 = d.data_space_id
-          , x.[ignore_dup_key]              = d.[ignore_dup_key]
-          , x.is_primary_key                = d.is_primary_key
-          , x.is_unique_constraint          = d.is_unique_constraint
-          , x.fill_factor                   = d.fill_factor
-          , x.is_padded                     = d.is_padded
-          , x.is_disabled                   = d.is_disabled
-          , x.is_hypothetical               = d.is_hypothetical
-          , x.is_ignored_in_optimization    = d.is_ignored_in_optimization
-          , x.[allow_row_locks]             = d.[allow_row_locks]
-          , x.[allow_page_locks]            = d.[allow_page_locks]
-          , x.has_filter                    = d.has_filter
-          , x.filter_definition             = d.filter_definition
-          , x.[compression_delay]           = d.[compression_delay]
-          , x.suppress_dup_key_messages     = d.suppress_dup_key_messages
-          , x.auto_created                  = d.auto_created
-          , x.[optimize_for_sequential_key] = d.[optimize_for_sequential_key]
-        FROM dbo._indexes x
-            JOIN #Dataset d ON d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID
-        WHERE x._RowHash <> d._RowHash;
-        EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update', @sw2, @@ROWCOUNT, @ProcName, @tableName;
+        ------------------------------------------------------------------------------
+        EXEC dbo.usp_Raiserror '[%s] Done: Import Proc', @sw, NULL, @ProcName;
+    END TRY
+    BEGIN CATCH
+        DECLARE @ErrorMessage nvarchar(2047) = FORMATMESSAGE('%s (Line %d)', ERROR_MESSAGE(), ERROR_LINE());
+        EXEC dbo.usp_Raiserror '[%s] Error: Import Proc - %s', @sw, NULL, @ProcName, @ErrorMessage;
 
-        EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @ProcName, @tableName; SET @sw2 = SYSUTCDATETIME();
-        INSERT dbo._indexes (_DatabaseID, _ObjectID, _IndexID, _RowHash, [object_id], [name], index_id, [type], [type_desc], is_unique, data_space_id, [ignore_dup_key], is_primary_key, is_unique_constraint, fill_factor, is_padded, is_disabled, is_hypothetical, is_ignored_in_optimization, [allow_row_locks], [allow_page_locks], has_filter, filter_definition, [compression_delay], suppress_dup_key_messages, auto_created, [optimize_for_sequential_key])
-        SELECT d._DatabaseID, d._ObjectID, d._IndexID, d._RowHash, d.[object_id], d.[name], d.index_id, d.[type], d.[type_desc], d.is_unique, d.data_space_id, d.[ignore_dup_key], d.is_primary_key, d.is_unique_constraint, d.fill_factor, d.is_padded, d.is_disabled, d.is_hypothetical, d.is_ignored_in_optimization, d.[allow_row_locks], d.[allow_page_locks], d.has_filter, d.filter_definition, d.[compression_delay], d.suppress_dup_key_messages, d.auto_created, d.[optimize_for_sequential_key]
-        FROM #Dataset d
-        WHERE NOT EXISTS (SELECT * FROM dbo._indexes x WHERE d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID);
-        EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @tableName;
-    COMMIT;
-    ------------------------------------------------------------------------------
-
-    ------------------------------------------------------------------------------
-    EXEC dbo.usp_Raiserror '[%s] Done', @sw, NULL, @ProcName;
+        THROW; -- re-throw original error so that an exception is returned to the caller
+    END CATCH;
 END;
 GO

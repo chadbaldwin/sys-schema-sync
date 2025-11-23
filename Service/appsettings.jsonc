@@ -4,7 +4,7 @@
   "LogRetentionDays": 30,
   "VerboseLog": true,
 
-  "EnableOpportunisticScheduling": true,
+  "OpportunisticSchedulingEnabled": true,
   "QueueProcessingBatchSize": 500,
 
   // How many instances do we want to run syncs against in parallel

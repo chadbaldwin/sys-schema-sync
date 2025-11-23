@@ -12,6 +12,7 @@ $current_path = [string]::IsNullOrWhiteSpace($PSScriptRoot) ? $PWD.Path : $PSScr
 # Get dependencies
 $config = Get-Content -LiteralPath "${current_path}\appsettings.jsonc" -Raw | ConvertFrom-Json -AsHashtable
 
+# Set configuration defaults
 $config.InstanceConcurrencyLimit      ??= 5
 $config.DatabaseConcurrencyLimit      ??= 1
 $config.VerboseLog                    ??= $false
@@ -87,7 +88,7 @@ try {
     $targets = Invoke-DbaQuery $conn -Query 'import.usp_GetDatabaseSyncObjectsToProcess' -CommandType StoredProcedure -As PSObject -QueryTimeout 30 `
             -SqlParameter @{
                 Limit = $config.QueueProcessingBatchSize
-                EnableOpportunisticScheduling = $config.EnableOpportunisticScheduling
+                OpportunisticSchedulingEnabled = $config.OpportunisticSchedulingEnabled
             } |
         Group-Object InstanceName | ForEach-Object {
             [pscustomobject]@{
@@ -107,15 +108,12 @@ try {
 }
 
 if ($targets.Count -eq 0) {
-    Write-Log 'No databases found to run against'
-    Write-Log 'Done'
+    Write-Log 'Done: Queue is empty, nothing to process.'
     Write-Log '-------------------------------------------------'
     return
 }
 
-Write-Log "Total instances: $($targets.Count)"
-Write-Log "Total databases: $($targets.Databases.Count)"
-Write-Log "Total sync tasks: $($targets.Databases.SyncObjects.Count)"
+Write-Log "Total instances: $($targets.Count); databases: $($targets.Databases.Count); sync tasks: $($targets.Databases.SyncObjects.Count)"
 
 #################################################
 # Main
@@ -126,30 +124,36 @@ Write-Log 'Starting concurrent process against instances'
 $targets | ForEach-Object -Parallel {
     $config = $using:config
     $sqlInstance = $_.Instance
+
     $sw_inst = [Diagnostics.Stopwatch]::StartNew()
     if ($config.VerboseLog) { Write-Output "[${sqlInstance}] Start: Instance [DBCount: $($_.Databases.Count)]" }
+
     # Handles running databases in parallel
     $_.Databases | ForEach-Object -Parallel {
         $config = $using:config
         $key = "[{0}].[{1}]" -f $using:sqlInstance, $_.Database
+
         function Write-Msg {
             param ([Parameter(Position=0,ValueFromPipeline)][object]$Message)
             process { Write-Output "${key} ${Message}" }
         }
 
-        if ($config.VerboseLog) { Write-Msg "Start: Database" }
         $sw_db = [Diagnostics.Stopwatch]::StartNew()
+        if ($config.VerboseLog) { Write-Msg "Start: Database" }
+
         try {
             & $config.ScriptToRun $using:sqlInstance $_.Database $_.SyncObjects $config | Write-Msg
         } catch {
             Write-Msg "Exception: $(Get-Error $_ | Out-String)"
             # throw # throwing here will cause the parallel loop to stop, so we need to catch, log and continue
         }
-        $sw_db.Stop()
 
         if ($config.VerboseLog) { Write-Msg "Done: Database [$($sw_db.Elapsed)]" }
+
     } -ThrottleLimit $config.DatabaseConcurrencyLimit
+
     if ($config.VerboseLog) { Write-Output "[${sqlInstance}] Done: Instance [$($sw_inst.Elapsed)]" }
+
 } -ThrottleLimit $config.InstanceConcurrencyLimit *>&1 | Write-Log
 
 Clear-DbaConnectionPool
@@ -170,9 +174,7 @@ Clear-DbaConnectionPool
 # Done
 #################################################
 
-$sw.Stop()
-Write-Log "Total time to run: $($sw.Elapsed.ToString('hh\:mm\:ss'))"
-Write-Log 'Done'
+Write-Log "Done [$($sw.Elapsed)]"
 Write-Log '-------------------------------------------------'
 
 #################################################
