@@ -1,25 +1,19 @@
 #Requires -PSEdition Core -Version 7.0 -Modules @{ ModuleName="dbatools"; ModuleVersion="2.1.7" }
 
-[CmdletBinding()]
-param (
-    [Parameter(Mandatory,Position=0)]
-    [ValidateScript({Test-Path -Path $_ -PathType Leaf}, ErrorMessage = 'DacPac file not found')]
-    [string]$DacPacPath
-)
+$ErrorActionPreference = 'Stop'
 
-$configPath = Resolve-Path -LiteralPath "${PSScriptRoot}\appsettings.jsonc"
+$config = Get-Content -LiteralPath "${PSScriptRoot}\appsettings.jsonc" -Raw | ConvertFrom-Json
+$dacPacPath = Get-Item -LiteralPath "${PSScriptRoot}\SysSchemaSync.dacpac"
 
 $dacpac = @{
-    Path = $DacPacPath
+    Path = $dacPacPath
     DacOption = New-DbaDacOption -Type Dacpac -Action Publish
 }
 $dacpac.DacOption.DeployOptions.AllowIncompatiblePlatform = $true
-
-$config = Get-Content -LiteralPath $configPath -Raw  | ConvertFrom-Json
 
 # Using connectionstring builder to extract the repository database name
 $connstr = New-DbaConnectionStringBuilder -ConnectionString $config.RepositoryDatabaseConnectionString
 $database = $connstr.Database
 
 # Publish DACPAC
-Publish-DbaDacPackage -ConnectionString $config.RepositoryDatabaseConnectionString -Database $database @dacpac
+Publish-DbaDacPackage -ConnectionString $config.RepositoryDatabaseConnectionString -Database $database @dacpac -Verbose
