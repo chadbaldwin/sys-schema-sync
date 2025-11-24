@@ -75,7 +75,7 @@ $sw = [Diagnostics.Stopwatch]::StartNew()
 # Get targets
 #################################################
 
-Write-Log 'Establishing connection to database'
+Write-Log 'Establishing connection to repository database'
 try {
     $conn = Connect-DbaInstance -ConnectionString $config.RepositoryDatabaseConnectionString
 } catch {
@@ -126,7 +126,7 @@ $targets | ForEach-Object -Parallel {
     $sqlInstance = $_.Instance
 
     $sw_inst = [Diagnostics.Stopwatch]::StartNew()
-    if ($config.VerboseLog) { Write-Output "[${sqlInstance}] Start: Instance [DBCount: $($_.Databases.Count)]" }
+    if ($config.VerboseLog) { Write-Output "[${sqlInstance}] Start: Instance [DB Count: $($_.Databases.Count)]" }
 
     # Handles running databases in parallel
     $_.Databases | ForEach-Object -Parallel {
@@ -139,7 +139,7 @@ $targets | ForEach-Object -Parallel {
         }
 
         $sw_db = [Diagnostics.Stopwatch]::StartNew()
-        if ($config.VerboseLog) { Write-Msg "Start: Database" }
+        if ($config.VerboseLog) { Write-Msg "Start: Database [Sync Object Count: $($_.SyncObjects.Count)]" }
 
         try {
             & $config.ScriptToRun $using:sqlInstance $_.Database $_.SyncObjects $config | Write-Msg
