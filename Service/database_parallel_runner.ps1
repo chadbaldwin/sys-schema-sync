@@ -1,16 +1,31 @@
 #Requires -PSEdition Core -Version 7.2 -Modules @{ ModuleName="dbatools"; ModuleVersion="2.1.7" }
 
+$ErrorActionPreference = 'Stop'
+
+# Setting current_path variable just to make it easier when running sections of this script ad-hoc
+$current_path = [string]::IsNullOrWhiteSpace($PSScriptRoot) ? $PWD.Path : $PSScriptRoot
+
+#################################################
+# Load dbatools
+#################################################
+
+# Setting environment variables here will still get inherited by parallel child processes
+# Disabling tab expansion (TEPP) and logging for dbatools helps improve concurrency performance
+# Otherwise, with too many concurrent processes, dbatools will start returning warnings when failing to start the TEPP runspaces
 $env:DBATOOLS_DISABLE_TEPP = $true
 $env:DBATOOLS_DISABLE_LOGGING = $true
 Import-Module -Name dbatools
-$PSDefaultParameterValues['Invoke-DbaQuery:EnableException'] = $true
+$PSDefaultParameterValues= @{
+    'Invoke-DbaQuery:EnableException' = $true
+    'Connect-DbaInstance:ConnectTimeout' = 30
+}
 
-$ErrorActionPreference = 'Stop'
-
-$current_path = [string]::IsNullOrWhiteSpace($PSScriptRoot) ? $PWD.Path : $PSScriptRoot
+#################################################
+# Load configuration
+#################################################
 
 # Get dependencies
-$config = Get-Content -LiteralPath "${current_path}\appsettings.jsonc" -Raw | ConvertFrom-Json -AsHashtable
+$config = Get-Content -LiteralPath (Join-Path $current_path 'appsettings.jsonc') -Raw | ConvertFrom-Json -AsHashtable
 
 # Set configuration defaults
 $config.InstanceConcurrencyLimit      ??= 5
@@ -20,10 +35,9 @@ $config.EnableOpportunisticScheduling ??= $false
 $config.QueueProcessingBatchSize      ??= 100
 $config.LogDirectory                  ??= 'Logs'
 $config.LogRetentionDays              ??= 30
+$config.ScriptToRun                     = Get-Item -LiteralPath (Join-Path $current_path 'dependencies\sync_objects.ps1')
 
-$config.ScriptToRun = Get-Item -LiteralPath "${current_path}\dependencies\sync_objects.ps1"
-
-$logdir = mkdir "${current_path}\$($config.LogDirectory)" -Force
+$logdir = mkdir (Join-Path $current_path $config.LogDirectory) -Force
 
 #################################################
 # Helper functions
@@ -79,7 +93,9 @@ Write-Log 'Establishing connection to repository database'
 try {
     $conn = Connect-DbaInstance -ConnectionString $config.RepositoryDatabaseConnectionString
 } catch {
-    Write-Log "[ERROR] Failed to connect to database. Exception: $(Get-Error $_ | Out-String)"
+    $errorStr = Get-Error $_ | Out-String
+    $errorMsg = $_.Exception.Message
+    Write-Log "Error: Failed to connect to database. Exception: ${errorMsg} ${errorStr}"
     throw
 }
 
@@ -103,7 +119,9 @@ try {
             }
         }
 } catch {
-    Write-Log "[ERROR] Failed to get list of instances and databases to run against. Exception: $(Get-Error $_ | Out-String)"
+    $errorStr = Get-Error $_ | Out-String
+    $errorMsg = $_.Exception.Message
+    Write-Log "Error: Failed to get list of instances and databases to run against. Exception: ${errorMsg} ${errorStr}"
     throw
 }
 
@@ -144,7 +162,9 @@ $targets | ForEach-Object -Parallel {
         try {
             & $config.ScriptToRun $using:sqlInstance $_.Database $_.SyncObjects $config | Write-Msg
         } catch {
-            Write-Msg "Exception: $(Get-Error $_ | Out-String)"
+            $errorStr = Get-Error $_ | Out-String
+            $errorMsg = $_.Exception.Message
+            Write-Msg "Error: ${errorMsg} ${errorStr}"
             # throw # throwing here will cause the parallel loop to stop, so we need to catch, log and continue
         }
 
