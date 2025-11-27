@@ -48,9 +48,9 @@ FROM ( -- Encapsulating in a sub-query to make row-hash calculation easier using
         JOIN sys.objects o ON o.[object_id] = mid.[object_id]
         CROSS APPLY (SELECT SchemaName = SCHEMA_NAME(o.[schema_id]), ObjectName = o.[name]) n
         CROSS APPLY (
-            SELECT EQUALITY  = STRING_AGG(IIF(column_usage = 'EQUALITY'  , x.col_name_clean, NULL), ',') WITHIN GROUP (ORDER BY column_name)
-                , INEQUALITY = STRING_AGG(IIF(column_usage = 'INEQUALITY', x.col_name_clean, NULL), ',') WITHIN GROUP (ORDER BY column_name)
-                , [INCLUDE]  = STRING_AGG(IIF(column_usage = 'INCLUDE'   , x.col_name_clean, NULL), ',') WITHIN GROUP (ORDER BY column_name)
+            SELECT EQUALITY  = STRING_AGG(CONVERT(nvarchar(MAX), IIF(column_usage = 'EQUALITY'  , x.col_name_clean, NULL)), ',') WITHIN GROUP (ORDER BY column_name)
+                , INEQUALITY = STRING_AGG(CONVERT(nvarchar(MAX), IIF(column_usage = 'INEQUALITY', x.col_name_clean, NULL)), ',') WITHIN GROUP (ORDER BY column_name)
+                , [INCLUDE]  = STRING_AGG(CONVERT(nvarchar(MAX), IIF(column_usage = 'INCLUDE'   , x.col_name_clean, NULL)), ',') WITHIN GROUP (ORDER BY column_name)
             FROM sys.dm_db_missing_index_columns(mig.index_handle) mic
                 CROSS APPLY (SELECT col_name_clean = QUOTENAME(STRING_ESCAPE(column_name,'json'),'"')) x
             GROUP BY () /* Ensures that if nothing is returned from `sys.dm_db_missing_index_columns`, then it is not included in the result of this query.
