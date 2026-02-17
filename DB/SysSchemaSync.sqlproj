@@ -247,6 +247,9 @@
     <Build Include="Security\ext.sql" />
     <Build Include="Security\import.sql" />
     <Build Include="import\Stored Procedures\usp_DatabaseMaintenanceTasks.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_trigger_events.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__trigger_events.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__trigger_events.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="StaticCodeAnalysis.SuppressMessages.xml" />
