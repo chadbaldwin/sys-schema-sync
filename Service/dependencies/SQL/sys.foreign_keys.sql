@@ -14,6 +14,7 @@ SELECT _SchemaName = s.[name]
     , _ReferencedObjectName = ro.ObjectName
     , _ReferencedObjectType = ro.ObjectType
     , _ReferencedIndexName = i.[name]
+    -- TODO: change hash to exclude volatile columns that don't need to be included (e.g., modify_date, create_date)
     , _RowHash = CONVERT(binary(32), HASHBYTES('SHA2_256', (SELECT x.* FROM (SELECT NULL) n(n) FOR JSON AUTO)))
     --
     , x.*
