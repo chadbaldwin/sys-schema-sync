@@ -1,5 +1,31 @@
 # sys-schema-sync
 
+<!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
+
+- [sys-schema-sync](#sys-schema-sync)
+   * [What is this, and how does it help?](#what-is-this-and-how-does-it-help)
+   * [Primary Objective](#primary-objective)
+   * [What this isn't](#what-this-isnt)
+   * [Installation and Setup](#installation-and-setup)
+      + [First things first...Set up the configuration file](#first-things-firstset-up-the-configuration-file)
+      + [Publish the database](#publish-the-database)
+         - [Using the script](#using-the-script)
+         - [Using SSDT](#using-ssdt)
+      + [Configure the database](#configure-the-database)
+      + [Deploy the service](#deploy-the-service)
+      + [Schedule the service](#schedule-the-service)
+      + [Done](#done)
+   * [Querying](#querying)
+      + [Example queries](#example-queries)
+         - [Helper Views](#helper-views)
+         - [Querying Objects](#querying-objects)
+         - [Instance Level Tables](#instance-level-tables)
+         - [Object Definitions](#object-definitions)
+   * [Architecture and Configuration](#architecture-and-configuration)
+   * [Helper procs](#helper-procs)
+
+<!-- TOC end -->
+
 > [!CAUTION]
 > This project is still in early development and testing. Behavior is subject to (and expected to) change, including breaking changes of configurations, installation, file names, database schema, etc.
 
@@ -281,7 +307,7 @@ GROUP BY vo.SchemaName, vo.ObjectName, od.ObjectDefinition
 
 ----
 
-## Architecture / Configuration
+## Architecture and Configuration
 
 SysSchemaSync consists of two parts, a database where all synced data is stored, and a service (PowerShell script) which is run on an interval to pick up items to sync.
 
