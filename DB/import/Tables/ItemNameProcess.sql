@@ -3,7 +3,8 @@
 CREATE TABLE import.ItemNameProcess (
     ProcessKey           uniqueidentifier NOT NULL,
     ID                   int              NOT NULL,
-    InsertDateUTC        datetime2        NOT NULL CONSTRAINT DF_ItemNameProcess_InsertDateUTC DEFAULT (SYSUTCDATETIME()),
+    InsertDateUTC        datetime2        NOT NULL  CONSTRAINT DF_ItemNameProcess_InsertDateUTC DEFAULT (SYSUTCDATETIME())
+                                                    INDEX IX_ItemNameProcess_InsertDateUTC,
     _DatabaseID          int              NOT NULL,
     SchemaName           nvarchar(128)    NOT NULL,
     ObjectName           nvarchar(128)    NOT NULL,
