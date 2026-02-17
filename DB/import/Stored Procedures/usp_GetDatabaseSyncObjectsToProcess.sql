@@ -83,7 +83,7 @@ BEGIN;
 
     SELECT so._InstanceID, so._DatabaseID, so.InstanceName, so.DatabaseName
         , so.SyncObjectID, so.SyncObjectName, so.SyncObjectLevelID, so.LastSyncTime, so.LastSyncChecksum
-        , so.ImportTable, so.ImportProc, so.ImportType, so.ExportQueryPath, so.SyncOnZeroChecksum, so.ChecksumQueryText, l.PriorityDescription
+        , so.ImportTable, so.ImportProc, so.ExportQueryPath, so.SyncOnZeroChecksum, so.ChecksumQueryText, l.PriorityDescription
     FROM import.vw_DatabaseSyncObject so
         JOIN #tmp_limit l ON EXISTS (
                                 SELECT so._InstanceID, so._DatabaseID, so.SyncObjectID

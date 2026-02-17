@@ -229,21 +229,7 @@ BEGIN;
             , Suggestion    = 'ExportQueryPath name should match the SyncObjectName'
             , ProperName    = so.SyncObjectName + '.sql'
         FROM #tmp_SyncObject so
-        WHERE so.SyncObjectName + '.sql' <> so.ExportQueryPath
-        UNION ALL
-        SELECT SyncObjectID = so.SyncObjectID
-            , IssueDesc     = 'Bad ImportType Name'
-            , Suggestion    = 'Fix ImportType name to follow naming convention'
-            , ProperName    = 'import.import__' + PARSENAME(so.SyncObjectName, 1)
-        FROM #tmp_SyncObject so
-            CROSS APPLY (
-                SELECT ImportType = CONCAT(SCHEMA_NAME(tt.[schema_id]), '.', tt.[name])
-                FROM sys.parameters pa
-                    JOIN sys.table_types tt ON tt.user_type_id = pa.user_type_id
-                WHERE pa.[object_id] = OBJECT_ID(so.ImportProc, 'P') AND pa.[name] = '@Dataset'
-            ) x
-        WHERE so.ImportProc IS NOT NULL
-            AND 'import.import__' + PARSENAME(so.SyncObjectName, 1) <> x.ImportType;
+        WHERE so.SyncObjectName + '.sql' <> so.ExportQueryPath;
 
         IF EXISTS (SELECT * FROM #issues)
         BEGIN;
@@ -408,7 +394,11 @@ BEGIN;
         RAISERROR('Updating: import.SyncObject ',0,1) WITH NOWAIT;
         MERGE INTO import.SyncObject WITH(HOLDLOCK) o
         USING #tmp_SyncObject n ON o.SyncObjectID = n.SyncObjectID
-        WHEN MATCHED
+        WHEN MATCHED AND EXISTS (
+            SELECT o.SyncObjectName, o.SyncObjectLevelID, o.IsEnabled, o.SyncStaleAgeMinutes, o.OpportunisticSchedulingEnabled, o.ImportTable, o.ImportProc, o.ExportQueryPath, o.SyncOnZeroChecksum, o.ChecksumQueryText
+            EXCEPT
+            SELECT n.SyncObjectName, n.SyncObjectLevelID, n.IsEnabled, n.SyncStaleAgeMinutes, n.OpportunisticSchedulingEnabled, n.ImportTable, n.ImportProc, n.ExportQueryPath, n.SyncOnZeroChecksum, n.ChecksumQueryText
+        )
         THEN UPDATE
             SET SyncObjectName                 = n.SyncObjectName,
                 SyncObjectLevelID              = n.SyncObjectLevelID,

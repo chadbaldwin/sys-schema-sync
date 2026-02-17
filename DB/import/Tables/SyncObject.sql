@@ -7,7 +7,6 @@ CREATE TABLE import.SyncObject (
     OpportunisticSchedulingEnabled bit           NOT NULL CONSTRAINT DF_SyncObject_OpportunisticSchedulingEnabled DEFAULT (1),
     ImportTable                    nvarchar(128)     NULL,
     ImportProc                     nvarchar(128)     NULL,
-    ImportType                     nvarchar(128)     NULL,
     ExportQueryPath                nvarchar(MAX)     NULL,
     SyncOnZeroChecksum             bit           NOT NULL CONSTRAINT DF_SyncObject_SyncOnZeroChecksum DEFAULT (1),
     ChecksumQueryText              nvarchar(MAX)     NULL,

@@ -149,19 +149,6 @@ BEGIN;
     WHERE t.is_ms_shipped = 0 AND t.[schema_id] <> SCHEMA_ID('ext')
         AND TYPE_NAME(c.system_type_id) = 'datetime'
         AND NOT (t.[name] LIKE '[_]%' AND c.[name] NOT LIKE '[_]%');
-
-    -- TVP's with sql_variant are not supported by the import process which uses System.Data.Common.DbDataAdapter.Fill
-    INSERT #issues (SmellDesc, ObjectName, ColumnName, DataType)
-    SELECT SmellDesc = 'SQL_VARIANT_DATATYPE_USED_IN_TVP'
-        , ObjectName = QUOTENAME(SCHEMA_NAME(t.[schema_id])) + '.' + QUOTENAME(t.[name])
-        , ColumnName = c.[name]
-        , DataType = TYPE_NAME(c.system_type_id)
-    FROM sys.table_types t
-        JOIN sys.objects o ON o.[object_id] = t.type_table_object_id
-        JOIN sys.columns c ON c.[object_id] = o.[object_id]
-    WHERE t.[schema_id] = SCHEMA_ID('ext')
-        AND TYPE_NAME(c.system_type_id) = 'sql_variant'
-        AND EXISTS (SELECT * FROM import.SyncObject so WHERE so.ImportType = t.[name]);
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
