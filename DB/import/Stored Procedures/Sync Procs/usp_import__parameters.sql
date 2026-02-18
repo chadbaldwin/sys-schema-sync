@@ -67,7 +67,6 @@ BEGIN;
               , x._RowHash                            = d._RowHash
               , x.[object_id]                         = d.[object_id]
               , x.[name]                              = d.[name]
-              , x.parameter_id                        = d.parameter_id
               , x.system_type_id                      = d.system_type_id
               , x.user_type_id                        = d.user_type_id
               , x.max_length                          = d.max_length

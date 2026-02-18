@@ -66,7 +66,6 @@ BEGIN;
             SET x._ModifyDate           = SYSUTCDATETIME()
               , x._RowHash              = d._RowHash
               , x.[object_id]           = d.[object_id]
-              , x.[type]                = d.[type]
               , x.[type_desc]           = d.[type_desc]
               , x.is_first              = d.is_first
               , x.is_last               = d.is_last
