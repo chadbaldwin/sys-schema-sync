@@ -146,6 +146,7 @@
     <Build Include="dbo\Tables\Sync Tables\_missing_indexes.sql" />
     <Build Include="dbo\Tables\Sync Tables\_OBJECTPROPERTYEX.sql" />
     <Build Include="dbo\Tables\Sync Tables\_objects.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_parameters.sql" />
     <Build Include="dbo\Tables\Sync Tables\_partition_functions.sql" />
     <Build Include="dbo\Tables\Sync Tables\_partition_parameters.sql" />
     <Build Include="dbo\Tables\Sync Tables\_partition_range_values.sql" />
@@ -193,6 +194,7 @@
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__missing_indexes.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__OBJECTPROPERTYEX.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__objects.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__parameters.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__partitions.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__sql_modules.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__stats.sql" />
@@ -235,6 +237,7 @@
     <Build Include="import\User Defined Types\Sync Types\import__missing_indexes.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__OBJECTPROPERTYEX.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__objects.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__parameters.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__partitions.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__sql_modules.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__stats.sql" />
