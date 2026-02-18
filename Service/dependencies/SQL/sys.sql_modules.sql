@@ -6,11 +6,12 @@ CREATE TABLE #column_overrides (
 );
 
 INSERT #column_overrides (ColumnName, ColumnOverride)
-VALUES ('definition', '[definition] = TRIM(CHAR(9)+CHAR(10)+CHAR(13)+CHAR(32) FROM [definition])')
+VALUES ('definition'
+    , '[definition] = TRIM(CHAR(9)+CHAR(10)+CHAR(13)+CHAR(32) FROM x.[definition])');
 
 DECLARE @columns nvarchar(MAX);
 
-SELECT @columns = STRING_AGG(CONVERT(nvarchar(MAX), COALESCE(co.ColumnOverride, QUOTENAME([name]))), CHAR(13)+CHAR(10)+'        , ') WITHIN GROUP (ORDER BY column_id)
+SELECT @columns = STRING_AGG(CONVERT(nvarchar(MAX), COALESCE(co.ColumnOverride, 'x.'+QUOTENAME(sc.[name]))), CHAR(13)+CHAR(10)+'        , ') WITHIN GROUP (ORDER BY column_id)
 FROM sys.system_columns sc
     LEFT JOIN #column_overrides co ON co.ColumnName = sc.[name]
 WHERE [object_id] = OBJECT_ID('sys.sql_modules');
@@ -37,12 +38,12 @@ SELECT _SchemaName = o.SchemaName
     , x.*
 FROM (
     SELECT {{columns}}
-    FROM sys.sql_modules
+    FROM sys.sql_modules x
 ) x
     JOIN cte_obj o ON o.[object_id] = x.[object_id];
 ';
 
-SELECT @sql = REPLACE(@sql, '{{columns}}', @columns)
+SELECT @sql = REPLACE(@sql, '{{columns}}', @columns);
 
 /* Run the query */
 EXEC sys.sp_executesql @stmt = @sql;

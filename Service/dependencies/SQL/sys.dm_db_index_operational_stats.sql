@@ -52,7 +52,8 @@ CREATE TABLE #prv (
 
 INSERT #prv (data_space_id, partition_number, boundary_value)
 SELECT s.data_space_id, rv.boundary_id + f.boundary_value_on_right
-    , CASE -- Convert boundary values to a lossless portable string value
+    -- Convert boundary values to a lossless portable string value
+    , CASE  -- Adapted from: https://github.com/chadbaldwin/SQL/blob/main/Scripts/Convert%20sql_variant%20to%20portable%20format.sql
         WHEN v.BaseType = 'date'                  THEN FORMAT(CONVERT(date, rv.[value]), 'yyyy-MM-dd')
         WHEN v.BaseType = 'datetime'              THEN FORMAT(CONVERT(datetime, rv.[value]), 'yyyy-MM-dd HH:mm:ss.fff')
         WHEN v.BaseType = 'smalldatetime'         THEN FORMAT(CONVERT(smalldatetime, rv.[value]), 'yyyy-MM-dd HH:mm')
@@ -60,18 +61,18 @@ SELECT s.data_space_id, rv.boundary_id + f.boundary_value_on_right
         WHEN v.BaseType = 'datetimeoffset'        THEN STUFF(FORMAT(CONVERT(datetimeoffset, rv.[value]), 'o'), v.[Precision]-6, 34-v.[Precision], '')
         WHEN v.BaseType = 'time'                  THEN LEFT(CONVERT(nvarchar(16), rv.[value], 114), v.[Precision])
         WHEN v.BaseType IN ('float','real')       THEN CONVERT(nvarchar(MAX), CONVERT(float, rv.[value]), 3)
-        WHEN v.BaseType IN ('money','smallmoney') THEN CONVERT(nvarchar(MAX), CONVERT(money, rv.[value]), 2)
         WHEN v.BaseType = 'varbinary'             THEN CONVERT(nvarchar(MAX), CONVERT(varbinary(MAX), rv.[value]), 1)
         WHEN v.BaseType = 'binary'                THEN CONVERT(nvarchar(MAX), CONVERT(varbinary(MAX), LEFT(CONVERT(varbinary(MAX), rv.[value]), v.[MaxLength])), 1)
+        WHEN v.BaseType IN ('money','smallmoney') THEN CONVERT(nvarchar(MAX), CONVERT(money, [value]), 2)
         ELSE CONVERT(nvarchar(MAX), rv.[value]) -- Tested OK: bigint, int, smallint, tinyint, bit, decimal, numeric, char, nchar, varchar, nvarchar, xml, uniqueidentifier
-    END
+      END
 FROM sys.partition_schemes s
-	JOIN sys.partition_functions f ON f.function_id = s.function_id
-	JOIN sys.partition_range_values rv ON f.function_id = rv.function_id
+    JOIN sys.partition_functions f ON f.function_id = s.function_id
+    JOIN sys.partition_range_values rv ON f.function_id = rv.function_id
     CROSS APPLY (
         SELECT BaseType   = CONVERT(nvarchar(128), SQL_VARIANT_PROPERTY(rv.[value], 'BaseType'))
-            , [Precision] = CONVERT(int, SQL_VARIANT_PROPERTY(rv.[value], 'Precision'))
-            , [MaxLength] = CONVERT(int, SQL_VARIANT_PROPERTY(rv.[value], 'MaxLength'))
+            , [Precision] = CONVERT(int          , SQL_VARIANT_PROPERTY(rv.[value], 'Precision'))
+            , [MaxLength] = CONVERT(int          , SQL_VARIANT_PROPERTY(rv.[value], 'MaxLength'))
     ) v;
 
 SELECT _SchemaName            = s.[name]

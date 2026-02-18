@@ -39,7 +39,7 @@ BEGIN;
             INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _RowHash, [object_id], [type], [type_desc], is_first, is_last, event_group_type, event_group_type_desc, is_trigger_event)
             SELECT @DatabaseID, o._ObjectID, d._RowHash, d.[object_id], d.[type], d.[type_desc], d.is_first, d.is_last, d.event_group_type, d.event_group_type_desc, d.is_trigger_event
             FROM @Dataset d
-                JOIN import.ItemNameProcess o ON o.ProcessKey = @ProcessKey1 AND o.ID = d.__ID
+                JOIN import.ItemNameProcess o ON o.ProcessKey = @ProcessKey1 AND o.ID = d.__ID;
             EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
             ----------------------------------------
 
