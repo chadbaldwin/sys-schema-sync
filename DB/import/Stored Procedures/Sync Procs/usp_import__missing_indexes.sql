@@ -34,7 +34,7 @@ BEGIN;
             EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
             SELECT TOP (0) * INTO #Dataset FROM dbo._missing_indexes;
             EXEC sys.sp_executesql @stmt = N'ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate, COLUMN IF EXISTS _ModifyDate, COLUMN IF EXISTS _ValidFrom, COLUMN IF EXISTS _ValidTo;';
-            CREATE CLUSTERED INDEX CIX ON #Dataset (_DatabaseID, _ObjectID);
+            CREATE CLUSTERED INDEX CIX ON #Dataset (_DatabaseID, _ObjectID, missing_index_hash);
 
             INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _RowHash, missing_index_hash, unique_compiles, user_seeks, user_scans, last_user_seek_utc, last_user_scan_utc, avg_total_user_cost, avg_user_impact, equality_columns, inequality_columns, included_columns, column_data)
             SELECT @DatabaseID, o._ObjectID, d._RowHash, d.missing_index_hash, d.unique_compiles, d.user_seeks, d.user_scans, d.last_user_seek_utc, d.last_user_scan_utc, d.avg_total_user_cost, d.avg_user_impact, d.equality_columns, d.inequality_columns, d.included_columns, d.column_data

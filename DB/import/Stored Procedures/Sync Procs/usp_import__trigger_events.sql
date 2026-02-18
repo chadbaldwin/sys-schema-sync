@@ -34,7 +34,7 @@ BEGIN;
             EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
             SELECT TOP (0) * INTO #Dataset FROM dbo._trigger_events;
             EXEC sys.sp_executesql @stmt = N'ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate, COLUMN IF EXISTS _ModifyDate, COLUMN IF EXISTS _ValidFrom, COLUMN IF EXISTS _ValidTo;';
-            CREATE CLUSTERED INDEX CIX ON #Dataset (_DatabaseID, _ObjectID);
+            CREATE CLUSTERED INDEX CIX ON #Dataset (_DatabaseID, _ObjectID, [type]);
 
             INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _ObjectID, _RowHash, [object_id], [type], [type_desc], is_first, is_last, event_group_type, event_group_type_desc, is_trigger_event)
             SELECT @DatabaseID, o._ObjectID, d._RowHash, d.[object_id], d.[type], d.[type_desc], d.is_first, d.is_last, d.event_group_type, d.event_group_type_desc, d.is_trigger_event
