@@ -1,42 +1,3 @@
-CREATE TABLE dbo._sysarticles (
-    _DatabaseID               int            NOT NULL CONSTRAINT FK__sysarticles__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) INDEX IX__sysarticles__DatabaseID,
-    _ObjectID                 bigint         NOT NULL CONSTRAINT FK__sysarticles__ObjectID   REFERENCES dbo.[Object]   (_ObjectID)   INDEX IX__sysarticles__ObjectID,
-    --
-    _InsertDate               datetime2      NOT NULL CONSTRAINT DF__sysarticles__InsertDate DEFAULT (SYSUTCDATETIME()),
-    _ModifyDate               datetime2      NOT NULL CONSTRAINT DF__sysarticles__ModifyDate DEFAULT (SYSUTCDATETIME()),
-    _RowHash                  binary(32)     NOT NULL,
-    _ValidFrom                datetime2      GENERATED ALWAYS AS ROW START NOT NULL,
-    _ValidTo                  datetime2      GENERATED ALWAYS AS ROW END   NOT NULL,
-    --
-    artid                     int            NOT NULL,
-    creation_script           nvarchar(255)      NULL,
-    del_cmd                   nvarchar(255)      NULL,
-    [description]             nvarchar(255)      NULL,
-    dest_table                nvarchar(128)  NOT NULL,
-    [filter]                  int            NOT NULL,
-    filter_clause             nvarchar(MAX)      NULL,
-    ins_cmd                   nvarchar(255)      NULL,
-    [name]                    nvarchar(128)  NOT NULL,
-    [objid]                   int            NOT NULL,
-    pubid                     int            NOT NULL,
-    pre_creation_cmd          tinyint        NOT NULL,
-    [status]                  tinyint        NOT NULL,
-    sync_objid                int            NOT NULL,
-    [type]                    tinyint        NOT NULL,
-    upd_cmd                   nvarchar(255)      NULL,
-    schema_option             binary(8)          NULL,
-    dest_owner                nvarchar(128)      NULL,
-    ins_scripting_proc        int                NULL,
-    del_scripting_proc        int                NULL,
-    upd_scripting_proc        int                NULL,
-    custom_script             nvarchar(2048)     NULL,
-    fire_triggers_on_snapshot bit            NOT NULL,
-
-    PERIOD FOR SYSTEM_TIME (_ValidFrom, _ValidTo),
-    CONSTRAINT CPK__sysarticles__DatabaseID__ObjectID_artid PRIMARY KEY CLUSTERED (_DatabaseID, _ObjectID, artid),
-) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo._sysarticles_history, DATA_CONSISTENCY_CHECK = ON, HISTORY_RETENTION_PERIOD = 6 MONTH));
-GO
-
 -- Temporal history table
 CREATE TABLE dbo._sysarticles_history (
     _DatabaseID               int            NOT NULL,
@@ -74,4 +35,43 @@ CREATE TABLE dbo._sysarticles_history (
 
     INDEX CIX__sysarticles_history__ValidTo__ValidFrom CLUSTERED (_ValidTo, _ValidFrom) WITH (DATA_COMPRESSION = PAGE),
 );
+GO
+
+CREATE TABLE dbo._sysarticles (
+    _DatabaseID               int            NOT NULL CONSTRAINT FK__sysarticles__DatabaseID REFERENCES dbo.[Database] (_DatabaseID) INDEX IX__sysarticles__DatabaseID,
+    _ObjectID                 bigint         NOT NULL CONSTRAINT FK__sysarticles__ObjectID   REFERENCES dbo.[Object]   (_ObjectID)   INDEX IX__sysarticles__ObjectID,
+    --
+    _InsertDate               datetime2      NOT NULL CONSTRAINT DF__sysarticles__InsertDate DEFAULT (SYSUTCDATETIME()),
+    _ModifyDate               datetime2      NOT NULL CONSTRAINT DF__sysarticles__ModifyDate DEFAULT (SYSUTCDATETIME()),
+    _RowHash                  binary(32)     NOT NULL,
+    _ValidFrom                datetime2      GENERATED ALWAYS AS ROW START NOT NULL,
+    _ValidTo                  datetime2      GENERATED ALWAYS AS ROW END   NOT NULL,
+    --
+    artid                     int            NOT NULL,
+    creation_script           nvarchar(255)      NULL,
+    del_cmd                   nvarchar(255)      NULL,
+    [description]             nvarchar(255)      NULL,
+    dest_table                nvarchar(128)  NOT NULL,
+    [filter]                  int            NOT NULL,
+    filter_clause             nvarchar(MAX)      NULL,
+    ins_cmd                   nvarchar(255)      NULL,
+    [name]                    nvarchar(128)  NOT NULL,
+    [objid]                   int            NOT NULL,
+    pubid                     int            NOT NULL,
+    pre_creation_cmd          tinyint        NOT NULL,
+    [status]                  tinyint        NOT NULL,
+    sync_objid                int            NOT NULL,
+    [type]                    tinyint        NOT NULL,
+    upd_cmd                   nvarchar(255)      NULL,
+    schema_option             binary(8)          NULL,
+    dest_owner                nvarchar(128)      NULL,
+    ins_scripting_proc        int                NULL,
+    del_scripting_proc        int                NULL,
+    upd_scripting_proc        int                NULL,
+    custom_script             nvarchar(2048)     NULL,
+    fire_triggers_on_snapshot bit            NOT NULL,
+
+    PERIOD FOR SYSTEM_TIME (_ValidFrom, _ValidTo),
+    CONSTRAINT CPK__sysarticles__DatabaseID__ObjectID_artid PRIMARY KEY CLUSTERED (_DatabaseID, _ObjectID, artid),
+) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo._sysarticles_history, DATA_CONSISTENCY_CHECK = ON, HISTORY_RETENTION_PERIOD = 6 MONTH));
 GO

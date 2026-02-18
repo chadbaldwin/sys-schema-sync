@@ -22,3 +22,4 @@ CREATE TABLE dbo._missing_indexes (
     CONSTRAINT CUQ__missing_indexes__DatabaseID__ObjectID_missing_index_hash UNIQUE CLUSTERED (_DatabaseID, _ObjectID, missing_index_hash),
     INDEX IX__missing_indexes__DatabaseID__ModifyDate NONCLUSTERED (_DatabaseID, _ModifyDate),
 );
+GO
