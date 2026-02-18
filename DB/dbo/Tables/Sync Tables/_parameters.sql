@@ -74,6 +74,6 @@ CREATE TABLE dbo._parameters (
     vector_base_type_desc               nvarchar(10)       NULL, -- Added in SQL Server 2025
 
     PERIOD FOR SYSTEM_TIME (_ValidFrom, _ValidTo),
-    CONSTRAINT CPK__parameters__DatabaseID__ObjectID_parameter_id PRIMARY KEY CLUSTERED (_DatabaseID, _ObjectID, parameter_id),
+    CONSTRAINT CPK__parameters__DatabaseID__ObjectID_parameter_id PRIMARY KEY CLUSTERED (_DatabaseID, _ObjectID, parameter_id) WITH (DATA_COMPRESSION = PAGE),
 ) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo._parameters_history, DATA_CONSISTENCY_CHECK = ON, HISTORY_RETENTION_PERIOD = 6 MONTH));
 GO
