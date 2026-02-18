@@ -1,4 +1,4 @@
-CREATE PROCEDURE import.usp_import__key_constraints (
+CREATE PROC import.usp_import__key_constraints (
     @DatabaseID int,
     @Dataset    import.import__key_constraints READONLY,
     @Verbose    bit = 0
@@ -65,48 +65,7 @@ BEGIN;
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------
-        BEGIN TRAN;
-            SET @TableName = N'dbo._key_constraints';
-
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Delete', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            DELETE x FROM dbo._key_constraints x
-            WHERE x._DatabaseID = @DatabaseID
-                AND NOT EXISTS (SELECT * FROM #Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID);
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Delete', @sw2, @@ROWCOUNT, @ProcName, @TableName;
-
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            UPDATE x
-            SET x._IndexID            = d._IndexID
-              , x._ParentObjectID     = d._ParentObjectID
-              , x._ModifyDate         = SYSUTCDATETIME()
-              , x._RowHash            = d._RowHash
-              , x.[name]              = d.[name]
-              , x.[object_id]         = d.[object_id]
-              , x.principal_id        = d.principal_id
-              , x.[schema_id]         = d.[schema_id]
-              , x.parent_object_id    = d.parent_object_id
-              , x.[type]              = d.[type]
-              , x.[type_desc]         = d.[type_desc]
-              , x.create_date         = d.create_date
-              , x.modify_date         = d.modify_date
-              , x.is_ms_shipped       = d.is_ms_shipped
-              , x.is_published        = d.is_published
-              , x.is_schema_published = d.is_schema_published
-              , x.unique_index_id     = d.unique_index_id
-              , x.is_system_named     = d.is_system_named
-              , x.is_enforced         = d.is_enforced
-            FROM dbo._key_constraints x
-                JOIN #Dataset d ON d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID
-            WHERE x._RowHash <> d._RowHash;
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update', @sw2, @@ROWCOUNT, @ProcName, @TableName;
-
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            INSERT dbo._key_constraints (_DatabaseID, _ObjectID, _IndexID, _ParentObjectID, _RowHash, [name], [object_id], principal_id, [schema_id], parent_object_id, [type], [type_desc], create_date, modify_date, is_ms_shipped, is_published, is_schema_published, unique_index_id, is_system_named, is_enforced)
-            SELECT d._DatabaseID, d._ObjectID, d._IndexID, d._ParentObjectID, d._RowHash, d.[name], d.[object_id], d.principal_id, d.[schema_id], d.parent_object_id, d.[type], d.[type_desc], d.create_date, d.modify_date, d.is_ms_shipped, d.is_published, d.is_schema_published, d.unique_index_id, d.is_system_named, d.is_enforced
-            FROM #Dataset d
-            WHERE NOT EXISTS (SELECT * FROM dbo._key_constraints x WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID);
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
-        COMMIT;
+        EXEC import.usp_RunCommonDUI @DatabaseID = @DatabaseID, @CallingProcName = @ProcName, @TargetTable = 'dbo._key_constraints';
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------

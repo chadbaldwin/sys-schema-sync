@@ -1,4 +1,4 @@
-CREATE PROCEDURE import.usp_import__trigger_events (
+CREATE PROC import.usp_import__trigger_events (
     @DatabaseID int,
     @Dataset    import.import__trigger_events READONLY,
     @Verbose    bit = 0
@@ -52,38 +52,7 @@ BEGIN;
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------
-        BEGIN TRAN;
-            SET @TableName = N'dbo._trigger_events';
-
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Delete', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            DELETE x FROM dbo._trigger_events x
-            WHERE x._DatabaseID = @DatabaseID
-                AND NOT EXISTS (SELECT * FROM #Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID AND d.[type] = x.[type]);
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Delete', @sw2, @@ROWCOUNT, @ProcName, @TableName;
-
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            UPDATE x
-            SET x._ModifyDate           = SYSUTCDATETIME()
-              , x._RowHash              = d._RowHash
-              , x.[object_id]           = d.[object_id]
-              , x.[type_desc]           = d.[type_desc]
-              , x.is_first              = d.is_first
-              , x.is_last               = d.is_last
-              , x.event_group_type      = d.event_group_type
-              , x.event_group_type_desc = d.event_group_type_desc
-              , x.is_trigger_event      = d.is_trigger_event
-            FROM dbo._trigger_events x
-                JOIN #Dataset d ON d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID AND d.[type] = x.[type]
-            WHERE x._RowHash <> d._RowHash;
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update', @sw2, @@ROWCOUNT, @ProcName, @TableName;
-
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            INSERT dbo._trigger_events (_DatabaseID, _ObjectID, _RowHash, [object_id], [type], [type_desc], is_first, is_last, event_group_type, event_group_type_desc, is_trigger_event)
-            SELECT d._DatabaseID, d._ObjectID, d._RowHash, d.[object_id], d.[type], d.[type_desc], d.is_first, d.is_last, d.event_group_type, d.event_group_type_desc, d.is_trigger_event
-            FROM #Dataset d
-            WHERE NOT EXISTS (SELECT * FROM dbo._trigger_events x WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID AND d.[type] = x.[type]);
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
-        COMMIT;
+        EXEC import.usp_RunCommonDUI @DatabaseID = @DatabaseID, @CallingProcName = @ProcName, @TargetTable = 'dbo._trigger_events';
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------

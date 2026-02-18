@@ -1,4 +1,4 @@
-CREATE PROCEDURE import.usp_import__objects (
+CREATE PROC import.usp_import__objects (
     @DatabaseID int,
     @Dataset    import.import__objects READONLY,
     @Verbose    bit = 0
@@ -52,43 +52,7 @@ BEGIN;
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------
-        BEGIN TRAN;
-            SET @TableName = N'dbo._objects';
-
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Delete', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            DELETE x FROM dbo._objects x
-            WHERE x._DatabaseID = @DatabaseID
-                AND NOT EXISTS (SELECT * FROM #Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID);
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Delete', @sw2, @@ROWCOUNT, @ProcName, @TableName;
-
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            UPDATE x
-            SET x._ModifyDate         = SYSUTCDATETIME()
-              , x._RowHash            = d._RowHash
-              , x._SchemaName         = d._SchemaName
-              , x.[name]              = d.[name]
-              , x.[object_id]         = d.[object_id]
-              , x.principal_id        = d.principal_id
-              , x.[schema_id]         = d.[schema_id]
-              , x.parent_object_id    = d.parent_object_id
-              , x.[type]              = d.[type]
-              , x.[type_desc]         = d.[type_desc]
-              , x.create_date         = d.create_date
-              , x.is_ms_shipped       = d.is_ms_shipped
-              , x.is_published        = d.is_published
-              , x.is_schema_published = d.is_schema_published
-            FROM dbo._objects x
-                JOIN #Dataset d ON d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID
-            WHERE x._RowHash <> d._RowHash;
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update', @sw2, @@ROWCOUNT, @ProcName, @TableName;
-
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            INSERT dbo._objects (_DatabaseID, _ObjectID, _SchemaName, _RowHash, [name], [object_id], principal_id, [schema_id], parent_object_id, [type], [type_desc], create_date, is_ms_shipped, is_published, is_schema_published)
-            SELECT d._DatabaseID, d._ObjectID, d._SchemaName, d._RowHash, d.[name], d.[object_id], d.principal_id, d.[schema_id], d.parent_object_id, d.[type], d.[type_desc], d.create_date, d.is_ms_shipped, d.is_published, d.is_schema_published
-            FROM #Dataset d
-            WHERE NOT EXISTS (SELECT * FROM dbo._objects x WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID);
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
-        COMMIT;
+        EXEC import.usp_RunCommonDUI @DatabaseID = @DatabaseID, @CallingProcName = @ProcName, @TargetTable = 'dbo._objects';
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-CREATE PROCEDURE import.usp_import__sql_modules (
+CREATE PROC import.usp_import__sql_modules (
     @DatabaseID int,
     @Dataset    import.import__sql_modules READONLY,
     @Verbose    bit = 0
@@ -100,14 +100,6 @@ BEGIN;
         ------------------------------------------------------------------------------
         SET @TableName = 'dbo._sql_modules'
         BEGIN TRAN;
-            /* -- Turning off delete logic; rely on soft delete logic instead by joining to vw_Object
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Delete', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            DELETE x FROM dbo._sql_modules x
-            WHERE x._DatabaseID = @DatabaseID
-                AND NOT EXISTS (SELECT * FROM #Dataset d WHERE x._DatabaseID = d._DatabaseID AND x._ObjectID = d._ObjectID);
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Delete', @sw2, @@ROWCOUNT, @ProcName, @TableName;
-            */
-
             EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
             UPDATE x
             SET   x._ModifyDate             = SYSUTCDATETIME()

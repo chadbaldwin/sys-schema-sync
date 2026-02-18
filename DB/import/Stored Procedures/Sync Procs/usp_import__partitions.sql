@@ -1,4 +1,4 @@
-CREATE PROCEDURE import.usp_import__partitions (
+CREATE PROC import.usp_import__partitions (
     @DatabaseID int,
     @Dataset    import.import__partitions READONLY,
     @Verbose    bit = 0
@@ -48,42 +48,7 @@ BEGIN;
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------
-        BEGIN TRAN;
-            SET @TableName = N'dbo._partitions';
-
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Delete', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            DELETE x FROM dbo._partitions x
-            WHERE x._DatabaseID = @DatabaseID
-                AND NOT EXISTS (SELECT * FROM #Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID AND d.partition_number = x.partition_number);
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Delete', @sw2, @@ROWCOUNT, @ProcName, @TableName;
-
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            UPDATE x
-            SET x._ObjectID               = d._ObjectID
-              , x._ModifyDate             = SYSUTCDATETIME()
-              , x._RowHash                = d._RowHash
-              , x.[partition_id]          = d.[partition_id]
-              , x.[object_id]             = d.[object_id]
-              , x.index_id                = d.index_id
-              , x.hobt_id                 = d.hobt_id
-              , x.[rows]                  = d.[rows]
-              , x.filestream_filegroup_id = d.filestream_filegroup_id
-              , x.[data_compression]      = d.[data_compression]
-              , x.data_compression_desc   = d.data_compression_desc
-              , x.xml_compression         = d.xml_compression
-              , x.xml_compression_desc    = d.xml_compression_desc
-            FROM dbo._partitions x
-                JOIN #Dataset d ON d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID AND d.partition_number = x.partition_number
-            WHERE x._RowHash <> d._RowHash;
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update', @sw2, @@ROWCOUNT, @ProcName, @TableName;
-
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            INSERT dbo._partitions (_DatabaseID, _ObjectID, _IndexID, _RowHash, [partition_id], [object_id], index_id, partition_number, hobt_id, [rows], filestream_filegroup_id, [data_compression], data_compression_desc, xml_compression, xml_compression_desc)
-            SELECT d._DatabaseID, d._ObjectID, d._IndexID, d._RowHash, d.[partition_id], d.[object_id], d.index_id, d.partition_number, d.hobt_id, d.[rows], d.filestream_filegroup_id, d.[data_compression], d.data_compression_desc, d.xml_compression, d.xml_compression_desc
-            FROM #Dataset d
-            WHERE NOT EXISTS (SELECT * FROM dbo._partitions x WHERE x._DatabaseID = d._DatabaseID AND x._IndexID  = d._IndexID AND x.partition_number = d.partition_number);
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
-        COMMIT;
+        EXEC import.usp_RunCommonDUI @DatabaseID = @DatabaseID, @CallingProcName = @ProcName, @TargetTable = 'dbo._partitions';
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------

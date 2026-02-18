@@ -1,4 +1,4 @@
-CREATE PROCEDURE import.usp_import__index_columns (
+CREATE PROC import.usp_import__index_columns (
     @DatabaseID int,
     @Dataset    import.import__index_columns READONLY,
     @Verbose    bit = 0
@@ -52,42 +52,7 @@ BEGIN;
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------
-        BEGIN TRAN;
-            SET @TableName = N'dbo._index_columns';
-
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Delete', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            DELETE x FROM dbo._index_columns x
-            WHERE x._DatabaseID = @DatabaseID
-                AND NOT EXISTS (SELECT * FROM #Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID AND d._ColumnID = x._ColumnID);
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Delete', @sw2, @@ROWCOUNT, @ProcName, @TableName;
-
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            UPDATE x
-            SET x._ObjectID                  = d._ObjectID
-              , x._ModifyDate                = SYSUTCDATETIME()
-              , x._RowHash                   = d._RowHash
-              , x.[object_id]                = d.[object_id]
-              , x.index_id                   = d.index_id
-              , x.index_column_id            = d.index_column_id
-              , x.column_id                  = d.column_id
-              , x.key_ordinal                = d.key_ordinal
-              , x.partition_ordinal          = d.partition_ordinal
-              , x.is_descending_key          = d.is_descending_key
-              , x.is_included_column         = d.is_included_column
-              , x.column_store_order_ordinal = d.column_store_order_ordinal
-              , x.data_clustering_ordinal    = d.data_clustering_ordinal
-            FROM dbo._index_columns x
-                JOIN #Dataset d ON d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID AND d._ColumnID = x._ColumnID
-            WHERE x._RowHash <> d._RowHash;
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update', @sw2, @@ROWCOUNT, @ProcName, @TableName;
-
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            INSERT dbo._index_columns (_DatabaseID, _ObjectID, _IndexID, _ColumnID, _RowHash, [object_id], index_id, index_column_id, column_id, key_ordinal, partition_ordinal, is_descending_key, is_included_column, column_store_order_ordinal, data_clustering_ordinal)
-            SELECT d._DatabaseID, d._ObjectID, d._IndexID, d._ColumnID, d._RowHash, d.[object_id], d.index_id, d.index_column_id, d.column_id, d.key_ordinal, d.partition_ordinal, d.is_descending_key, d.is_included_column, d.column_store_order_ordinal, d.data_clustering_ordinal
-            FROM #Dataset d
-            WHERE NOT EXISTS (SELECT * FROM dbo._index_columns x WHERE d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID AND d._ColumnID = x._ColumnID);
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
-        COMMIT;
+        EXEC import.usp_RunCommonDUI @DatabaseID = @DatabaseID, @CallingProcName = @ProcName, @TargetTable = 'dbo._index_columns';
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------

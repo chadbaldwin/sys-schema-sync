@@ -17,43 +17,22 @@ BEGIN;
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------
-        BEGIN TRAN;
-            SET @TableName = N'dbo._database_automatic_tuning_options';
-
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Delete', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            DELETE x FROM dbo._database_automatic_tuning_options x
-            WHERE x._DatabaseID = @DatabaseID
-                AND NOT EXISTS (SELECT * FROM @Dataset d WHERE d.[name] = x.[name]);
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Delete', @sw2, @@ROWCOUNT, @ProcName, @TableName;
-
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            UPDATE x
-            SET x._ModifyDate        = SYSUTCDATETIME()
-              , x._RowHash           = d._RowHash
-              , x.[desired_state]    = d.[desired_state]
-              , x.desired_state_desc = d.desired_state_desc
-              , x.actual_state       = d.actual_state
-              , x.actual_state_desc  = d.actual_state_desc
-              , x.reason             = d.reason
-              , x.reason_desc        = d.reason_desc
-            FROM dbo._database_automatic_tuning_options x
-                JOIN @Dataset d ON d.[name] = x.[name]
-            WHERE x._DatabaseID = @DatabaseID
-                AND x._RowHash <> d._RowHash;
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update', @sw2, @@ROWCOUNT, @ProcName, @TableName;
-
+        BEGIN;
+            SET @TableName = '#Dataset';
             EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            INSERT dbo._database_automatic_tuning_options (_DatabaseID, _RowHash, [name], [desired_state], desired_state_desc, actual_state, actual_state_desc, reason, reason_desc)
+            SELECT TOP (0) * INTO #Dataset FROM dbo._database_automatic_tuning_options;
+            EXEC sys.sp_executesql @stmt = N'ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate, COLUMN IF EXISTS _ModifyDate, COLUMN IF EXISTS _ValidFrom, COLUMN IF EXISTS _ValidTo;';
+            CREATE CLUSTERED INDEX CIX ON #Dataset (_DatabaseID, [name]);
+
+            INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _RowHash, [name], [desired_state], desired_state_desc, actual_state, actual_state_desc, reason, reason_desc)
             SELECT @DatabaseID, d._RowHash, d.[name], d.[desired_state], d.desired_state_desc, d.actual_state, d.actual_state_desc, d.reason, d.reason_desc
             FROM @Dataset d
-            WHERE NOT EXISTS (
-                    SELECT *
-                    FROM dbo._database_automatic_tuning_options x
-                    WHERE x._DatabaseID = @DatabaseID
-                        AND x.[name] = d.[name]
-                );
             EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
-        COMMIT;
+        END;
+        ------------------------------------------------------------------------------
+
+        ------------------------------------------------------------------------------
+        EXEC import.usp_RunCommonDUI @DatabaseID = @DatabaseID, @CallingProcName = @ProcName, @TargetTable = 'dbo._database_automatic_tuning_options';
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------

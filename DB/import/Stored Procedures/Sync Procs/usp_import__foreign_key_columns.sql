@@ -1,4 +1,4 @@
-CREATE PROCEDURE import.usp_import__foreign_key_columns (
+CREATE PROC import.usp_import__foreign_key_columns (
     @DatabaseID int,
     @Dataset    import.import__foreign_key_columns READONLY,
     @Verbose    bit = 0
@@ -78,40 +78,7 @@ BEGIN;
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------
-        BEGIN TRAN;
-            SET @TableName = N'dbo._foreign_key_columns';
-
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Delete', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            DELETE x FROM dbo._foreign_key_columns x
-            WHERE x._DatabaseID = @DatabaseID
-                AND NOT EXISTS (SELECT * FROM #Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID AND d.constraint_column_id = x.constraint_column_id);
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Delete', @sw2, @@ROWCOUNT, @ProcName, @TableName;
-
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            UPDATE x
-            SET x._ParentObjectID      = d._ParentObjectID
-              , x._ParentColumnID      = d._ParentColumnID
-              , x._ReferencedObjectID  = d._ReferencedObjectID
-              , x._ReferencedColumnID  = d._ReferencedColumnID
-              , x._ModifyDate          = SYSUTCDATETIME()
-              , x._RowHash             = d._RowHash
-              , x.constraint_object_id = d.constraint_object_id
-              , x.parent_object_id     = d.parent_object_id
-              , x.parent_column_id     = d.parent_column_id
-              , x.referenced_object_id = d.referenced_object_id
-              , x.referenced_column_id = d.referenced_column_id
-            FROM dbo._foreign_key_columns x
-                JOIN #Dataset d ON d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID AND d.constraint_column_id = x.constraint_column_id
-            WHERE x._RowHash <> d._RowHash;
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update', @sw2, @@ROWCOUNT, @ProcName, @TableName;
-
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            INSERT dbo._foreign_key_columns (_DatabaseID, _ObjectID, _ParentObjectID, _ParentColumnID, _ReferencedObjectID, _ReferencedColumnID, _RowHash, constraint_object_id, constraint_column_id, parent_object_id, parent_column_id, referenced_object_id, referenced_column_id)
-            SELECT d._DatabaseID, d._ObjectID, d._ParentObjectID, d._ParentColumnID, d._ReferencedObjectID, d._ReferencedColumnID, d._RowHash, d.constraint_object_id, d.constraint_column_id, d.parent_object_id, d.parent_column_id, d.referenced_object_id, d.referenced_column_id
-            FROM #Dataset d
-            WHERE NOT EXISTS (SELECT * FROM dbo._foreign_key_columns x WHERE d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID AND d.constraint_column_id = x.constraint_column_id);
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
-        COMMIT;
+        EXEC import.usp_RunCommonDUI @DatabaseID = @DatabaseID, @CallingProcName = @ProcName, @TargetTable = 'dbo._foreign_key_columns';
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------
