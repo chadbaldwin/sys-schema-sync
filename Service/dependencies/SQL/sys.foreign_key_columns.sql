@@ -23,4 +23,5 @@ FROM sys.foreign_key_columns x
     JOIN cte_obj po ON po.[object_id] = x.parent_object_id
     JOIN sys.columns pc ON pc.[object_id] = x.parent_object_id AND pc.column_id = x.parent_column_id
     JOIN cte_obj ro ON ro.[object_id] = x.referenced_object_id
-    JOIN sys.columns rc ON rc.[object_id] = x.referenced_object_id AND rc.column_id = x.referenced_column_id;
+    JOIN sys.columns rc ON rc.[object_id] = x.referenced_object_id AND rc.column_id = x.referenced_column_id
+OPTION (RECOMPILE);

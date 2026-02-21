@@ -22,4 +22,5 @@ SELECT _SchemaName = '<<DB>>'
 FROM sys.trigger_events x
     JOIN sys.triggers tr ON tr.[object_id] = x.[object_id]
 WHERE tr.is_ms_shipped = 0
-    AND tr.parent_class = 0;
+    AND tr.parent_class = 0
+OPTION (RECOMPILE);

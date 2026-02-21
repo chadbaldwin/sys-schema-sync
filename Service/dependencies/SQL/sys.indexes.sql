@@ -1,11 +1,16 @@
-SELECT _SchemaName = s.[name]
-    , _ObjectName = o.[name]
-    , _ObjectType = o.[type]
+WITH cte_obj AS (
+    SELECT o.[object_id], SchemaName = s.[name], ObjectName = o.[name], ObjectType = o.[type]
+    FROM sys.objects o
+        JOIN sys.schemas s ON s.[schema_id] = o.[schema_id]
+    WHERE o.is_ms_shipped = 0
+)
+SELECT _SchemaName = o.SchemaName
+    , _ObjectName = o.ObjectName
+    , _ObjectType = o.ObjectType
     , _IndexName = IIF(x.[type] = 0, '<<HEAP>>', x.[name])
     , _RowHash = CONVERT(binary(32), HASHBYTES('SHA2_256', (SELECT x.* FROM (SELECT NULL) n(n) FOR JSON AUTO)))
     --
     , x.*
 FROM sys.indexes x
-    JOIN sys.objects o ON o.[object_id] = x.[object_id]
-    JOIN sys.schemas s ON s.[schema_id] = o.[schema_id]
-WHERE o.is_ms_shipped = 0;
+    JOIN cte_obj o ON o.[object_id] = x.[object_id]
+OPTION (RECOMPILE);

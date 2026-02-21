@@ -40,7 +40,8 @@ FROM (
     SELECT {{columns}}
     FROM sys.sql_modules x
 ) x
-    JOIN cte_obj o ON o.[object_id] = x.[object_id];
+    JOIN cte_obj o ON o.[object_id] = x.[object_id]
+OPTION (RECOMPILE);
 ';
 
 SELECT @sql = REPLACE(@sql, '{{columns}}', @columns);

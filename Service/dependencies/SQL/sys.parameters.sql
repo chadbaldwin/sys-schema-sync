@@ -52,7 +52,8 @@ FROM (
                 , [MaxLength] = CONVERT(int          , SQL_VARIANT_PROPERTY(x.[default_value], ''MaxLength''))
         ) v
 ) x
-    JOIN cte_obj o ON o.[object_id] = x.[object_id];
+    JOIN cte_obj o ON o.[object_id] = x.[object_id]
+OPTION (RECOMPILE);
 ';
 
 SELECT @sql = REPLACE(@sql, '{{columns}}', @columns);

@@ -1,30 +1,48 @@
+DECLARE @rowhash_columns nvarchar(MAX);
+
+SELECT @rowhash_columns = STRING_AGG(CONVERT(nvarchar(MAX), 'x.'+QUOTENAME(sc.[name])), ', ') WITHIN GROUP (ORDER BY column_id)
+FROM sys.system_columns sc
+WHERE [object_id] = OBJECT_ID('sys.triggers')
+    AND sc.[name] NOT IN ('create_date','modify_date','is_ms_shipped','type_desc','parent_class_desc'); -- exclude unecessary columns from rowhash calculation
+
+/* Template query */
+DECLARE @sql nvarchar(MAX) = '
+WITH cte_obj AS (
+    SELECT o.[object_id], ObjectType = o.[type], SchemaName = s.[name], ObjectName = o.[name]
+    FROM sys.objects o
+        JOIN sys.schemas s ON s.[schema_id] = o.[schema_id]
+    WHERE o.is_ms_shipped = 0
+)
 -- Object level triggers
-SELECT _SchemaName = s.[name]
-    , _ObjectName = x.[name]
-    , _ObjectType = x.[type]
-    , _ParentObjectName = po.[name]
-    , _ParentObjectType = po.[type]
-    -- TODO: change hash to exclude volatile columns that don't need to be included (e.g., modify_date, create_date)
-    , _RowHash = CONVERT(binary(32), HASHBYTES('SHA2_256', (SELECT x.* FROM (SELECT NULL) n(n) FOR JSON AUTO)))
+SELECT _SchemaName = o.SchemaName
+    , _ObjectName = o.ObjectName
+    , _ObjectType = o.ObjectType
+    , _ParentObjectName = po.ObjectName
+    , _ParentObjectType = po.ObjectType
+    , _RowHash = CONVERT(binary(32), HASHBYTES(''SHA2_256'', (SELECT {{x.rowhash_columns}} FOR JSON PATH)))
     --
     , x.*
 FROM sys.triggers x
-    JOIN sys.objects o ON o.[object_id] = x.[object_id]
-    JOIN sys.schemas s ON s.[schema_id] = o.[schema_id]
-    JOIN sys.objects po ON po.[object_id] = x.parent_id
-WHERE x.is_ms_shipped = 0
-    AND x.parent_class = 1
+    JOIN cte_obj o ON o.[object_id] = x.[object_id]
+    JOIN cte_obj po ON po.[object_id] = x.parent_id
+WHERE x.parent_class = 1
 UNION
 -- Database level triggers
-SELECT _SchemaName = '<<DB>>'
+SELECT _SchemaName = ''<<DB>>''
     , _ObjectName = x.[name]
     , _ObjectType = x.[type]
     , _ParentObjectName = NULL
     , _ParentObjectType = NULL
-    -- TODO: change hash to exclude volatile columns that don't need to be included (e.g., modify_date, create_date)
-    , _RowHash = CONVERT(binary(32), HASHBYTES('SHA2_256', (SELECT x.* FROM (SELECT NULL) n(n) FOR JSON AUTO)))
+    , _RowHash = CONVERT(binary(32), HASHBYTES(''SHA2_256'', (SELECT {{x.rowhash_columns}} FOR JSON PATH)))
     --
     , x.*
 FROM sys.triggers x
 WHERE x.is_ms_shipped = 0
-    AND x.parent_class = 0;
+    AND x.parent_class = 0
+OPTION (RECOMPILE);
+';
+
+SELECT @sql = REPLACE(@sql, '{{x.rowhash_columns}}', @rowhash_columns);
+
+/* Run the query */
+EXEC sys.sp_executesql @stmt = @sql;

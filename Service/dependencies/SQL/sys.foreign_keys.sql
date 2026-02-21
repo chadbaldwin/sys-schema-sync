@@ -4,9 +4,9 @@ WITH cte_obj AS (
         JOIN sys.schemas s ON s.[schema_id] = o.[schema_id]
     WHERE o.is_ms_shipped = 0
 )
-SELECT _SchemaName = s.[name]
-    , _ObjectName = x.[name]
-    , _ObjectType = x.[type]
+SELECT _SchemaName = o.SchemaName
+    , _ObjectName = o.ObjectName
+    , _ObjectType = o.ObjectType
     , _ParentSchemaName = po.SchemaName
     , _ParentObjectName = po.ObjectName
     , _ParentObjectType = po.ObjectType
@@ -19,8 +19,8 @@ SELECT _SchemaName = s.[name]
     --
     , x.*
 FROM sys.foreign_keys x
-    JOIN sys.schemas s ON s.[schema_id] = x.[schema_id]
+    JOIN cte_obj o ON o.[object_id] = x.[object_id]
     JOIN cte_obj po ON po.[object_id] = x.parent_object_id
     JOIN cte_obj ro ON ro.[object_id] = x.referenced_object_id
     JOIN sys.indexes i ON i.[object_id] = x.referenced_object_id AND i.index_id = x.key_index_id
-WHERE x.is_ms_shipped = 0
+OPTION (RECOMPILE);

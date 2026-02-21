@@ -1,10 +1,30 @@
-SELECT _SchemaName = s.[name]
-    , _ObjectName = x.[name]
-    , _ObjectType = x.[type]
-    -- TODO: change hash to exclude volatile columns that don't need to be included (e.g., modify_date, create_date)
-    , _RowHash = CONVERT(binary(32), HASHBYTES('SHA2_256', (SELECT x.* FROM (SELECT NULL) n(n) FOR JSON AUTO)))
+DECLARE @rowhash_columns nvarchar(MAX);
+
+SELECT @rowhash_columns = STRING_AGG(CONVERT(nvarchar(MAX), 'x.'+QUOTENAME(sc.[name])), ', ') WITHIN GROUP (ORDER BY column_id)
+FROM sys.system_columns sc
+WHERE [object_id] = OBJECT_ID('sys.objects')
+    AND sc.[name] NOT IN ('create_date','modify_date','is_ms_shipped','type_desc'); -- exclude unecessary columns from rowhash calculation
+
+/* Template query */
+DECLARE @sql nvarchar(MAX) = '
+WITH cte_obj AS (
+    SELECT o.[object_id], ObjectType = o.[type], SchemaName = s.[name], ObjectName = o.[name]
+    FROM sys.objects o
+        JOIN sys.schemas s ON s.[schema_id] = o.[schema_id]
+    WHERE o.is_ms_shipped = 0
+)
+SELECT _SchemaName = o.SchemaName
+    , _ObjectName = o.ObjectName
+    , _ObjectType = o.ObjectType
+    , _RowHash = CONVERT(binary(32), HASHBYTES(''SHA2_256'', (SELECT {{x.rowhash_columns}} FOR JSON PATH)))
     --
     , x.*
 FROM sys.objects x
-    JOIN sys.schemas s ON s.[schema_id] = x.[schema_id]
-WHERE x.is_ms_shipped = 0;
+    JOIN cte_obj o ON o.[object_id] = x.[object_id]
+OPTION (RECOMPILE);
+';
+
+SELECT @sql = REPLACE(@sql, '{{x.rowhash_columns}}', @rowhash_columns);
+
+/* Run the query */
+EXEC sys.sp_executesql @stmt = @sql;

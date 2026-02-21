@@ -2,3 +2,4 @@ SELECT _RowHash = CONVERT(binary(32), HASHBYTES('SHA2_256', (SELECT x.* FROM (SE
     --
     , x.*
 FROM sys.configurations x
+OPTION (RECOMPILE);
