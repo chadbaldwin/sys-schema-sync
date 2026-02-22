@@ -16,9 +16,16 @@ BEGIN;
     -- Cleanup orphaned records from ItemNameProcess table
     ------------------------------------------------------------------------------
     EXEC dbo.usp_Raiserror '[%s] Start: Cleanup orphaned records from ItemNameProcess table', NULL, NULL, @ProcName; SET @ts = SYSUTCDATETIME();
-    DELETE import.ItemNameProcess
-    WHERE InsertDateUTC < DATEADD(MINUTE, -15, SYSUTCDATETIME());
-    EXEC dbo.usp_Raiserror '[%s] Done: Cleanup orphaned records from ItemNameProcess table', @ts, @@ROWCOUNT, @ProcName;
+    DECLARE @ts2 datetime2 = SYSUTCDATETIME(), @rc2 bigint;
+    WHILE (1=1)
+    BEGIN;
+        DELETE TOP(3000) import.ItemNameProcess WHERE InsertDateUTC < DATEADD(MINUTE, -15, SYSUTCDATETIME());
+        SET @rc2 = @@ROWCOUNT;
+        IF (@rc2 = 0) BEGIN; BREAK; END;
+        EXEC dbo.usp_Raiserror '[%s] Deleted batch', @ts2, @rc2, @ProcName; SET @ts2 = SYSUTCDATETIME();
+        WAITFOR DELAY '00:00:01';
+    END;
+    EXEC dbo.usp_Raiserror '[%s] Done:  Cleanup orphaned records from ItemNameProcess table', @ts, NULL, @ProcName;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
