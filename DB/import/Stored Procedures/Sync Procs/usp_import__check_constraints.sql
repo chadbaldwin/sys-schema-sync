@@ -57,10 +57,7 @@ BEGIN;
             ----------------------------------------
 
             ----------------------------------------
-            SET @TableName = 'import.ItemNameProcess';
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Delete', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            DELETE import.ItemNameProcess WHERE ProcessKey IN (@ProcessKey1, @ProcessKey2);
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Delete', @sw2, @@ROWCOUNT, @ProcName, @TableName;
+            EXEC import.usp_DeleteItemNameProcessByProcessKey @ProcessKey1, @ProcessKey2;
         END;
         ------------------------------------------------------------------------------
 
