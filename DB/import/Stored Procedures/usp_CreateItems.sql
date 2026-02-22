@@ -30,6 +30,8 @@ BEGIN;
                 SELECT _DatabaseID, SchemaName, ObjectName, ObjectType FROM dbo.[Object] WHERE _DatabaseID = @DatabaseID;
                 EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
 
+                SET @TableName = 'import.ItemNameProcess';
+                EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update _ObjectID', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
                 UPDATE x SET x._ObjectID = o._ObjectID
                 FROM import.ItemNameProcess x
                     JOIN dbo.[Object] o ON o._DatabaseID = x._DatabaseID
@@ -37,6 +39,7 @@ BEGIN;
                                        AND o.ObjectName  = x.ObjectName
                                        AND o.ObjectType  = x.ObjectType
                 WHERE x.ProcessKey = @ProcessKey;
+                EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update _ObjectID', @sw2, @@ROWCOUNT, @ProcName, @TableName;
             END;
             -------------------------------------
 
@@ -51,12 +54,15 @@ BEGIN;
                 SELECT _DatabaseID, _ObjectID, IndexName FROM dbo.[Index] WHERE _DatabaseID = @DatabaseID;
                 EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
 
+                SET @TableName = 'import.ItemNameProcess';
+                EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update _IndexID', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
                 UPDATE x SET x._IndexID = i._IndexID
                 FROM import.ItemNameProcess x
                     JOIN dbo.[Index] i ON i._DatabaseID = x._DatabaseID
                                       AND i._ObjectID   = x._ObjectID
                                       AND i.IndexName   = x.IndexName
                 WHERE x.ProcessKey = @ProcessKey;
+                EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update _IndexID', @sw2, @@ROWCOUNT, @ProcName, @TableName;
             END;
             -------------------------------------
 
@@ -71,22 +77,28 @@ BEGIN;
                 SELECT _DatabaseID, _ObjectID, ColumnName FROM dbo.[Column] WHERE _DatabaseID = @DatabaseID;
                 EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
 
+                SET @TableName = 'import.ItemNameProcess';
+                EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update _ColumnID', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
                 UPDATE x SET x._ColumnID = c._ColumnID
                 FROM import.ItemNameProcess x
                     JOIN dbo.[Column] c ON c._DatabaseID = x._DatabaseID
                                        AND c._ObjectID   = x._ObjectID
                                        AND c.ColumnName  = x.ColumnName
                 WHERE x.ProcessKey = @ProcessKey;
+                EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update _ColumnID', @sw2, @@ROWCOUNT, @ProcName, @TableName;
             END;
             -------------------------------------
 
             -------------------------------------
             IF EXISTS (SELECT * FROM import.ItemNameProcess WHERE ProcessKey = @ProcessKey AND ObjectDefinitionHash IS NOT NULL)
             BEGIN;
+                SET @TableName = 'import.ItemNameProcess';
+                EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update _ObjectDefinitionID', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
                 UPDATE x SET x._ObjectDefinitionID = od._ObjectDefinitionID
                 FROM import.ItemNameProcess x
                     JOIN dbo.ObjectDefinition od ON od.ObjectDefinitionHash = x.ObjectDefinitionHash
                 WHERE x.ProcessKey = @ProcessKey;
+                EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update _ObjectDefinitionID', @sw2, @@ROWCOUNT, @ProcName, @TableName;
             END;
         END;
         ------------------------------------------------------------------------------

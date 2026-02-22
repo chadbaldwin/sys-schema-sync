@@ -33,7 +33,7 @@ BEGIN;
         SET LastSyncChecksum = -1
     WHERE LastSyncTime < DATEADD(DAY, -7, SYSUTCDATETIME())
         AND LastSyncChecksum <> -1; -- Implicitly excluding NULLs
-    EXEC dbo.usp_Raiserror '[%s] Done: Force reset old sync object statuses to trigger a full re-sync', @ts, @@ROWCOUNT, @ProcName;
+    EXEC dbo.usp_Raiserror '[%s] Done:  Force reset old sync object statuses to trigger a full re-sync', @ts, @@ROWCOUNT, @ProcName;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
@@ -47,7 +47,7 @@ BEGIN;
             FROM dbo._sql_modules FOR SYSTEM_TIME ALL sm
             WHERE sm._ObjectDefinitionID = od._ObjectDefinitionID
         );
-    EXEC dbo.usp_Raiserror '[%s] Done: Cleanup orphaned ObjectDefinition records', @ts, @@ROWCOUNT, @ProcName;
+    EXEC dbo.usp_Raiserror '[%s] Done:  Cleanup orphaned ObjectDefinition records', @ts, @@ROWCOUNT, @ProcName;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
