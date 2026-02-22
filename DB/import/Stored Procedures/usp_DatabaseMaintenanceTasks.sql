@@ -7,7 +7,7 @@ BEGIN;
     SET XACT_ABORT ON;
     SET @Verbose = COALESCE(CONVERT(bit, SESSION_CONTEXT(N'Verbose')), @Verbose); EXEC sys.sp_set_session_context N'Verbose', @Verbose;
 
-    DECLARE @sw datetime2 = SYSUTCDATETIME(), @ts datetime2, @rc bigint = 0;
+    DECLARE @proc_sw datetime2 = SYSUTCDATETIME(), @ts datetime2, @rc bigint = 0;
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
     EXEC dbo.usp_Raiserror '[%s] Start', NULL, NULL, @ProcName;
     ------------------------------------------------------------------------------
@@ -70,6 +70,6 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    EXEC dbo.usp_Raiserror '[%s] Done', @sw, NULL, @ProcName;
+    EXEC dbo.usp_Raiserror '[%s] Done', @proc_sw, NULL, @ProcName;
 END;
 GO
