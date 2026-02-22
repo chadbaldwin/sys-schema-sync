@@ -1,4 +1,4 @@
-CREATE PROCEDURE import.usp_import__dm_db_index_usage_stats (
+CREATE PROC import.usp_import__dm_db_index_usage_stats (
     @DatabaseID int,
     @Dataset    import.import__dm_db_index_usage_stats READONLY,
     @Verbose    bit = 0
@@ -133,4 +133,3 @@ BEGIN;
         THROW; -- re-throw original error so that an exception is returned to the caller
     END CATCH;
 END;
-GO

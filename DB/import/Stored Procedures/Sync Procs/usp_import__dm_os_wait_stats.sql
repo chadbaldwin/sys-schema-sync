@@ -1,4 +1,4 @@
-CREATE PROCEDURE import.usp_import__dm_os_wait_stats (
+CREATE PROC import.usp_import__dm_os_wait_stats (
     @InstanceID int,
     @Dataset    import.import__dm_os_wait_stats READONLY,
     @Verbose    bit = 0
@@ -59,4 +59,3 @@ BEGIN;
     END CATCH;
 END;
 -- TODO: Convert to similar setup as sys.dm_db_index_usage_stats using delta table with temporal history.
-GO

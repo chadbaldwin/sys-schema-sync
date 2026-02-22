@@ -1,4 +1,4 @@
-CREATE PROCEDURE import.usp_import__databases (
+CREATE PROC import.usp_import__databases (
     @InstanceID int,
     @Dataset    import.import__databases READONLY,
     @Verbose    bit = 0
@@ -163,4 +163,3 @@ BEGIN;
         THROW; -- re-throw original error so that an exception is returned to the caller
     END CATCH;
 END;
-GO

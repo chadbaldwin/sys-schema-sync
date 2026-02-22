@@ -64,4 +64,3 @@ BEGIN;
     END CATCH;
 END;
 -- TODO: Add _BoundaryValue and supporting logic since partition_number is not sticky, but boundary values are.
-GO

@@ -63,4 +63,3 @@ BEGIN;
         THROW; -- re-throw original error so that an exception is returned to the caller
     END CATCH;
 END;
-GO

@@ -1,4 +1,4 @@
-CREATE PROCEDURE import.usp_import__master_files (
+CREATE PROC import.usp_import__master_files (
     @InstanceID int,
     @Dataset    import.import__master_files READONLY,
     @Verbose    bit = 0
@@ -98,4 +98,3 @@ BEGIN;
         THROW; -- re-throw original error so that an exception is returned to the caller
     END CATCH;
 END;
-GO

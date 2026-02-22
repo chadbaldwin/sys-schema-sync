@@ -1,4 +1,4 @@
-CREATE PROCEDURE import.usp_import__missing_indexes (
+CREATE PROC import.usp_import__missing_indexes (
     @DatabaseID int,
     @Dataset    import.import__missing_indexes READONLY,
     @Verbose    bit = 0
@@ -72,4 +72,3 @@ BEGIN;
         THROW; -- re-throw original error so that an exception is returned to the caller
     END CATCH;
 END;
-GO
