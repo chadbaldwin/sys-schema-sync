@@ -50,7 +50,7 @@ CREATE TABLE #prv (
     INDEX CIX CLUSTERED (data_space_id, partition_number)
 );
 
-INSERT #prv (data_space_id, partition_number, boundary_value)
+INSERT #prv WITH(TABLOCK) (data_space_id, partition_number, boundary_value)
 SELECT s.data_space_id, rv.boundary_id + f.boundary_value_on_right
     -- Convert boundary values to a lossless portable string value
     , CASE  -- Adapted from: https://github.com/chadbaldwin/SQL/blob/main/Scripts/Convert%20sql_variant%20to%20portable%20format.sql

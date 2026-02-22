@@ -5,7 +5,7 @@ CREATE TABLE #column_overrides (
     ColumnOverride nvarchar(MAX),
 );
 
-INSERT #column_overrides (ColumnName, ColumnOverride)
+INSERT #column_overrides WITH(TABLOCK) (ColumnName, ColumnOverride)
 VALUES ('default_value'
     , '[default_value] = CONVERT(nvarchar(MAX),
             CASE -- Adapted from: https://github.com/chadbaldwin/SQL/blob/main/Scripts/Convert%20sql_variant%20to%20portable%20format.sql

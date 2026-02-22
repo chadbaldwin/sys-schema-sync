@@ -210,7 +210,7 @@ BEGIN;
         -- Check for configuration issues
         ------------------------------------------
         -- Make sure everything is named properly before checking anything else
-        INSERT #issues (SyncObjectID, IssueDesc, Suggestion, ProperName)
+        INSERT #issues WITH(TABLOCK) (SyncObjectID, IssueDesc, Suggestion, ProperName)
         SELECT SyncObjectID = so.SyncObjectID
             , IssueDesc     = 'Bad ImportTable Name'
             , Suggestion    = 'Fix ImportTable name to follow naming convention'
@@ -241,7 +241,7 @@ BEGIN;
 
         ------------------------------------------
         -- Now that the names have been checked, make sure those objects exist
-        INSERT #issues (SyncObjectID, IssueDesc, Suggestion, ProperName)
+        INSERT #issues WITH(TABLOCK) (SyncObjectID, IssueDesc, Suggestion, ProperName)
         SELECT SyncObjectID = so.SyncObjectID
             , IssueDesc     = 'ImportTable does not exist in database'
             , Suggestion    = 'Create missing table'
@@ -268,7 +268,7 @@ BEGIN;
         ------------------------------------------
 
         ------------------------------------------
-        INSERT #issues (SyncObjectID, IssueDesc, Suggestion, ProperName)
+        INSERT #issues WITH(TABLOCK) (SyncObjectID, IssueDesc, Suggestion, ProperName)
         SELECT SyncObjectID = so.SyncObjectID
             , IssueDesc     = 'SyncObject changing levels with existing status records'
             , Suggestion    = 'Remove existing import.DatabaseSyncObjectStatus records before changing level'

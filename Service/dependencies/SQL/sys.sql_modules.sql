@@ -5,7 +5,7 @@ CREATE TABLE #column_overrides (
     ColumnOverride nvarchar(MAX),
 );
 
-INSERT #column_overrides (ColumnName, ColumnOverride)
+INSERT #column_overrides WITH(TABLOCK) (ColumnName, ColumnOverride)
 VALUES ('definition'
     , '[definition] = TRIM(CHAR(9)+CHAR(10)+CHAR(13)+CHAR(32) FROM x.[definition])');
 

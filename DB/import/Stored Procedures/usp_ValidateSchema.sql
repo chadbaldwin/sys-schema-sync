@@ -15,7 +15,7 @@ BEGIN;
 
     ------------------------------------------------------------------------------
     -- Check default constraint names
-    INSERT #naming_issues (SmellDesc, ObjectName, TypeDesc, CurrentName, ProperName, RenameScript)
+    INSERT #naming_issues WITH(TABLOCK) (SmellDesc, ObjectName, TypeDesc, CurrentName, ProperName, RenameScript)
     SELECT SmellDesc = 'BAD_CONSTRAINT_OR_INDEX_NAME', ObjectName = QUOTENAME(OBJECT_SCHEMA_NAME(dc.parent_object_id)) + '.' + QUOTENAME(OBJECT_NAME(dc.parent_object_id)), TypeDesc = dc.[type_desc], CurrentName = dc.[name], n.ProperName
         , RenameScript = CONCAT('EXEC sp_rename N''', SCHEMA_NAME(dc.[schema_id]), '.', dc.[name], ''', N''', n.ProperName, ''', N''OBJECT'';')
     FROM sys.default_constraints dc
@@ -26,7 +26,7 @@ BEGIN;
         AND dc.[name] COLLATE SQL_Latin1_General_CP1_CS_AS <> n.ProperName COLLATE SQL_Latin1_General_CP1_CS_AS;
 
     -- Check FK names
-    INSERT #naming_issues (SmellDesc, ObjectName, TypeDesc, CurrentName, ProperName, RenameScript)
+    INSERT #naming_issues WITH(TABLOCK) (SmellDesc, ObjectName, TypeDesc, CurrentName, ProperName, RenameScript)
     SELECT SmellDesc = 'BAD_CONSTRAINT_OR_INDEX_NAME', ObjectName = QUOTENAME(OBJECT_SCHEMA_NAME(fk.parent_object_id)) + '.' + QUOTENAME(OBJECT_NAME(fk.parent_object_id)), TypeDesc = fk.[type_desc], CurrentName = fk.[name], n.ProperName
         , RenameScript = CONCAT('EXEC sp_rename N''', SCHEMA_NAME(fk.[schema_id]), '.', fk.[name], ''', N''', n.ProperName, ''', N''OBJECT'';')
     FROM sys.foreign_keys fk
@@ -42,7 +42,7 @@ BEGIN;
         AND fk.[name] COLLATE SQL_Latin1_General_CP1_CS_AS <> n.ProperName COLLATE SQL_Latin1_General_CP1_CS_AS;
 
     -- Check index names
-    INSERT #naming_issues (SmellDesc, ObjectName, TypeDesc, CurrentName, ProperName, RenameScript)
+    INSERT #naming_issues WITH(TABLOCK) (SmellDesc, ObjectName, TypeDesc, CurrentName, ProperName, RenameScript)
     SELECT SmellDesc = 'BAD_CONSTRAINT_OR_INDEX_NAME', ObjectName = QUOTENAME(SCHEMA_NAME(o.[schema_id])) + '.' + QUOTENAME(o.[name]), TypeDesc = COALESCE(kc.[type_desc], 'INDEX'), CurrentName = i.[name], n.ProperName
         , RenameScript = CONCAT('EXEC sp_rename N''', SCHEMA_NAME(o.[schema_id]), '.', o.[name], '.', i.[name], ''', N''', n.ProperName, ''', N''INDEX'';')
     FROM sys.objects o
@@ -89,7 +89,7 @@ BEGIN;
 
     ------------------------------------------------------------------------------
     -- Check for heaps
-    INSERT #issues (SmellDesc, ObjectName)
+    INSERT #issues WITH(TABLOCK) (SmellDesc, ObjectName)
     SELECT SmellDesc = 'HEAP'
         , ObjectName = QUOTENAME(SCHEMA_NAME(o.[schema_id])) + '.' + QUOTENAME(o.[name])
     FROM sys.objects o
@@ -107,7 +107,7 @@ BEGIN;
     -- Check for columns missing constraints
     ------------------------------------------------------------------------------
     -- Common columns missing default constraints
-    INSERT #issues (SmellDesc, ObjectName, ColumnName)
+    INSERT #issues WITH(TABLOCK) (SmellDesc, ObjectName, ColumnName)
     SELECT SmellDesc = 'MISSING_DEFAULT_CONSTRAINT'
         , ObjectName = QUOTENAME(SCHEMA_NAME(t.[schema_id])) + '.' + QUOTENAME(t.[name])
         , ColumnName = c.[name]
@@ -118,7 +118,7 @@ BEGIN;
         AND c.default_object_id = 0;
 
     -- Common columns missing FK constraints
-    INSERT #issues (SmellDesc, ObjectName, ColumnName)
+    INSERT #issues WITH(TABLOCK) (SmellDesc, ObjectName, ColumnName)
     SELECT SmellDesc = 'MISSING_FOREIGN_KEY_CONSTRAINT'
         , ObjectName = QUOTENAME(SCHEMA_NAME(t.[schema_id])) + '.' + QUOTENAME(t.[name])
         , ColumnName = c.[name]
@@ -139,7 +139,7 @@ BEGIN;
     -- Other
     ------------------------------------------------------------------------------
     -- Usage of datetime datatype on non-synced columns
-    INSERT #issues (SmellDesc, ObjectName, ColumnName, DataType)
+    INSERT #issues WITH(TABLOCK) (SmellDesc, ObjectName, ColumnName, DataType)
     SELECT SmellDesc = 'DATETIME_DATATYPE_USED'
         , ObjectName = QUOTENAME(SCHEMA_NAME(t.[schema_id])) + '.' + QUOTENAME(t.[name])
         , ColumnName = c.[name]

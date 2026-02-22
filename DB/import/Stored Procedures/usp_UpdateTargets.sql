@@ -20,7 +20,7 @@ BEGIN;
         DatabaseName nvarchar(128) NOT NULL,
     );
 
-    INSERT #tmp_db (InstanceName, DatabaseName)
+    INSERT #tmp_db WITH(TABLOCK) (InstanceName, DatabaseName)
     SELECT d.InstanceName, d.DatabaseName
     FROM OPENJSON(@ServiceConfigJSON)
         WITH (
