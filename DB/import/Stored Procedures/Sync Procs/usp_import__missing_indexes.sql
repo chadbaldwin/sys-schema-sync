@@ -49,7 +49,7 @@ BEGIN;
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------
-        EXEC import.usp_RunCommonDUI @DatabaseID = 1, @CallingProcName = @ProcName, @TargetTable = 'dbo._missing_indexes', @DeletesEnabled = 0;
+        EXEC import.usp_RunCommonDUI @DatabaseID = @DatabaseID, @CallingProcName = @ProcName, @TargetTable = 'dbo._missing_indexes', @DeletesEnabled = 0;
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------
