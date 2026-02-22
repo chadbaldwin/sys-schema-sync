@@ -28,14 +28,15 @@ $PSDefaultParameterValues= @{
 $config = Get-Content -LiteralPath (Join-Path $current_path 'appsettings.jsonc') -Raw | ConvertFrom-Json -AsHashtable
 
 # Set configuration defaults
-$config.InstanceConcurrencyLimit      ??= 5
-$config.DatabaseConcurrencyLimit      ??= 1
-$config.VerboseLog                    ??= $false
-$config.EnableOpportunisticScheduling ??= $false
-$config.QueueProcessingBatchSize      ??= 100
-$config.LogDirectory                  ??= 'Logs'
-$config.LogRetentionDays              ??= 30
-$config.ScriptToRun                     = Get-Item -LiteralPath (Join-Path $current_path 'dependencies\sync_objects.ps1')
+$config.InstanceConcurrencyLimit         ??= 5
+$config.DatabaseConcurrencyLimit         ??= 1
+$config.VerboseLog                       ??= $false
+$config.OpportunisticSchedulingEnabled   ??= $false
+$config.OpportunisticSchedulingThreshold ??= 50
+$config.QueueProcessingBatchSize         ??= 100
+$config.LogDirectory                     ??= 'Logs'
+$config.LogRetentionDays                 ??= 30
+$config.ScriptToRun                        = Get-Item -LiteralPath (Join-Path $current_path 'dependencies\sync_objects.ps1')
 
 $logdir = mkdir (Join-Path $current_path $config.LogDirectory) -Force
 
@@ -105,6 +106,7 @@ try {
             -SqlParameter @{
                 Limit = $config.QueueProcessingBatchSize
                 OpportunisticSchedulingEnabled = $config.OpportunisticSchedulingEnabled
+                OpportunisticSchedulingThreshold = $config.OpportunisticSchedulingThreshold
             } |
         Group-Object InstanceName | ForEach-Object {
             [pscustomobject]@{

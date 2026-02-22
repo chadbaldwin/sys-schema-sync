@@ -5,6 +5,7 @@
   "VerboseLog": true,
 
   "OpportunisticSchedulingEnabled": true,
+  "OpportunisticSchedulingThreshold": 50,
   "QueueProcessingBatchSize": 500,
 
   // How many instances do we want to run syncs against in parallel
