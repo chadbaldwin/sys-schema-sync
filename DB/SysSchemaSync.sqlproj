@@ -255,6 +255,7 @@
     <Build Include="import\User Defined Types\Sync Types\import__trigger_events.sql" />
     <Build Include="import\Stored Procedures\usp_RunCommonDUI.sql" />
     <Build Include="import\Stored Procedures\usp_DeleteItemNameProcessByProcessKey.sql" />
+    <Build Include="import\Tables\Log.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="StaticCodeAnalysis.SuppressMessages.xml" />

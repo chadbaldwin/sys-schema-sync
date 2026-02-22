@@ -7,6 +7,7 @@ AS
 BEGIN;
     SET NOCOUNT, XACT_ABORT ON;
     EXEC sp_set_session_context N'Verbose', @Verbose;
+    EXEC sp_set_session_context N'_DatabaseID', @DatabaseID;
 
     DECLARE @sw datetime2 = SYSUTCDATETIME(), @sw2 datetime2, @TableName nvarchar(300);
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
