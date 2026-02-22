@@ -38,12 +38,7 @@ BEGIN;
             INSERT dbo._dm_os_wait_stats (_InstanceID, wait_type, waiting_tasks_count, wait_time_ms, max_wait_time_ms, signal_wait_time_ms)
             SELECT @InstanceID, wait_type, waiting_tasks_count, wait_time_ms, max_wait_time_ms, signal_wait_time_ms
             FROM @Dataset d
-            WHERE NOT EXISTS (
-                    SELECT *
-                    FROM dbo._dm_os_wait_stats x
-                    WHERE x._InstanceID = @InstanceID
-                        AND x.wait_type = d.wait_type
-                );
+            WHERE NOT EXISTS (SELECT * FROM dbo._dm_os_wait_stats x WHERE x._InstanceID = @InstanceID AND x.wait_type = d.wait_type);
             EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
         COMMIT;
         ------------------------------------------------------------------------------

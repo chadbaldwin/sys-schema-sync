@@ -78,12 +78,7 @@ BEGIN;
             SELECT @InstanceID, sd._DatabaseID, d._RowHash, d._DatabaseName, d.database_id, d.[file_id], d.file_guid, d.[type], d.[type_desc], d.data_space_id, d.[name], d.physical_name, d.[state], d.state_desc, d.size, d.max_size, d.growth, d.is_media_read_only, d.is_read_only, d.is_sparse, d.is_percent_growth, d.is_name_reserved, d.is_persistent_log_buffer, d.create_lsn, d.drop_lsn, d.read_only_lsn, d.read_write_lsn, d.differential_base_lsn, d.differential_base_guid, d.differential_base_time, d.redo_start_lsn, d.redo_start_fork_guid, d.redo_target_lsn, d.redo_target_fork_guid, d.backup_lsn, d.credential_id
             FROM @Dataset d
                 LEFT JOIN dbo.[Database] sd ON sd._InstanceID = @InstanceID AND sd.DatabaseName = d._DatabaseName -- Get _DatabaseID for ones we do sync
-            WHERE NOT EXISTS (
-                    SELECT *
-                    FROM dbo._master_files x
-                    WHERE x._InstanceID = @InstanceID
-                        AND x._DatabaseName = d._DatabaseName AND x.[file_id] = d.[file_id]
-                );
+            WHERE NOT EXISTS (SELECT * FROM dbo._master_files x WHERE x._InstanceID = @InstanceID AND x._DatabaseName = d._DatabaseName AND x.[file_id] = d.[file_id]);
             EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
         COMMIT;
         ------------------------------------------------------------------------------
