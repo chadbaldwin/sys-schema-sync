@@ -1,5 +1,6 @@
 ﻿CREATE PROC import.usp_RunCommonDUI (
-    @DatabaseID      int,
+    @InstanceID      int = NULL,
+    @DatabaseID      int = NULL,
     @CallingProcName nvarchar(500),
     @TargetTable     nvarchar(300),
     @DeletesEnabled  bit = 1,
@@ -14,7 +15,11 @@ BEGIN;
 
     BEGIN TRY
         EXEC dbo.usp_Raiserror '[%s] Start: Import Proc', NULL, NULL, @ProcName;
-        IF (@DatabaseID IS NULL) BEGIN; THROW 51000, 'Required parameter @DatabaseID is NULL', 1; END;
+
+        IF (COALESCE(@InstanceID, @DatabaseID) IS NULL AND @DeletesEnabled = 1)
+        BEGIN;
+            THROW 51000, 'Either @InstanceID or @DatabaseID must be provided when deletes are enabled', 1;
+        END;
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------
@@ -85,22 +90,31 @@ BEGIN;
                 EXEC dbo.usp_Raiserror ''[%s] [%s] Start: Delete'', NULL, NULL, @ProcName, @TableName; SET @sw = SYSUTCDATETIME();
                 DELETE x
                 FROM {{FQON}} x
-                WHERE x.[_DatabaseID] = @DatabaseID
+                WHERE 1=1
+                    {{InstanceIDFilter}}
+                    {{DatabaseIDFilter}}
                     AND NOT EXISTS (
                         SELECT *
                         FROM #Dataset d
                         WHERE {{JoinPredicates}}
                     );
-                EXEC dbo.usp_Raiserror ''[%s] [%s] Done: Delete'', @sw, @@ROWCOUNT, @ProcName, @TableName;'),
-                @template_update nvarchar(MAX) = TRIM(CHAR(13)+CHAR(10)+CHAR(32) FROM N'
+                EXEC dbo.usp_Raiserror ''[%s] [%s] Done: Delete'', @sw, @@ROWCOUNT, @ProcName, @TableName;');
+
+        SELECT @template_delete = REPLACE(@template_delete, '{{InstanceIDFilter}}', IIF(@InstanceID IS NOT NULL, 'AND x.[_InstanceID] = @InstanceID', ''));
+        SELECT @template_delete = REPLACE(@template_delete, '{{DatabaseIDFilter}}', IIF(@DatabaseID IS NOT NULL, 'AND x.[_DatabaseID] = @DatabaseID', ''));
+        ----------------------------------------
+
+        ----------------------------------------
+        DECLARE @template_update nvarchar(MAX) = TRIM(CHAR(13)+CHAR(10)+CHAR(32) FROM N'
                 EXEC dbo.usp_Raiserror ''[%s] [%s] Start: Update'', NULL, NULL, @ProcName, @TableName; SET @sw = SYSUTCDATETIME();
                 UPDATE x
                 SET {{UpdateSet}}
                 FROM {{FQON}} x
                     JOIN #Dataset d ON {{JoinPredicates}}
                 WHERE x.[_RowHash] <> d.[_RowHash];
-                EXEC dbo.usp_Raiserror ''[%s] [%s] Done: Update'', @sw, @@ROWCOUNT, @ProcName, @TableName;'),
-                @template_insert nvarchar(MAX) = TRIM(CHAR(13)+CHAR(10)+CHAR(32) FROM N'
+                EXEC dbo.usp_Raiserror ''[%s] [%s] Done: Update'', @sw, @@ROWCOUNT, @ProcName, @TableName;');
+
+        DECLARE @template_insert nvarchar(MAX) = TRIM(CHAR(13)+CHAR(10)+CHAR(32) FROM N'
                 EXEC dbo.usp_Raiserror ''[%s] [%s] Start: Insert'', NULL, NULL, @ProcName, @TableName; SET @sw = SYSUTCDATETIME();
                 INSERT {{FQON}} ({{InsertColumnList}})
                 SELECT {{InsertColumnSelectList}}
@@ -140,15 +154,17 @@ BEGIN;
         IF (@WhatIf = 1)
         BEGIN;
             SELECT SQLToRun = @sql;
-        END
+        END;
         ELSE
         BEGIN;
             EXEC sp_executesql @sql
                 , N'
+                    @InstanceID int,
                     @DatabaseID int,
                     @ProcName nvarchar(200),
                     @TableName nvarchar(200)
                 '
+                , @InstanceID = @InstanceID
                 , @DatabaseID = @DatabaseID
                 , @ProcName = @CallingProcName
                 , @TableName = @TargetTable;

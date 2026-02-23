@@ -1,6 +1,11 @@
-CREATE TABLE dbo._SERVERPROPERTY (
-    _InstanceID                        int           NOT NULL CONSTRAINT FK__SERVERPROPERTY__InstanceID REFERENCES dbo.[Instance] (_InstanceID), -- Covered by CIX
-    _CollectionDate                    datetime2     NOT NULL,
+CREATE TABLE dbo._SERVERPROPERTY_history (
+    _InstanceID                        int           NOT NULL,
+    --
+    _InsertDate                        datetime2     NOT NULL,
+    _ModifyDate                        datetime2     NOT NULL,
+    _RowHash                           binary(32)    NOT NULL,
+    _ValidFrom                         datetime2     NOT NULL,
+    _ValidTo                           datetime2     NOT NULL,
     --
     BuildClrVersion                    nvarchar(128)     NULL,
     Collation                          nvarchar(128)     NULL,
@@ -56,6 +61,74 @@ CREATE TABLE dbo._SERVERPROPERTY (
     SqlSortOrderName                   nvarchar(128)     NULL,
     SuspendedDatabaseCount             int               NULL,
 
-    CONSTRAINT CUQ__SERVERPROPERTY__InstanceID UNIQUE CLUSTERED (_InstanceID),
+    INDEX CIX__SERVERPROPERTY_history__ValidTo__ValidFrom CLUSTERED (_ValidTo, _ValidFrom) WITH (DATA_COMPRESSION = PAGE),
 );
+GO
+
+CREATE TABLE dbo._SERVERPROPERTY (
+    _InstanceID                        int           NOT NULL CONSTRAINT FK__SERVERPROPERTY__InstanceID REFERENCES dbo.[Instance] (_InstanceID), -- Covered by CIX
+    --
+    _InsertDate                        datetime2     NOT NULL CONSTRAINT DF__SERVERPROPERTY__InsertDate DEFAULT (SYSUTCDATETIME()),
+    _ModifyDate                        datetime2     NOT NULL CONSTRAINT DF__SERVERPROPERTY__ModifyDate DEFAULT (SYSUTCDATETIME()),
+    _RowHash                           binary(32)    NOT NULL,
+    _ValidFrom                         datetime2     GENERATED ALWAYS AS ROW START NOT NULL,
+    _ValidTo                           datetime2     GENERATED ALWAYS AS ROW END   NOT NULL,
+    --
+    BuildClrVersion                    nvarchar(128)     NULL,
+    Collation                          nvarchar(128)     NULL,
+    CollationID                        int               NULL,
+    ComparisonStyle                    int               NULL,
+    ComputerNamePhysicalNetBIOS        nvarchar(128)     NULL,
+    Edition                            nvarchar(128)     NULL,
+    EditionID                          int               NULL,
+    EngineEdition                      int               NULL,
+    FilestreamConfiguredLevel          int               NULL,
+    FilestreamEffectiveLevel           int               NULL,
+    FilestreamShareName                nvarchar(128)     NULL,
+    HadrManagerStatus                  int               NULL,
+    InstanceDefaultBackupPath          nvarchar(128)     NULL,
+    InstanceDefaultDataPath            nvarchar(128)     NULL,
+    InstanceDefaultLogPath             nvarchar(128)     NULL,
+    InstanceName                       nvarchar(128)     NULL,
+    IsAdvancedAnalyticsInstalled       int               NULL,
+    IsBigDataCluster                   int               NULL,
+    IsClustered                        int               NULL,
+    IsExternalAuthenticationOnly       int               NULL,
+    IsExternalGovernanceEnabled        int               NULL,
+    IsFullTextInstalled                int               NULL,
+    IsHadrEnabled                      int               NULL,
+    IsIntegratedSecurityOnly           int               NULL,
+    IsLocalDB                          int               NULL,
+    IsPolyBaseInstalled                int               NULL,
+    IsServerSuspendedForSnapshotBackup int               NULL,
+    IsSingleUser                       int               NULL,
+    IsTempDbMetadataMemoryOptimized    int               NULL,
+    IsXTPSupported                     int               NULL,
+    LCID                               int               NULL,
+    LicenseType                        nvarchar(128)     NULL,
+    MachineName                        nvarchar(128)     NULL,
+    NumLicenses                        int               NULL,
+    PathSeparator                      nvarchar(128)     NULL,
+    ProcessID                          int               NULL,
+    ProductBuild                       nvarchar(128)     NULL,
+    ProductBuildType                   nvarchar(128)     NULL,
+    ProductLevel                       nvarchar(128)     NULL,
+    ProductMajorVersion                nvarchar(128)     NULL,
+    ProductMinorVersion                nvarchar(128)     NULL,
+    ProductUpdateLevel                 nvarchar(128)     NULL,
+    ProductUpdateReference             nvarchar(128)     NULL,
+    ProductUpdateType                  nvarchar(128)     NULL,
+    ProductVersion                     nvarchar(128)     NULL,
+    ResourceLastUpdateDateTime         datetime          NULL,
+    ResourceVersion                    nvarchar(128)     NULL,
+    ServerName                         nvarchar(128)     NULL,
+    SqlCharSet                         tinyint           NULL,
+    SqlCharSetName                     nvarchar(128)     NULL,
+    SqlSortOrder                       tinyint           NULL,
+    SqlSortOrderName                   nvarchar(128)     NULL,
+    SuspendedDatabaseCount             int               NULL,
+
+    PERIOD FOR SYSTEM_TIME (_ValidFrom, _ValidTo),
+    CONSTRAINT CPK__SERVERPROPERTY__InstanceID PRIMARY KEY CLUSTERED (_InstanceID),
+) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = dbo._SERVERPROPERTY_history, DATA_CONSISTENCY_CHECK = ON, HISTORY_RETENTION_PERIOD = 6 MONTH));
 GO
