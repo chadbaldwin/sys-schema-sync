@@ -2,26 +2,30 @@
 
 <!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
 
-* [What is this, and how does it help?](#what-is-this-and-how-does-it-help)
-* [Primary Objective](#primary-objective)
-* [What this isn't](#what-this-isnt)
-* [Installation and Setup](#installation-and-setup)
-   + [First things first...Set up the configuration file](#first-things-firstset-up-the-configuration-file)
-   + [Publish the database](#publish-the-database)
-      - [Using the script](#using-the-script)
-      - [Using SSDT](#using-ssdt)
-   + [Configure the database](#configure-the-database)
-   + [Deploy the service](#deploy-the-service)
-   + [Schedule the service](#schedule-the-service)
-   + [Done](#done)
-* [Querying](#querying)
-   + [Example queries](#example-queries)
-      - [Helper Views](#helper-views)
-      - [Querying Objects](#querying-objects)
-      - [Instance Level Tables](#instance-level-tables)
-      - [Object Definitions](#object-definitions)
-* [Architecture and Configuration](#architecture-and-configuration)
-* [Helper procs](#helper-procs)
+- [What is this, and how does it help?](#what-is-this-and-how-does-it-help)
+- [Primary Objective](#primary-objective)
+- [What this isn't](#what-this-isnt)
+- [Installation and Setup](#installation-and-setup)
+   * [First things first...Set up the configuration file](#first-things-firstset-up-the-configuration-file)
+   * [Publish the database](#publish-the-database)
+      + [Using the script](#using-the-script)
+      + [Using SSDT](#using-ssdt)
+   * [Configure the database](#configure-the-database)
+   * [Deploy and schedule the service](#deploy-and-schedule-the-service)
+   * [Done](#done)
+- [Querying](#querying)
+   * [Example queries](#example-queries)
+      + [Helper Views](#helper-views)
+      + [Querying Objects](#querying-objects)
+      + [Instance Level Tables](#instance-level-tables)
+      + [Object Definitions](#object-definitions)
+- [Architecture / Configuration](#architecture-configuration)
+- [Helper procs](#helper-procs)
+- [Database Maintenance](#database-maintenance)
+- [Additional Notes](#additional-notes)
+   * [Temporal History (System-Versioned Tables)](#temporal-history-system-versioned-tables)
+   * [The `dw` Schema (Data Warehouse / Derived Data)](#the-dw-schema-data-warehouse-derived-data)
+   * [Internal Logging](#internal-logging)
 
 <!-- TOC end -->
 
@@ -95,7 +99,7 @@ EXAMPLE file:
   // Opportunistic scheduling allows the service to pick up more work if the queue is light or empty.
   // This helps use idle time to spread work out over time while also keeping the database a bit more up to date.
   // Note, this can be further controlled at the SyncObject level in the import.SyncObject table.
-  "EnableOpportunisticScheduling": true,
+  "OpportunisticSchedulingEnabled": true,
   // If the queue size falls below QueueProcessingBatchSize, this is the max number of additional sync items that will be added to the queue.
   // For example, if QueueProcessingBatchSize is set to 500 and there are only 200 items in the queue, then an additional 50 items will be added to the queue.
   "OpportunisticSchedulingThreshold": 50,
@@ -104,8 +108,8 @@ EXAMPLE file:
   "InstanceConcurrencyLimit": 5,
 
   // How many databases PER INSTANCE do we want to run syncs against in parallel?
-  // If Instance is set to 4 and Database is set to 2, then the highest number of concurrent processes possible is 8.
-  "DatabaseConcurrencyLimit": 2,
+  // If Instance is set to 5 and Database is set to 1, then the highest number of concurrent processes possible is 5.
+  "DatabaseConcurrencyLimit": 1,
 
   // Connection string pointing to the SysSchemaSync repository database
   "RepositoryDatabaseConnectionString": "Server=MYINSTANCE;Database=SysSchemaSync;MultiSubnetFailover=True;Application Name=SysSchemaSyncService"
@@ -135,20 +139,20 @@ The list of instances/databases to sync is handled via `targets.json`:
 ```json
 [
   {
-    "InstanceName": "Instance1",
-    "DatabaseName": "DBFoo"
+    "Instance": "Instance1",
+    "Database": "DBFoo"
   },
   {
-    "InstanceName": "Instance1",
-    "DatabaseName": "DBBar"
+    "Instance": "Instance1",
+    "Database": "DBBar"
   },
   {
-    "InstanceName": "Instance2",
-    "DatabaseName": "DBFoo"
+    "Instance": "Instance2",
+    "Database": "DBFoo"
   },
   {
-    "InstanceName": "Instance3",
-    "DatabaseName": "DBQux"
+    "Instance": "Instance3",
+    "Database": "DBQux"
   }
 ]
 ```
@@ -305,7 +309,7 @@ One special case to point out is how object definitions are handled. In order to
 -- Get the object definition of a specific stored procedure
 SELECT od.ObjectDefinition
 FROM vw_Object vo
-    JOIN dbo.sql_modules sm ON sm._ObjectID = vo._ObjectID
+    JOIN dbo._sql_modules sm ON sm._ObjectID = vo._ObjectID
     JOIN dbo.ObjectDefinition od ON od._ObjectDefinitionID = sm._ObjectDefinitionID
 WHERE vo.InstanceName = 'Instance1'
     AND vo.DatabaseName = 'DBFoo'
@@ -353,6 +357,10 @@ Both sync types require two things 1) a record in `import.SyncObject` and 2) a s
     * Controls whether that `SyncObject` is active. Disabling a sync does not delete the data, it only excludes it from the sync process.
   * `SyncStaleAgeMinutes`
     * The minimum amount of time that should pass before syncing that object again, there is no guarantee it will sync exactly at that interval, only that it will be placed in the queue once that amount of time has passed.
+  * `OpportunisticSchedulingEnabled`
+    * Controls whether this specific `SyncObject` is eligible for opportunistic scheduling (priority 4). Even if opportunistic scheduling is enabled globally in `appsettings.jsonc`, individual sync objects can be excluded by setting this to `0`. Defaults to `1` (enabled).
+  * `SyncOnZeroChecksum`
+    * Controls behavior when the calculated checksum is `0`. If set to `1` (default), the sync will still run even if the new checksum is zero. If set to `0`, a zero checksum is treated as "no changes" and the sync is skipped. Useful for delta style syncs like `dbo._sql_modules`, which only checks for changes after a point in time. If there are no changes, it will return a checksum of `0`. We want to treat this to mean "no changes", so we would set `SyncOnZeroChecksum` to `0` to avoid unnecessary syncs.
   * `ExportQueryPath` (optional)
     * An optional override query when the export is not a simple `SELECT *`. For example, filtering on `is_ms_shipped` or on `database_id`.
     * A `.sql` file needs to be created with the export query (ensuring backward compatibility for previous versions of SQL Server) and placed in the appropriate folder where the service is deployed.
@@ -369,18 +377,18 @@ Both sync types require two things 1) a record in `import.SyncObject` and 2) a s
     * A checksum query is highly recommended (if possible) to avoid unnecessary deletes and inserts every time the sync is run.
 * Complex - "Upload and execute"
   * Useful for syncs that require some pre-processing before merging. For example when syncing `sys.columns` where `dbo.[Object]` and `dbo.[Column]` records need to be added and soft deleted/undeleted.
-  * `ImportType`
-    * A user-defined table type which matches the query output and is passed into the configured `ImportProc`.
-    * Naming standard: `import.import_{sync table name}` (e.g. `import.import__objects`).
   * `ImportProc`
     * Stored procedure used for pre-processing and merging the result set into its target sync table.
+    * The proc must have a `@Dataset` parameter using a user-defined table type (TVP). The service automatically discovers the TVP type from the proc's `@Dataset` parameter at runtime — there is no need to configure it separately.
+    * TVP naming standard: `import.import_{sync table name}` (e.g. `import.import__objects`).
     * Required parameters:
       * `@DatabaseID` OR `@InstanceID` - depending on the `SyncObjectLevelID`
-      * `@Dataset` - using the configured `ImportType`
+      * `@Dataset` - a table-valued parameter matching the export query output
+      * `@Verbose` - `bit` flag for verbose logging. All externally referenced stored procedures should have a `@Verbose` parameter, which is then set in the `SESSION_CONTEXT` and used by the `usp_RaiseError` proc.
 
 Once all of these items are created and populated, the system will ensure (upon deployment) that everything is configured correctly. Any errors and the `SyncObject` record will not get created/updated.
 
-The service runs on a regular interval, for example, every 5 minutes. It checks in with `import.vw_DatabaseSyncObjectQueue` to see if there are any syncs which are now stale and need to be run. Checksum queries are run first to verify whether the sync can stop early otherwise the full sync is run.
+The service runs on a regular interval, for example, every 5 minutes. It calls `import.usp_GetDatabaseSyncObjectsToProcess` to get a prioritized batch of syncs to run. Priorities range from 0–4: Manual resets (0), New syncs (1), Aging syncs (2), Forced re-syncs (3), and Opportunistic (4). Checksum queries are run first to verify whether the sync can stop early otherwise the full sync is run.
 
 Checksums, sync times and caught exceptions are tracked in `import.DatabaseSyncObjectStatus`.
 
@@ -394,3 +402,66 @@ There are two helper procs to assist in resetting SyncObjects and trigger them t
   * Allows you to specify a SyncObjectID, InstanceID and/or DatabaseID to reset all matching SyncObjects for.
 * `import.usp_DatabaseSyncObjectStatus_Reset_Friendly`
   * Same as `import.usp_DatabaseSyncObjectStatus_Reset` except the parameters accept strings such as SyncObjectName, InstanceName and DatabaseName. This helps make it easier to perform resets without having to constantly look up their IDs.
+
+----
+
+## Database Maintenance
+
+A maintenance script is provided at `/Service/run_database_maintenance.ps1` which calls `import.usp_DatabaseMaintenanceTasks`. This proc handles several housekeeping tasks:
+
+* **Cleanup orphaned `ItemNameProcess` records** — Removes records older than 15 minutes from the staging table used during complex imports.
+* **Force re-sync of stale data** — Sets `LastSyncChecksum = -1` for any sync statuses where `LastSyncTime` is older than 7 days, forcing a full re-sync regardless of checksum.
+* **Cleanup orphaned `ObjectDefinition` records** — Removes definition records that are no longer referenced by any `_sql_modules` entry (including temporal history).
+* **Cleanup old logs** — Purges `import.Log` entries older than 30 days.
+
+It is recommended to schedule this script to run periodically (e.g., daily) alongside the main sync service.
+
+NOTE: For now, all thresholds and limits are hardcoded in the proc, but in the future, these may be moved to a configuration table and/or appsettings properties to allow for easier adjustments without needing to modify the proc code.
+
+----
+
+## Additional Notes
+
+### Temporal History (System-Versioned Tables)
+
+Many sync tables in this database use SQL Server system-versioning (temporal tables) with automatic history retention. This means you can query historical snapshots of synced data over time using the `FOR SYSTEM_TIME` clause.
+
+To find which tables support system-versioning and their configured retention periods:
+
+```sql
+SELECT TableName        = QUOTENAME(SCHEMA_NAME(t.[schema_id])) + '.' + QUOTENAME(t.[name])
+    ,  HistoryTableName = QUOTENAME(OBJECT_SCHEMA_NAME(t.history_table_id)) + '.' + QUOTENAME(OBJECT_NAME(t.history_table_id))
+    ,  RetentionPeriod  = CONCAT(t.history_retention_period, ' ', t.history_retention_period_unit_desc)
+FROM sys.tables t
+WHERE t.temporal_type = 2 -- SYSTEM_VERSIONED_TEMPORAL_TABLE
+ORDER BY TableName;
+```
+
+Example — querying all historical versions of a stored procedure's definition:
+
+```sql
+SELECT sm.*, od.ObjectDefinition
+FROM dbo._sql_modules FOR SYSTEM_TIME ALL sm
+    JOIN dbo.ObjectDefinition od ON od._ObjectDefinitionID = sm._ObjectDefinitionID
+WHERE sm._ObjectID = @ObjectID
+ORDER BY sm._ValidFrom DESC;
+```
+
+### The `dw` Schema (Data Warehouse / Derived Data)
+
+The `dw` schema is used to store derived and calculated data that goes beyond what the raw sync tables provide. This includes things like delta calculations and historical retention for statistics-style data that would otherwise only represent a point-in-time snapshot.
+
+Currently, the `dw` schema contains "delta" tables for index statistics:
+
+* `dw._dm_db_index_usage_stats_delta` — Calculates the difference in index usage counters (seeks, scans, lookups, updates) between each sync snapshot.
+* `dw._dm_db_index_operational_stats_delta` — Calculates the difference in operational stats counters (lock waits, latch waits, leaf operations, etc.) between each sync snapshot.
+
+These delta tables work by comparing the current snapshot against the previous one. When the underlying stats are reset (e.g., due to a SQL Server restart, index rebuild, etc.), the delta proc detects this and adjusts accordingly.
+
+Each delta table is itself a system-versioned temporal table (with 180-day history retention), so prior snapshots are automatically preserved. This means you can trend index usage over time — for example, identifying which indexes are seeing increasing or decreasing activity over weeks or months.
+
+The history tables for deltas use clustered columnstore indexes for efficient storage and analytical queries.
+
+### Internal Logging
+
+The `import.Log` table captures operational log messages from import stored procedures (row counts, timings, etc.). These logs are automatically purged after 30 days by the maintenance proc. This can be useful for troubleshooting sync issues at the database level.
