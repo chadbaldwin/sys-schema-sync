@@ -79,95 +79,100 @@ BEGIN;
             CROSS APPLY (SELECT ColName = QUOTENAME(c.[name])) x
         WHERE o.[object_id] = @ObjectID;
 
-        SELECT @UpdateSet             = STRING_AGG(CONVERT(nvarchar(MAX), IIF(ExcludeFromUpdate = 1, NULL, c.UpdateLine)), CHAR(13)+CHAR(10)+N'              , ') WITHIN GROUP (ORDER BY c.column_id)
+        SELECT @UpdateSet             = STRING_AGG(CONVERT(nvarchar(MAX), IIF(ExcludeFromUpdate = 1, NULL, c.UpdateLine)), CHAR(13)+CHAR(10)+N'                  , ') WITHIN GROUP (ORDER BY c.column_id)
             , @InsertColumnList       = STRING_AGG(CONVERT(nvarchar(MAX), IIF(ExcludeFromInsert = 1, NULL, c.InsertCol))   , N', ') WITHIN GROUP (ORDER BY c.column_id)
             , @InsertColumnSelectList = STRING_AGG(CONVERT(nvarchar(MAX), IIF(ExcludeFromInsert = 1, NULL, c.InsertSelect)), N', ') WITHIN GROUP (ORDER BY c.column_id)
         FROM #tmpCols c;
         ----------------------------------------
 
         ----------------------------------------
-        DECLARE @template_delete nvarchar(MAX) = TRIM(CHAR(13)+CHAR(10)+CHAR(32) FROM N'
-                EXEC dbo.usp_Raiserror ''[%s] [%s] Start: Delete'', NULL, NULL, @ProcName, @TableName; SET @sw = SYSUTCDATETIME();
+        -- Prepare delete script
+        ----------------------------------------
+        IF (@DeletesEnabled = 1)
+        BEGIN;
+            DECLARE @template_delete nvarchar(MAX) = TRIM(CHAR(13)+CHAR(10)+CHAR(32) FROM N'
                 DELETE x
                 FROM {{FQON}} x
-                WHERE 1=1
+                WHERE NOT EXISTS (SELECT * FROM #Dataset d WHERE {{JoinPredicates}})
                     {{InstanceIDFilter}}
                     {{DatabaseIDFilter}}
-                    AND NOT EXISTS (
-                        SELECT *
-                        FROM #Dataset d
-                        WHERE {{JoinPredicates}}
-                    );
-                EXEC dbo.usp_Raiserror ''[%s] [%s] Done: Delete'', @sw, @@ROWCOUNT, @ProcName, @TableName;');
+                ;
+            ');
 
-        SELECT @template_delete = REPLACE(@template_delete, '{{InstanceIDFilter}}', IIF(@InstanceID IS NOT NULL, 'AND x.[_InstanceID] = @InstanceID', ''));
-        SELECT @template_delete = REPLACE(@template_delete, '{{DatabaseIDFilter}}', IIF(@DatabaseID IS NOT NULL, 'AND x.[_DatabaseID] = @DatabaseID', ''));
+            SELECT @template_delete = REPLACE(@template_delete, '{{FQON}}'          , @FQON)
+                ,  @template_delete = REPLACE(@template_delete, '{{JoinPredicates}}', @JoinPredicates)
+                --
+                ,  @template_delete = REPLACE(@template_delete, '{{InstanceIDFilter}}', IIF(@InstanceID IS NOT NULL, 'AND x.[_InstanceID] = @InstanceID', ''))
+                ,  @template_delete = REPLACE(@template_delete, '{{DatabaseIDFilter}}', IIF(@DatabaseID IS NOT NULL, 'AND x.[_DatabaseID] = @DatabaseID', ''));
+        END;
         ----------------------------------------
 
+        ----------------------------------------
+        -- Prepare update script
         ----------------------------------------
         DECLARE @template_update nvarchar(MAX) = TRIM(CHAR(13)+CHAR(10)+CHAR(32) FROM N'
-                EXEC dbo.usp_Raiserror ''[%s] [%s] Start: Update'', NULL, NULL, @ProcName, @TableName; SET @sw = SYSUTCDATETIME();
-                UPDATE x
-                SET {{UpdateSet}}
-                FROM {{FQON}} x
-                    JOIN #Dataset d ON {{JoinPredicates}}
-                WHERE x.[_RowHash] <> d.[_RowHash];
-                EXEC dbo.usp_Raiserror ''[%s] [%s] Done: Update'', @sw, @@ROWCOUNT, @ProcName, @TableName;');
+            UPDATE x
+            SET {{UpdateSet}}
+            FROM {{FQON}} x
+                JOIN #Dataset d ON {{JoinPredicates}}
+            WHERE 1=1
+                {{RowHashCompare}}
+            ;
+        ');
 
+        -- If _RowHash doesn't exist, then every row will be updated whether there are changes or not.
+        -- Typically used by the delta table feeds since we want to record snapshots even when the row hasn't changed.
+        SELECT @template_update = REPLACE(@template_update, '{{FQON}}'          , @FQON)
+            ,  @template_update = REPLACE(@template_update, '{{JoinPredicates}}', @JoinPredicates)
+            --
+            ,  @template_update = REPLACE(@template_update, '{{RowHashCompare}}', IIF(COLUMNPROPERTY(@ObjectID, '_RowHash', 'ColumnId') IS NOT NULL, 'AND x.[_RowHash] <> d.[_RowHash]', ''))
+            ,  @template_update = REPLACE(@template_update, '{{UpdateSet}}'     , @UpdateSet);
+        ----------------------------------------
+
+        ----------------------------------------
+        -- Prepare insert script
+        ----------------------------------------
         DECLARE @template_insert nvarchar(MAX) = TRIM(CHAR(13)+CHAR(10)+CHAR(32) FROM N'
-                EXEC dbo.usp_Raiserror ''[%s] [%s] Start: Insert'', NULL, NULL, @ProcName, @TableName; SET @sw = SYSUTCDATETIME();
-                INSERT {{FQON}} ({{InsertColumnList}})
-                SELECT {{InsertColumnSelectList}}
-                FROM #Dataset d
-                WHERE NOT EXISTS (
-                        SELECT *
-                        FROM {{FQON}} x
-                        WHERE {{JoinPredicates}}
-                    );
-                EXEC dbo.usp_Raiserror ''[%s] [%s] Done: Insert'', @sw, @@ROWCOUNT, @ProcName, @TableName;');
-        ----------------------------------------
+            INSERT {{FQON}} ({{InsertColumnList}})
+            SELECT {{InsertColumnSelectList}}
+            FROM #Dataset d
+            WHERE NOT EXISTS (SELECT * FROM {{FQON}} x WHERE {{JoinPredicates}});
+        ');
 
-        ----------------------------------------
-        DECLARE @sql nvarchar(MAX);
-        SELECT @sql = N'
-            BEGIN TRAN;
-                DECLARE @sw datetime2(7);
-                {{delete}}
-                {{update}}
-                {{insert}}
-            COMMIT;'
-            ----
-            ,  @sql = REPLACE(@sql, '{{delete}}'                , IIF(@DeletesEnabled = 1, @template_delete, ''))
-            ,  @sql = REPLACE(@sql, '{{update}}'                , @template_update)
-            ,  @sql = REPLACE(@sql, '{{insert}}'                , @template_insert)
-            ----
-            ,  @sql = REPLACE(@sql, '{{FQON}}'                  , @FQON)
-            ,  @sql = REPLACE(@sql, '{{JoinPredicates}}'        , @JoinPredicates)
-            ,  @sql = REPLACE(@sql, '{{UpdateSet}}'             , @UpdateSet)
-            ,  @sql = REPLACE(@sql, '{{InsertColumnList}}'      , @InsertColumnList)
-            ,  @sql = REPLACE(@sql, '{{InsertColumnSelectList}}', @InsertColumnSelectList)
-            ----
-            ,  @sql = TRIM(CHAR(13)+CHAR(10) FROM @sql);
+        SELECT @template_insert = REPLACE(@template_insert, '{{FQON}}'                  , @FQON)
+            ,  @template_insert = REPLACE(@template_insert, '{{JoinPredicates}}'        , @JoinPredicates)
+            --
+            ,  @template_insert = REPLACE(@template_insert, '{{InsertColumnList}}'      , @InsertColumnList)
+            ,  @template_insert = REPLACE(@template_insert, '{{InsertColumnSelectList}}', @InsertColumnSelectList);
         ----------------------------------------
 
         ----------------------------------------
         IF (@WhatIf = 1)
         BEGIN;
-            SELECT SQLToRun = @sql;
+            SELECT DeleteScript = IIF(@DeletesEnabled = 1, @template_delete, NULL)
+                ,  UpdateScript = @template_update
+                ,  InsertScript = @template_insert;
         END;
         ELSE
         BEGIN;
-            EXEC sp_executesql @sql
-                , N'
-                    @InstanceID int,
-                    @DatabaseID int,
-                    @ProcName nvarchar(200),
-                    @TableName nvarchar(200)
-                '
-                , @InstanceID = @InstanceID
-                , @DatabaseID = @DatabaseID
-                , @ProcName = @CallingProcName
-                , @TableName = @TargetTable;
+            DECLARE @sw datetime2 = SYSUTCDATETIME();
+
+            BEGIN TRAN;
+                IF (@DeletesEnabled = 1)
+                BEGIN;
+                    EXEC dbo.usp_Raiserror '[%s] [%s] Start: Delete', NULL, NULL, @CallingProcName, @TargetTable;
+                    EXEC sp_executesql @template_delete, N'@InstanceID int, @DatabaseID int', @InstanceID = @InstanceID, @DatabaseID = @DatabaseID;
+                    EXEC dbo.usp_Raiserror '[%s] [%s] Done: Delete', @sw, @@ROWCOUNT, @CallingProcName, @TargetTable;
+                END;
+
+                EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update', NULL, NULL, @CallingProcName, @TargetTable;
+                EXEC sp_executesql @template_update, N'@InstanceID int, @DatabaseID int', @InstanceID = @InstanceID, @DatabaseID = @DatabaseID;
+                EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update', @sw, @@ROWCOUNT, @CallingProcName, @TargetTable;
+
+                EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @CallingProcName, @TargetTable;
+                EXEC sp_executesql @template_insert, N'@InstanceID int, @DatabaseID int', @InstanceID = @InstanceID, @DatabaseID = @DatabaseID;
+                EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw, @@ROWCOUNT, @CallingProcName, @TargetTable;
+            COMMIT;
         END;
         ------------------------------------------------------------------------------
 

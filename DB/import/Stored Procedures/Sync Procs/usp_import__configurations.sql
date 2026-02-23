@@ -18,42 +18,22 @@ BEGIN;
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------
-        BEGIN TRAN;
-            SET @TableName = N'dbo._configurations';
-
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Delete', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            DELETE x FROM dbo._configurations x
-            WHERE x._InstanceID = @InstanceID
-                AND NOT EXISTS (SELECT * FROM @Dataset d WHERE d.configuration_id = x.configuration_id);
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Delete', @sw2, @@ROWCOUNT, @ProcName, @TableName;
-
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            UPDATE x
-            SET   x._ModifyDate      = SYSUTCDATETIME()
-                , x._RowHash         = d._RowHash
-                --
-                , x.configuration_id = d.configuration_id
-                , x.[name]           = d.[name]
-                , x.[value]          = d.[value]
-                , x.minimum          = d.minimum
-                , x.maximum          = d.maximum
-                , x.value_in_use     = d.value_in_use
-                , x.[description]    = d.[description]
-                , x.is_dynamic       = d.is_dynamic
-                , x.is_advanced      = d.is_advanced
-            FROM dbo._configurations x
-                JOIN @Dataset d ON d.configuration_id = x.configuration_id
-            WHERE x._InstanceID = @InstanceID
-                AND x._RowHash <> d._RowHash;
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update', @sw2, @@ROWCOUNT, @ProcName, @TableName;
-
+        BEGIN;
+            SET @TableName = '#Dataset';
             EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            INSERT dbo._configurations (_InstanceID, _RowHash, configuration_id, [name], [value], minimum, maximum, value_in_use, [description], is_dynamic, is_advanced)
+            SELECT TOP (0) * INTO #Dataset FROM dbo._configurations;
+            EXEC sys.sp_executesql @stmt = N'ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate, COLUMN IF EXISTS _ModifyDate, COLUMN IF EXISTS _ValidFrom, COLUMN IF EXISTS _ValidTo;';
+            CREATE CLUSTERED INDEX CIX ON #Dataset (_InstanceID, configuration_id);
+
+            INSERT #Dataset WITH(TABLOCK) (_InstanceID, _RowHash, configuration_id, [name], [value], minimum, maximum, value_in_use, [description], is_dynamic, is_advanced)
             SELECT @InstanceID, d._RowHash, d.configuration_id, d.[name], d.[value], d.minimum, d.maximum, d.value_in_use, d.[description], d.is_dynamic, d.is_advanced
             FROM @Dataset d
-            WHERE NOT EXISTS (SELECT * FROM dbo._configurations x WHERE x._InstanceID = @InstanceID AND x.configuration_id = d.configuration_id);
             EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
-        COMMIT;
+        END;
+        ------------------------------------------------------------------------------
+
+        ------------------------------------------------------------------------------
+        EXEC import.usp_RunCommonDUI @InstanceID = @InstanceID, @CallingProcName = @ProcName, @TargetTable = 'dbo._configurations';
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------
