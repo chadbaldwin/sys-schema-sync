@@ -175,6 +175,8 @@ Copy the "Service" directory wherever you plan to host the service as you will n
 
 The scheduled task should call `/Service/database_parallel_runner.ps1`. I recommend running it every 1-5 minutes for larger installations with hundreds of databases. You can run it as often as you like, but the process will only pick up items which are ready to run from the queue in batches. If there's nothing to do, it will almost immediately close.
 
+It's also a good idea to set up a separate scheduled job to run `/Service/run_database_maintenance.ps1` on a regular basis (e.g., daily). See [Database Maintenance](#database-maintenance) for details.
+
 > TODO: In the future possibly include a script to set up the scheduled task automatically?
 
 ### Done
