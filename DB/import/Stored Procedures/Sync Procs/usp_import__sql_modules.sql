@@ -70,9 +70,11 @@ BEGIN;
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------
-        /*  For some reason, SQL Server stores database level items, like database triggers, in sys.sql_modules
-            Because of this, when the full import for sys.objects runs, it sees those as missing and marks them
-            as deleted. So instead, we exclude them from the normal delete process and handle them here.
+        /*  For some reason, SQL Server stores database level items, like database triggers, in sys.sql_modules.
+
+            Because of this, when the full import for sys.objects runs, it sees those database level objects as
+            missing and marks them as deleted. So instead we exclude them from the normal delete process and
+            handle them here.
 
             The normal undelete process isn't affected though since they are still created/imported the same way.
         */
@@ -96,36 +98,7 @@ BEGIN;
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------
-        SET @TableName = 'dbo._sql_modules'
-        BEGIN TRAN;
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            UPDATE x
-            SET   x._ModifyDate             = SYSUTCDATETIME()
-                , x._RowHash                = d._RowHash
-                , x.[object_id]             = d.[object_id]
-                , x._ObjectDefinitionID     = d._ObjectDefinitionID
-                , x.uses_ansi_nulls         = d.uses_ansi_nulls
-                , x.uses_quoted_identifier  = d.uses_quoted_identifier
-                , x.is_schema_bound         = d.is_schema_bound
-                , x.uses_database_collation = d.uses_database_collation
-                , x.is_recompiled           = d.is_recompiled
-                , x.null_on_null_input      = d.null_on_null_input
-                , x.execute_as_principal_id = d.execute_as_principal_id
-                , x.uses_native_compilation = d.uses_native_compilation
-                , x.inline_type             = d.inline_type
-                , x.is_inlineable           = d.is_inlineable
-            FROM dbo._sql_modules x
-                JOIN #Dataset d ON d._DatabaseID = x._DatabaseID AND d._ObjectID = x._ObjectID
-            WHERE (x._RowHash <> d._RowHash OR x._ObjectDefinitionID <> d._ObjectDefinitionID);
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update', @sw2, @@ROWCOUNT, @ProcName, @TableName;
-
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            INSERT dbo._sql_modules (_DatabaseID, _ObjectID, _RowHash, [object_id], _ObjectDefinitionID, uses_ansi_nulls, uses_quoted_identifier, is_schema_bound, uses_database_collation, is_recompiled, null_on_null_input, execute_as_principal_id, uses_native_compilation, inline_type, is_inlineable)
-            SELECT d._DatabaseID, d._ObjectID, d._RowHash, d.[object_id], d._ObjectDefinitionID, d.uses_ansi_nulls, d.uses_quoted_identifier, d.is_schema_bound, d.uses_database_collation, d.is_recompiled, d.null_on_null_input, d.execute_as_principal_id, d.uses_native_compilation, d.inline_type, d.is_inlineable
-            FROM #Dataset d
-            WHERE NOT EXISTS (SELECT * FROM dbo._sql_modules x WHERE x._DatabaseID = d._DatabaseID AND x._ObjectID = d._ObjectID);
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
-        COMMIT;
+        EXEC import.usp_RunCommonDUI @DatabaseID = @DatabaseID, @CallingProcName = @ProcName, @TargetTable = 'dbo._sql_modules';
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------

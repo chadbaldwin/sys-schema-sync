@@ -81,12 +81,11 @@ BEGIN;
             /*  Deletes here are okay because the export query left joins to sys.dm_db_index_usage_stats
                 so it will always return every index. The only time indexes will be deleted is when
                 they have been completely dropped from the database and never re-created. */
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Delete', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            DELETE x FROM dbo._dm_db_index_usage_stats x
-            WHERE x._DatabaseID = @DatabaseID
-                AND NOT EXISTS (SELECT * FROM #Dataset d WHERE d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID);
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Delete', @sw2, @@ROWCOUNT, @ProcName, @TableName;
+            -- Common delete only
+            EXEC import.usp_RunCommonDUI @DatabaseID = @DatabaseID, @CallingProcName = @ProcName, @TargetTable = @TableName, @DeletesEnabled = 1, @UpdatesEnabled = 0, @InsertsEnabled = 0;
 
+            /*  Special case for not using import.usp_RunCommonDUI
+                This update deviates from the common pattern since we want last_* columns to bubble up to the top rather than getting set to null. */
             EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
             UPDATE x
             SET x.EstimatedStatsBeginTime = d.EstimatedStatsBeginTime
@@ -114,12 +113,8 @@ BEGIN;
                 JOIN #Dataset d ON d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID
             EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update', @sw2, @@ROWCOUNT, @ProcName, @TableName;
 
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            INSERT dbo._dm_db_index_usage_stats (_DatabaseID, _IndexID, EstimatedStatsBeginTime, StatsEndTime, database_id, [object_id], index_id, user_seeks, user_scans, user_lookups, user_updates, last_user_seek_utc, last_user_scan_utc, last_user_lookup_utc, last_user_update_utc, system_seeks, system_scans, system_lookups, system_updates, last_system_seek_utc, last_system_scan_utc, last_system_lookup_utc, last_system_update_utc)
-            SELECT d._DatabaseID, d._IndexID, d.EstimatedStatsBeginTime, d.StatsEndTime, d.database_id, d.[object_id], d.index_id, d.user_seeks, d.user_scans, d.user_lookups, d.user_updates, d.last_user_seek_utc, d.last_user_scan_utc, d.last_user_lookup_utc, d.last_user_update_utc, d.system_seeks, d.system_scans, d.system_lookups, d.system_updates, d.last_system_seek_utc, d.last_system_scan_utc, d.last_system_lookup_utc, d.last_system_update_utc
-            FROM #Dataset d
-            WHERE NOT EXISTS (SELECT * FROM dbo._dm_db_index_usage_stats x WHERE d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID);
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
+            -- Common insert only
+            EXEC import.usp_RunCommonDUI @DatabaseID = @DatabaseID, @CallingProcName = @ProcName, @TargetTable = @TableName, @DeletesEnabled = 0, @UpdatesEnabled = 0, @InsertsEnabled = 1;
         COMMIT;
         ------------------------------------------------------------------------------
 

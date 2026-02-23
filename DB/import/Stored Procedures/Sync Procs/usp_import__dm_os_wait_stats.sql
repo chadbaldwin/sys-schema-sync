@@ -18,9 +18,26 @@ BEGIN;
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------
+        BEGIN;
+            SET @TableName = '#Dataset';
+            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
+            SELECT TOP (0) * INTO #Dataset FROM dbo._dm_os_wait_stats;
+            EXEC sys.sp_executesql @stmt = N'ALTER TABLE #Dataset DROP COLUMN IF EXISTS _InsertDate, COLUMN IF EXISTS _ModifyDate, COLUMN IF EXISTS _ValidFrom, COLUMN IF EXISTS _ValidTo;';
+            CREATE CLUSTERED INDEX CIX ON #Dataset (_InstanceID, wait_type);
+
+            INSERT #Dataset WITH(TABLOCK) (_InstanceID, wait_type, waiting_tasks_count, wait_time_ms, max_wait_time_ms, signal_wait_time_ms)
+            SELECT @InstanceID, d.wait_type, d.waiting_tasks_count, d.wait_time_ms, d.max_wait_time_ms, d.signal_wait_time_ms
+            FROM @Dataset d
+            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
+        END;
+        ------------------------------------------------------------------------------
+
+        ------------------------------------------------------------------------------
         BEGIN TRAN;
             SET @TableName = N'dbo._dm_os_wait_stats';
 
+            /*  Special case for not using import.usp_RunCommonDUI
+                This update deviates from the common pattern since we want to set missing wait types to 0 instead of deleting */
             EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
             UPDATE x
             SET   x._ModifyDate         = SYSUTCDATETIME()
@@ -30,16 +47,12 @@ BEGIN;
                 , x.max_wait_time_ms    = COALESCE(d.max_wait_time_ms, 0)
                 , x.signal_wait_time_ms = COALESCE(d.signal_wait_time_ms, 0)
             FROM dbo._dm_os_wait_stats x
-                LEFT JOIN @Dataset d ON d.wait_type = x.wait_type
+                LEFT JOIN #Dataset d ON d._InstanceID = x._InstanceID AND d.wait_type = x.wait_type
             WHERE x._InstanceID = @InstanceID;
             EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update', @sw2, @@ROWCOUNT, @ProcName, @TableName;
 
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
-            INSERT dbo._dm_os_wait_stats (_InstanceID, wait_type, waiting_tasks_count, wait_time_ms, max_wait_time_ms, signal_wait_time_ms)
-            SELECT @InstanceID, wait_type, waiting_tasks_count, wait_time_ms, max_wait_time_ms, signal_wait_time_ms
-            FROM @Dataset d
-            WHERE NOT EXISTS (SELECT * FROM dbo._dm_os_wait_stats x WHERE x._InstanceID = @InstanceID AND x.wait_type = d.wait_type);
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
+            -- Common insert only
+            EXEC import.usp_RunCommonDUI @InstanceID = @InstanceID, @CallingProcName = @ProcName, @TargetTable = @TableName, @DeletesEnabled = 0, @UpdatesEnabled = 0, @InsertsEnabled = 1;
         COMMIT;
         ------------------------------------------------------------------------------
 
