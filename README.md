@@ -32,13 +32,13 @@
 
 ## What is this, and how does it help?
 
-Let's say you work in a single-tenant database environment where you have many duplicate databases and you need to track things like schema drift, configuration, etc. For example, does a particular table index exist on every single database and does it have the same definition on all databases?
+Let's say you work in a single-tenant database environment where you have many duplicate databases and you need to track things like schema drift, configuration, etc. For example, does a particular index exist on every single database and does it have the same definition on all databases? What about query store settings, resource governor settings or database scoped configurations?
 
-In order to answer these questions, you need to write some sort of PowerShell script, maybe loop through linked servers, or try to use some other tool to get that data. What happens when you have dozens of people building these types of processes that reach out to all of your databases every day just to query the same information and store it in some altered format?
+In order to answer these questions, you need to write some sort of PowerShell script, maybe loop through linked servers, or try to use some other tool to get that data. What happens when you have dozens of people building processes that reach out to all of your databases every day just to query the same information and store it in some altered format specific to their process?
 
-I have a personal pet peeve when people build sync processes and change source column names when they are simply copying data directly to another table...e.g. changing `snapshot_isolation_state` to `IsSnapshotOn`.
+I have a personal pet peeve when people build processes for syncronizing data and they change source column names when they are simply copying data directly to another table...e.g. changing `snapshot_isolation_state` to `IsSnapshotOn`. It might look nicer, but it can be hard for new developers to follow because you need to learn the column name mapping.
 
-This is a database that centralizes various SQL Server instance and database level metadata into a familiar schema. Processes and views can then be built to utilize this data, reading from a single database, rather than having to reach out to every production database.
+This is a database that centralizes various SQL Server instance and database level metadata into a familiar schema. You can then build upon it, utilizing its data, reading from a single database, rather than having to reach out to every single database.
 
 ----
 
@@ -58,6 +58,8 @@ This is not a realtime view of your databases.
 
 This does not replace existing tools like SentryOne, DBADash, SQLWATCH, dbachecks, etc.
 
+While there might be data useful for performance reporting, it is not intended to catch anything in the act.
+
 ----
 
 ## Installation and Setup
@@ -66,7 +68,7 @@ For now, because this project is still in the early stages of development, there
 
 ### First things first...Set up the configuration file
 
-The main configuration file controls multiple things. It controls settings like concurrency levels for syncing, connection strings, the name of the new central database, etc.
+The main configuration controls settings like concurrency levels for syncing, connection strings, logging, queue batch sizes, etc.
 
 The file can be found here: `/Service/appsettings.jsonc`
 
@@ -76,37 +78,51 @@ EXAMPLE file:
 {
   // For now, this is simply the NAME of the folder to create within the "Service" folder to use for logs
   "LogDirectory": "Logs",
+
+// How many days of logs to retain before deleting old logs
   "LogRetentionDays": 30,
+
+// Logging currently has two levels...quiet and noisy with no in-between.
+  "VerboseLog": true,
+
+  // How many items to pull from the queue per run of the service.
+  // The queue batch size should be balanced with run frequency.
+  // If you set the batch size too low and only run the service daily, it may never catch up.
+  // Smaller batches (100-500) and more frequent runs (every 1-5 minutes) is what's recommended.
+  // Use a value of -1 to disable batching altogether.
+  "QueueProcessingBatchSize": 500,
+
+  // Opportunistic scheduling allows the service to pick up more work if the queue is light or empty.
+  // This helps use idle time to spread work out over time while also keeping the database a bit more up to date.
+  // Note, this can be further controlled at the SyncObject level in the import.SyncObject table.
+  "EnableOpportunisticScheduling": true,
+  // If the queue size falls below QueueProcessingBatchSize, this is the max number of additional sync items that will be added to the queue.
+  // For example, if QueueProcessingBatchSize is set to 500 and there are only 200 items in the queue, then an additional 50 items will be added to the queue.
+  "OpportunisticSchedulingThreshold": 50,
 
   // How many instances do we want to run syncs against in parallel
   "InstanceConcurrencyLimit": 5,
-  // How many databases PER INSTANCE do we want to run syncs against in parallel?
-  "DatabaseConcurrencyLimit": 2,
-  // If Instance is set to 10 and Database is set to 3, then the highest number of concurrent processes possible is 30.
 
-  // Connection string pointing to where the SysSchemaSync database was deployed
-  // This connection string is used by the SysSchemaSync scripts to know where to push the collected data.
+  // How many databases PER INSTANCE do we want to run syncs against in parallel?
+  // If Instance is set to 4 and Database is set to 2, then the highest number of concurrent processes possible is 8.
+  "DatabaseConcurrencyLimit": 2,
+
+  // Connection string pointing to the SysSchemaSync repository database
   "RepositoryDatabaseConnectionString": "Server=MYINSTANCE;Database=SysSchemaSync;MultiSubnetFailover=True;Application Name=SysSchemaSyncService"
 }
 ```
 
 ### Publish the database
 
-To publish the database you currently have two options, you can either use the provided script that uses dbatools to deploy the DACPAC. Or, if you don't want to put your faith in blindly deploying a DACPAC, you can build and publish it yourself.
+You have two options, either use the provided script that uses dbatools to deploy the DACPAC. Or, if you don't want to put your faith in blindly deploying a DACPAC, you can build and publish it yourself using SSDT in Visual Studio (or msbuild).
 
 #### Using the script
 
-First, download the DACPAC from the GitHub Releases section:
-
-<https://github.com/chadbaldwin/sys-schema-sync/releases>
+DACPAC files are included in the release archive under `/Service/SysSchemaSync.dacpac`
 
 Using the DACPAC publish script, located here: `/Service/publish_dacpac.ps1`
 
-Use as follows:
-
-`.\publish_dacpac.ps1 -DacPacPath 'C:\Path\To\Wherever\You\Downloaded\The\DacPac\SysSchemaSync.dacpac'`
-
-The script will look up the connection string and database name from the `/Service/appsettings.jsonc` and publish to the configured database.
+The script will look up the connection string and database name from `/Service/appsettings.jsonc` and publish to the configured database.
 
 #### Using SSDT
 
@@ -114,42 +130,46 @@ Open the SSDT Solution `/DB/SysSchemaSync.sln`, build and publish the database m
 
 ### Configure the database
 
-Now that the database is published, we need to configure the list of instances/databases to sync.
-
-Do this by populating the `targets.json` file like so:
+The list of instances/databases to sync is handled via `targets.json`:
 
 ```json
 [
   {
-    "Instance": "Instance1",
-    "Database": "DBFoo"
+    "InstanceName": "Instance1",
+    "DatabaseName": "DBFoo"
   },
   {
-    "Instance": "Instance1",
-    "Database": "DBBar"
+    "InstanceName": "Instance1",
+    "DatabaseName": "DBBar"
   },
   {
-    "Instance": "Instance2",
-    "Database": "DBFoo"
+    "InstanceName": "Instance2",
+    "DatabaseName": "DBFoo"
   },
   {
-    "Instance": "Instance3",
-    "Database": "DBQux"
+    "InstanceName": "Instance3",
+    "DatabaseName": "DBQux"
   }
 ]
 ```
 
-The connection string itself is handled by the syncing service using dbatools. Though this is likely to change in the future, for now, this was the easiest implementation. The service defaults to using Windows authentication.
+I would recommend generating this file programatically and set up a process to refresh it regularly.
+
+The connection string itself is handled by the syncing service using dbatools. Though this is likely to change in the future, for now, this was the easiest implementation. The service defaults to using Windows authentication and connections are made using:
+
+```pwsh
+Connect-DbaInstance -SqlInstance {InstanceName} -Database {DatabaseName} -MultiSubnetFailover
+```
 
 Once the `targets.json` file has been populated, run `/Service/update_targets.ps1`. This will pull the list of instances and databases out of the `/Service/targets.json` file and update the SysSchemaSync database.
 
-### Deploy the service
+Alternatively, you can manage it yourself manually by inserting/updating records in the `dbo.Instance` and `dbo.Database` tables.
 
-Once that is set up, next you need to set up the sync service. Copy the "Service" directory wherever you plan to host the service as you will need to set up a Scheduled task. You can use anything that is able to run a PowerShell script in a regular interval, I'm using Windows Task Scheduler, but you can use whatever works for you.
+### Deploy and schedule the service
 
-### Schedule the service
+Copy the "Service" directory wherever you plan to host the service as you will need to set up a Scheduled task. You can use anything able to run a PowerShell script in a regular interval like Windows Task Scheduler.
 
-Now set up an automated job / Windows Scheduled Task to call `/Service/database_parallel_runner.ps1`. I recommend running it every 5 minutes for larger installations with hundreds of databases. You can run it as often as you like, but the process will only pick up items that are scheduled to run in the queue in batches. If there's nothing to do, it will almost immediately close.
+The scheduled task should call `/Service/database_parallel_runner.ps1`. I recommend running it every 1-5 minutes for larger installations with hundreds of databases. You can run it as often as you like, but the process will only pick up items which are ready to run from the queue in batches. If there's nothing to do, it will almost immediately close.
 
 > TODO: In the future possibly include a script to set up the scheduled task automatically?
 
@@ -308,7 +328,7 @@ GROUP BY vo.SchemaName, vo.ObjectName, od.ObjectDefinition
 
 ----
 
-## Architecture and Configuration
+## Architecture / Configuration
 
 SysSchemaSync consists of two parts, a database where all synced data is stored, and a service (PowerShell script) which is run on an interval to pick up items to sync.
 
