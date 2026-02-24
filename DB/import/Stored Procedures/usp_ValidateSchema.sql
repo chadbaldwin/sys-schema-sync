@@ -1,7 +1,7 @@
-CREATE PROCEDURE import.usp_ValidateSchema
+CREATE PROC import.usp_ValidateSchema
 AS
 BEGIN;
-    SET NOCOUNT ON;
+    SET NOCOUNT, XACT_ABORT ON;
 
     CREATE TABLE #naming_issues (
         SmellDesc    nvarchar(200) NOT NULL,
@@ -79,6 +79,7 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
+    -- DROP TABLE IF EXISTS #issues;
     CREATE TABLE #issues (
         SmellDesc  nvarchar(200) NOT NULL,
         ObjectName nvarchar(128) NOT NULL,

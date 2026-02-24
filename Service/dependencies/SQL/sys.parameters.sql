@@ -1,5 +1,5 @@
 /* Column overrides */
-DROP TABLE IF EXISTS #column_overrides;
+-- DROP TABLE IF EXISTS #column_overrides;
 CREATE TABLE #column_overrides (
     ColumnName nvarchar(128),
     ColumnOverride nvarchar(MAX),

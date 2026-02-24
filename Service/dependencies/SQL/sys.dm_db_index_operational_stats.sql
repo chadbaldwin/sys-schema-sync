@@ -42,7 +42,7 @@ FROM msdb.dbo.restorehistory WHERE destination_database_name = DB_NAME();
 /*------------------------------------------------------------*/
 
 /*------------------------------------------------------------*/
---DROP TABLE IF EXISTS #prv;
+-- DROP TABLE IF EXISTS #prv;
 CREATE TABLE #prv (
     data_space_id    int           NOT NULL,
     partition_number int           NOT NULL,

@@ -6,8 +6,8 @@ CREATE PROC import.usp_import__sql_modules (
 AS
 BEGIN;
     SET NOCOUNT, XACT_ABORT ON;
-    EXEC sp_set_session_context N'Verbose', @Verbose;
-    EXEC sp_set_session_context N'_DatabaseID', @DatabaseID;
+    EXEC sys.sp_set_session_context @key = N'Verbose', @value = @Verbose;
+    EXEC sys.sp_set_session_context @key = N'_DatabaseID', @value = @DatabaseID;
 
     DECLARE @proc_sw datetime2 = SYSUTCDATETIME(), @sw2 datetime2, @TableName nvarchar(300);
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
@@ -18,7 +18,7 @@ BEGIN;
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------
-        SET @TableName = 'dbo.ObjectDefinition'
+        SET @TableName = 'dbo.ObjectDefinition';
         EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
         WITH cte AS (
             SELECT rn = ROW_NUMBER() OVER (PARTITION BY d._ObjectDefinitionHash ORDER BY d.[object_id])

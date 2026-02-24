@@ -6,8 +6,8 @@ CREATE PROC import.usp_import__dm_db_index_usage_stats (
 AS
 BEGIN;
     SET NOCOUNT, XACT_ABORT ON;
-    EXEC sp_set_session_context N'Verbose', @Verbose;
-    EXEC sp_set_session_context N'_DatabaseID', @DatabaseID;
+    EXEC sys.sp_set_session_context @key = N'Verbose', @value = @Verbose;
+    EXEC sys.sp_set_session_context @key = N'_DatabaseID', @value = @DatabaseID;
 
     DECLARE @proc_sw datetime2 = SYSUTCDATETIME(), @sw2 datetime2, @TableName nvarchar(300);
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
@@ -110,7 +110,7 @@ BEGIN;
               , x.last_system_lookup_utc  = COALESCE(d.last_system_lookup_utc, x.last_system_lookup_utc)
               , x.last_system_update_utc  = COALESCE(d.last_system_update_utc, x.last_system_update_utc)
             FROM dbo._dm_db_index_usage_stats x
-                JOIN #Dataset d ON d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID
+                JOIN #Dataset d ON d._DatabaseID = x._DatabaseID AND d._IndexID = x._IndexID;
             EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update', @sw2, @@ROWCOUNT, @ProcName, @TableName;
 
             -- Common insert only

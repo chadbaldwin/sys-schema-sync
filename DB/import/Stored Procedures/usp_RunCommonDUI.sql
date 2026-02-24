@@ -41,6 +41,7 @@ BEGIN;
         ----------------------------------------
 
         ----------------------------------------
+        -- DROP TABLE IF EIXSTS #join_columns;
         CREATE TABLE #join_columns (
             key_ordinal int           NOT NULL,
             column_id   int           NOT NULL,
@@ -62,7 +63,7 @@ BEGIN;
         DECLARE @JoinPredicates nvarchar(MAX);
 
         SELECT @JoinPredicates = STRING_AGG(CONCAT('d.', QUOTENAME([name]), ' = x.', QUOTENAME([name])), N' AND ') WITHIN GROUP (ORDER BY key_ordinal)
-        FROM #join_columns
+        FROM #join_columns;
         ----------------------------------------
 
         ----------------------------------------
@@ -70,7 +71,7 @@ BEGIN;
             , UpdateLine  = CONCAT('x.', x.ColName, SPACE(MAX(LEN(x.ColName)) OVER () - LEN(x.ColName)), ' = ', IIF(c.[name] = '_ModifyDate', 'SYSUTCDATETIME()', 'd.'+x.ColName))
             , InsertCol    = x.ColName
             , InsertSelect = 'd.'+x.ColName
-            , ExcludeFromUpdate = CONVERT(bit, IIF(c.[name] IN ('_InsertDate'               , '_ValidFrom', '_ValidTo') OR c.[name] IN (SELECT [name] FROM #join_columns), 1, 0))
+            , ExcludeFromUpdate = CONVERT(bit, IIF(c.[name] IN ('_InsertDate'               , '_ValidFrom', '_ValidTo') OR c.[name] IN (SELECT jc.[name] FROM #join_columns jc), 1, 0))
             , ExcludeFromInsert = CONVERT(bit, IIF(c.[name] IN ('_InsertDate', '_ModifyDate', '_ValidFrom', '_ValidTo'), 1, 0))
         INTO #tmpCols
         FROM sys.objects o
@@ -127,7 +128,7 @@ BEGIN;
                     , IIF(COLUMNPROPERTY(@ObjectID, '_RowHash'           , 'ColumnId') IS NOT NULL, 'x.[_RowHash] <> d.[_RowHash]', NULL)
                     -- Kind of an annoying hack just for one single proc that uses this scenario, but sticking with this for now until I come up with a better solution
                     , IIF(COLUMNPROPERTY(@ObjectID, '_ObjectDefinitionID', 'ColumnId') IS NOT NULL, 'x.[_ObjectDefinitionID] <> d.[_ObjectDefinitionID]', NULL)
-                ), '') + ')'
+                ), '') + ')';
             -- If _RowHash doesn't exist, then every row will be updated whether there are changes or not.
             -- Typically used by the delta table feeds since we want to record snapshots even when the row hasn't changed.
             SELECT @template_update = REPLACE(@template_update, '{{FQON}}'          , @FQON)
@@ -173,21 +174,21 @@ BEGIN;
                 IF (@DeletesEnabled = 1)
                 BEGIN;
                     EXEC dbo.usp_Raiserror '[%s] [%s] Start: Delete', NULL, NULL, @CallingProcName, @TargetTable;
-                    EXEC sp_executesql @template_delete, N'@InstanceID int, @DatabaseID int', @InstanceID = @InstanceID, @DatabaseID = @DatabaseID;
+                    EXEC sys.sp_executesql @template_delete, N'@InstanceID int, @DatabaseID int', @InstanceID = @InstanceID, @DatabaseID = @DatabaseID;
                     EXEC dbo.usp_Raiserror '[%s] [%s] Done: Delete', @sw, @@ROWCOUNT, @CallingProcName, @TargetTable;
                 END;
 
                 IF (@UpdatesEnabled = 1)
                 BEGIN;
                     EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update', NULL, NULL, @CallingProcName, @TargetTable;
-                    EXEC sp_executesql @template_update, N'@InstanceID int, @DatabaseID int', @InstanceID = @InstanceID, @DatabaseID = @DatabaseID;
+                    EXEC sys.sp_executesql @template_update, N'@InstanceID int, @DatabaseID int', @InstanceID = @InstanceID, @DatabaseID = @DatabaseID;
                     EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update', @sw, @@ROWCOUNT, @CallingProcName, @TargetTable;
                 END;
 
                 IF (@InsertsEnabled = 1)
                 BEGIN;
                     EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @CallingProcName, @TargetTable;
-                    EXEC sp_executesql @template_insert, N'@InstanceID int, @DatabaseID int', @InstanceID = @InstanceID, @DatabaseID = @DatabaseID;
+                    EXEC sys.sp_executesql @template_insert, N'@InstanceID int, @DatabaseID int', @InstanceID = @InstanceID, @DatabaseID = @DatabaseID;
                     EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw, @@ROWCOUNT, @CallingProcName, @TargetTable;
                 END;
             COMMIT;

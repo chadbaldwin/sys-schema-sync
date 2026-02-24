@@ -6,8 +6,8 @@ CREATE PROC import.usp_import__configurations (
 AS
 BEGIN;
     SET NOCOUNT, XACT_ABORT ON;
-    EXEC sp_set_session_context N'Verbose', @Verbose;
-    EXEC sp_set_session_context N'_InstanceID', @InstanceID;
+    EXEC sys.sp_set_session_context @key = N'Verbose', @value = @Verbose;
+    EXEC sys.sp_set_session_context @key = N'_InstanceID', @value = @InstanceID;
 
     DECLARE @proc_sw datetime2 = SYSUTCDATETIME(), @sw2 datetime2, @TableName nvarchar(300);
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
@@ -27,7 +27,7 @@ BEGIN;
 
             INSERT #Dataset WITH(TABLOCK) (_InstanceID, _RowHash, configuration_id, [name], [value], minimum, maximum, value_in_use, [description], is_dynamic, is_advanced)
             SELECT @InstanceID, d._RowHash, d.configuration_id, d.[name], d.[value], d.minimum, d.maximum, d.value_in_use, d.[description], d.is_dynamic, d.is_advanced
-            FROM @Dataset d
+            FROM @Dataset d;
             EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
         END;
         ------------------------------------------------------------------------------

@@ -6,8 +6,8 @@ CREATE PROC import.usp_import__dm_server_services (
 AS
 BEGIN;
     SET NOCOUNT, XACT_ABORT ON;
-    EXEC sp_set_session_context N'Verbose', @Verbose;
-    EXEC sp_set_session_context N'_InstanceID', @InstanceID;
+    EXEC sys.sp_set_session_context @key = N'Verbose', @value = @Verbose;
+    EXEC sys.sp_set_session_context @key = N'_InstanceID', @value = @InstanceID;
 
     DECLARE @proc_sw datetime2 = SYSUTCDATETIME(), @sw2 datetime2, @TableName nvarchar(300);
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
@@ -27,7 +27,7 @@ BEGIN;
 
             INSERT #Dataset WITH(TABLOCK) (_InstanceID, _RowHash, servicename, startup_type, startup_type_desc, [status], status_desc, process_id, last_startup_time, service_account, [filename], is_clustered, cluster_nodename, instant_file_initialization_enabled)
             SELECT @InstanceID, d._RowHash, d.servicename, d.startup_type, d.startup_type_desc, d.[status], d.status_desc, d.process_id, d.last_startup_time, d.service_account, d.[filename], d.is_clustered, d.cluster_nodename, d.instant_file_initialization_enabled
-            FROM @Dataset d
+            FROM @Dataset d;
             EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
         END;
         ------------------------------------------------------------------------------

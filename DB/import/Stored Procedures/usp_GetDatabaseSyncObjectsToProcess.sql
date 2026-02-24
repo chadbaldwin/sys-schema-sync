@@ -1,11 +1,11 @@
-CREATE PROCEDURE import.usp_GetDatabaseSyncObjectsToProcess (
+CREATE PROC import.usp_GetDatabaseSyncObjectsToProcess (
     @Limit int = -1, -- Set to -1 to disable batching
     @OpportunisticSchedulingEnabled   bit = 0,
     @OpportunisticSchedulingThreshold int = 50
 )
 AS
 BEGIN;
-    SET NOCOUNT ON;
+    SET NOCOUNT, XACT_ABORT ON;
     DECLARE @ts datetime2 = SYSUTCDATETIME();
 
     /* Lets make things more complicated than they need to be just for fun...
@@ -24,7 +24,7 @@ BEGIN;
     DECLARE @Limit int = 500, @OpportunisticSchedulingEnabled bit = 1, @OpportunisticSchedulingThreshold int = 50, @ts datetime2 = SYSUTCDATETIME();
     --*/
 
-    DROP TABLE IF EXISTS #tmp_limit
+    -- DROP TABLE IF EXISTS #tmp_limit;
     SELECT x._InstanceID, x._DatabaseID, x.SyncObjectID, x.[priority]
         , PriorityDescription = CHOOSE(x.[priority]+1,'Manual','New','Aging','Force','Opportunistic')
     INTO #tmp_limit

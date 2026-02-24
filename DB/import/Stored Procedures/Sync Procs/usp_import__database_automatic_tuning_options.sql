@@ -6,8 +6,8 @@ CREATE PROC import.usp_import__database_automatic_tuning_options (
 AS
 BEGIN;
     SET NOCOUNT, XACT_ABORT ON;
-    EXEC sp_set_session_context N'Verbose', @Verbose;
-    EXEC sp_set_session_context N'_DatabaseID', @DatabaseID;
+    EXEC sys.sp_set_session_context @key = N'Verbose', @value = @Verbose;
+    EXEC sys.sp_set_session_context @key = N'_DatabaseID', @value = @DatabaseID;
 
     DECLARE @proc_sw datetime2 = SYSUTCDATETIME(), @sw2 datetime2, @TableName nvarchar(300);
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
@@ -27,7 +27,7 @@ BEGIN;
 
             INSERT #Dataset WITH(TABLOCK) (_DatabaseID, _RowHash, [name], [desired_state], desired_state_desc, actual_state, actual_state_desc, reason, reason_desc)
             SELECT @DatabaseID, d._RowHash, d.[name], d.[desired_state], d.desired_state_desc, d.actual_state, d.actual_state_desc, d.reason, d.reason_desc
-            FROM @Dataset d
+            FROM @Dataset d;
             EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
         END;
         ------------------------------------------------------------------------------

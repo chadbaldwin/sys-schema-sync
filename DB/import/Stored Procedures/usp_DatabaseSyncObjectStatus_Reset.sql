@@ -14,7 +14,7 @@ BEGIN;
     END;
 
     UPDATE s
-    SET   s.LastSyncCheck        = '1900-01-01 00:00:00.0000000'
+    SET   s.LastSyncCheck        = CONVERT(datetime2, '1900-01-01 00:00:00.0000000')
         , s.LastSyncChecksum     = IIF(@ResetChecksum = 1, NULL, s.LastSyncChecksum)
         , s.LastSyncError        = IIF(@ResetErrors   = 1, NULL, s.LastSyncError)
         , s.LastSyncErrorMessage = IIF(@ResetErrors   = 1, NULL, s.LastSyncErrorMessage)
@@ -23,6 +23,6 @@ BEGIN;
     WHERE   (s.SyncObjectID = @SyncObjectID OR @SyncObjectID IS NULL)
         AND (s._InstanceID  = @InstanceID   OR @InstanceID   IS NULL)
         AND (s._DatabaseID  = @DatabaseID   OR @DatabaseID   IS NULL)
-        AND s.LastSyncCheck <> '1900-01-01 00:00:00.0000000'
+        AND s.LastSyncCheck <> CONVERT(datetime2, '1900-01-01 00:00:00.0000000')
     OPTION (RECOMPILE);
 END;

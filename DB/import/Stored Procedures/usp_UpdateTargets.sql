@@ -1,12 +1,11 @@
-CREATE PROCEDURE import.usp_UpdateTargets (
+CREATE PROC import.usp_UpdateTargets (
     @ServiceConfigJSON nvarchar(MAX),
     @Verbose           bit = 0
 )
 AS
 BEGIN;
-    SET NOCOUNT ON;
-    SET XACT_ABORT ON;
-    EXEC sp_set_session_context N'Verbose', @Verbose;
+    SET NOCOUNT, XACT_ABORT ON;
+    EXEC sys.sp_set_session_context @key = N'Verbose', @value = @Verbose;
 
     DECLARE @sw datetime2 = SYSUTCDATETIME(), @sw2 datetime2;
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
@@ -14,7 +13,7 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    --DROP TABLE IF EXISTS #tmp_db;
+    -- DROP TABLE IF EXISTS #tmp_db;
     CREATE TABLE #tmp_db (
         InstanceName nvarchar(128) NOT NULL,
         DatabaseName nvarchar(128) NOT NULL,

@@ -1,4 +1,4 @@
-CREATE PROCEDURE import.usp_CreateItems (
+CREATE PROC import.usp_CreateItems (
     @DatabaseID         int,
     @ProcessKey         uniqueidentifier,
     @FullImport_Object  bit = 0,
@@ -7,7 +7,7 @@ CREATE PROCEDURE import.usp_CreateItems (
 )
 AS
 BEGIN;
-    SET NOCOUNT ON;
+    SET NOCOUNT, XACT_ABORT ON;
 
     DECLARE @sw datetime2 = SYSUTCDATETIME(), @sw2 datetime2, @TableName nvarchar(300);
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
@@ -120,7 +120,7 @@ BEGIN;
                     WHERE x._DatabaseID = @DatabaseID
                         AND NOT EXISTS (SELECT * FROM import.ItemNameProcess p WHERE p.ProcessKey = @ProcessKey AND p._DatabaseID = x._DatabaseID AND p._ObjectID = x._ObjectID)
                         AND x.IsDeleted = 0
-                        AND x.SchemaName <> '<<DB>>'
+                        AND x.SchemaName <> '<<DB>>';
                     EXEC dbo.usp_Raiserror '[%s] [%s] Done: Mark deleted', @sw2, @@ROWCOUNT, @ProcName, @TableName;
                 END;
 

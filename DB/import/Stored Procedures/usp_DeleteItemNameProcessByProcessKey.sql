@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE import.usp_DeleteItemNameProcessByProcessKey (
+﻿CREATE PROC import.usp_DeleteItemNameProcessByProcessKey (
     @ProcessKey1 uniqueidentifier,
     @ProcessKey2 uniqueidentifier = NULL,
     @ProcessKey3 uniqueidentifier = NULL,
@@ -18,7 +18,7 @@ BEGIN;
 
         ------------------------------------------------------------------------------
         DECLARE @TableName nvarchar(300) = 'import.ItemNameProcess';
-        BEGIN TRY;
+        BEGIN TRY
             EXEC dbo.usp_Raiserror '[%s] [%s] Start: Delete', NULL, NULL, @ProcName, @TableName; DECLARE @deletes_sw datetime2 = SYSUTCDATETIME();
             DECLARE @delete_batch_sw datetime2 = SYSUTCDATETIME(), @delete_batch_rc bigint;
             WHILE (1=1)
@@ -50,4 +50,4 @@ BEGIN;
 
         THROW; -- re-throw original error so that an exception is returned to the caller
     END CATCH;
-END
+END;

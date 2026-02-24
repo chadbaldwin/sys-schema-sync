@@ -1,4 +1,4 @@
-CREATE PROCEDURE dw.usp_import__dm_db_index_usage_stats_delta (
+CREATE PROC dw.usp_import__dm_db_index_usage_stats_delta (
     @DatabaseID int
 )
 AS
@@ -60,7 +60,7 @@ BEGIN;
                 JOIN dbo._dm_db_index_usage_stats p ON p._DatabaseID = t._DatabaseID AND p._IndexID = t._IndexID -- Previous snapshot
                 JOIN #Dataset n ON n._DatabaseID = t._DatabaseID AND n._IndexID = t._IndexID -- New snapshot
                 CROSS APPLY (
-                    SELECT WereStatsReset = CASE
+                    SELECT WereStatsReset = CONVERT(bit, CASE
                                                 /*  If the new EstimatedStatsBeginTime is higher than the last snapshot time (StatsEndTime), then we know something was reset.
                                                     e.g. SQL Server was restarted, database restored, table dropped and recreated, index dropped and recreated, etc.
                                                     Unfortunately, this isn't a perfect solution. There may be other reasons for a stats record to be reset that we are not detecting. */
@@ -82,7 +82,7 @@ BEGIN;
                                                     OR n.system_updates < p.system_updates
                                                 THEN 1
                                                 ELSE 0
-                                            END
+                                            END)
                 ) x
             WHERE n.StatsEndTime > p.StatsEndTime;
             EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update', @sw2, @@ROWCOUNT, @ProcName, @TableName;

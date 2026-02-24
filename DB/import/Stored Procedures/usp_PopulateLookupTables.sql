@@ -1,7 +1,7 @@
-CREATE PROCEDURE import.usp_PopulateLookupTables
+CREATE PROC import.usp_PopulateLookupTables
 AS
 BEGIN;
-    SET NOCOUNT ON;
+    SET NOCOUNT, XACT_ABORT ON;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
@@ -85,7 +85,7 @@ BEGIN;
                                                a bit of processing time due to saved network IO.
         */
 
-        --DROP TABLE IF EXISTS #tmp_SyncObject; --SELECT * FROM #tmp_SyncObject
+        -- DROP TABLE IF EXISTS #tmp_SyncObject; --SELECT * FROM #tmp_SyncObject
         SELECT n.SyncObjectID, n.SyncObjectName, n.SyncObjectLevelID, n.SyncStaleAgeMinutes, n.ImportTable, n.ImportProc, n.ExportQueryPath, n.ChecksumQueryText
         INTO #tmp_SyncObject
         FROM ( --               SyncObjectName                                         ImportTable                                 ImportProc                                              ExportQueryPath                              ChecksumQueryText
@@ -197,7 +197,7 @@ BEGIN;
     ------------------------------------------------------------------------------
     -- Perform checks against SyncObject configuration
     ------------------------------------------------------------------------------
-        --DROP TABLE IF EXISTS #issues; --SELECT * FROM #issues
+        -- DROP TABLE IF EXISTS #issues; --SELECT * FROM #issues
         CREATE TABLE #issues (
             SyncObjectID    int             NOT NULL,
             IssueDesc       nvarchar(128)   NOT NULL,
@@ -292,7 +292,7 @@ BEGIN;
         FROM #tmp_SyncObject so
         WHERE so.IsEnabled = 1 AND COALESCE(so.ExportQueryPath, '') = ''
             AND NOT EXISTS (SELECT * FROM sys.system_objects s WHERE s.[object_id] = OBJECT_ID(so.SyncObjectName))
-            AND NOT EXISTS (SELECT * FROM msdb.sys.objects s WHERE s.[object_id] = OBJECT_ID(so.SyncObjectName))
+            AND NOT EXISTS (SELECT * FROM msdb.sys.objects s WHERE s.[object_id] = OBJECT_ID(so.SyncObjectName));
 
         IF EXISTS (SELECT * FROM #issues)
         BEGIN;

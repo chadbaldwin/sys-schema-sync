@@ -6,8 +6,8 @@ CREATE PROC import.usp_import__SERVERPROPERTY (
 AS
 BEGIN;
     SET NOCOUNT, XACT_ABORT ON;
-    EXEC sp_set_session_context N'Verbose', @Verbose;
-    EXEC sp_set_session_context N'_InstanceID', @InstanceID;
+    EXEC sys.sp_set_session_context @key = N'Verbose', @value = @Verbose;
+    EXEC sys.sp_set_session_context @key = N'_InstanceID', @value = @InstanceID;
 
     DECLARE @proc_sw datetime2 = SYSUTCDATETIME(), @sw2 datetime2, @TableName nvarchar(300);
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
@@ -27,7 +27,7 @@ BEGIN;
 
             INSERT #Dataset WITH(TABLOCK) (_InstanceID, _RowHash, BuildClrVersion, Collation, CollationID, ComparisonStyle, ComputerNamePhysicalNetBIOS, Edition, EditionID, EngineEdition, FilestreamConfiguredLevel, FilestreamEffectiveLevel, FilestreamShareName, HadrManagerStatus, InstanceDefaultBackupPath, InstanceDefaultDataPath, InstanceDefaultLogPath, InstanceName, IsAdvancedAnalyticsInstalled, IsBigDataCluster, IsClustered, IsExternalAuthenticationOnly, IsExternalGovernanceEnabled, IsFullTextInstalled, IsHadrEnabled, IsIntegratedSecurityOnly, IsLocalDB, IsPolyBaseInstalled, IsServerSuspendedForSnapshotBackup, IsSingleUser, IsTempDbMetadataMemoryOptimized, IsXTPSupported, LCID, LicenseType, MachineName, NumLicenses, PathSeparator, ProcessID, ProductBuild, ProductBuildType, ProductLevel, ProductMajorVersion, ProductMinorVersion, ProductUpdateLevel, ProductUpdateReference, ProductUpdateType, ProductVersion, ResourceLastUpdateDateTime, ResourceVersion, ServerName, SqlCharSet, SqlCharSetName, SqlSortOrder, SqlSortOrderName, SuspendedDatabaseCount)
             SELECT @InstanceID, d._RowHash, d.BuildClrVersion, d.Collation, d.CollationID, d.ComparisonStyle, d.ComputerNamePhysicalNetBIOS, d.Edition, d.EditionID, d.EngineEdition, d.FilestreamConfiguredLevel, d.FilestreamEffectiveLevel, d.FilestreamShareName, d.HadrManagerStatus, d.InstanceDefaultBackupPath, d.InstanceDefaultDataPath, d.InstanceDefaultLogPath, d.InstanceName, d.IsAdvancedAnalyticsInstalled, d.IsBigDataCluster, d.IsClustered, d.IsExternalAuthenticationOnly, d.IsExternalGovernanceEnabled, d.IsFullTextInstalled, d.IsHadrEnabled, d.IsIntegratedSecurityOnly, d.IsLocalDB, d.IsPolyBaseInstalled, d.IsServerSuspendedForSnapshotBackup, d.IsSingleUser, d.IsTempDbMetadataMemoryOptimized, d.IsXTPSupported, d.LCID, d.LicenseType, d.MachineName, d.NumLicenses, d.PathSeparator, d.ProcessID, d.ProductBuild, d.ProductBuildType, d.ProductLevel, d.ProductMajorVersion, d.ProductMinorVersion, d.ProductUpdateLevel, d.ProductUpdateReference, d.ProductUpdateType, d.ProductVersion, d.ResourceLastUpdateDateTime, d.ResourceVersion, d.ServerName, d.SqlCharSet, d.SqlCharSetName, d.SqlSortOrder, d.SqlSortOrderName, d.SuspendedDatabaseCount
-            FROM @Dataset d
+            FROM @Dataset d;
             EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
         END;
         ------------------------------------------------------------------------------

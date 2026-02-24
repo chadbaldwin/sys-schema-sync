@@ -1,4 +1,4 @@
-CREATE PROCEDURE import.usp_SetSyncStatus (
+CREATE PROC import.usp_SetSyncStatus (
     @InstanceID     int,
     @DatabaseID     int = NULL,
     @SyncObjectID   int = NULL,
@@ -9,9 +9,9 @@ CREATE PROCEDURE import.usp_SetSyncStatus (
 AS
 BEGIN;
     SET NOCOUNT, XACT_ABORT ON;
-    EXEC sp_set_session_context N'Verbose', @Verbose;
-    EXEC sp_set_session_context N'_InstanceID', @InstanceID;
-    EXEC sp_set_session_context N'_DatabaseID', @DatabaseID;
+    EXEC sys.sp_set_session_context @key = N'Verbose', @value = @Verbose;
+    EXEC sys.sp_set_session_context @key = N'_InstanceID', @value = @InstanceID;
+    EXEC sys.sp_set_session_context @key = N'_DatabaseID', @value = @DatabaseID;
 
     DECLARE @sw datetime2 = SYSUTCDATETIME();
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
@@ -23,8 +23,11 @@ BEGIN;
 
         -- Including the entire exception message in the output is excessive, so reducing it down to just yes/no on IsError
         DECLARE @HasError nvarchar(10) = IIF(@ErrorMessage IS NOT NULL, 'true','false');
-        IF (@Verbose = 1) RAISERROR(N'[%s] Input parameters: @InstanceID = %i, @DatabaseID = %i, @SyncObjectID = %i, @Checksum = %i, @ErrorMessage is populated: %s',0,1
-            , @ProcName, @InstanceID, @DatabaseID, @SyncObjectID, @Checksum, @HasError) WITH NOWAIT;
+        IF (@Verbose = 1)
+        BEGIN;
+            RAISERROR(N'[%s] Input parameters: @InstanceID = %i, @DatabaseID = %i, @SyncObjectID = %i, @Checksum = %i, @ErrorMessage is populated: %s',0,1
+                , @ProcName, @InstanceID, @DatabaseID, @SyncObjectID, @Checksum, @HasError) WITH NOWAIT;
+        END;
 
         IF EXISTS (
             SELECT *
@@ -36,7 +39,7 @@ BEGIN;
         )
         BEGIN;
             -- This seems to be the easist solution for now...Prepend the existing exception with this one.
-            SET @ErrorMessage = 'Error: Checksum value is NULL even though a ChecksumQueryText was provided.'
+            SET @ErrorMessage = 'Error: Checksum value is NULL even though a ChecksumQueryText was provided.';
         END;
         ------------------------------------------------------------------------------
 

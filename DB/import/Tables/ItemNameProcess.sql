@@ -12,9 +12,9 @@ CREATE TABLE import.ItemNameProcess (
     IndexName            nvarchar(128)        NULL,
     ColumnName           nvarchar(128)        NULL,
     ObjectDefinitionHash binary(32)           NULL,
-    _ObjectID            int                  NULL,
-    _IndexID             int                  NULL,
-    _ColumnID            int                  NULL,
+    _ObjectID            bigint               NULL,
+    _IndexID             bigint               NULL,
+    _ColumnID            bigint               NULL,
     _ObjectDefinitionID  int                  NULL,
 
     INDEX CIX_ItemNameProcess_ProcessKey_ID CLUSTERED (ProcessKey, ID),

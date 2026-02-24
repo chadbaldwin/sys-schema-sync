@@ -6,8 +6,8 @@ CREATE PROC import.usp_import__dm_os_wait_stats (
 AS
 BEGIN;
     SET NOCOUNT, XACT_ABORT ON;
-    EXEC sp_set_session_context N'Verbose', @Verbose;
-    EXEC sp_set_session_context N'_InstanceID', @InstanceID;
+    EXEC sys.sp_set_session_context @key = N'Verbose', @value = @Verbose;
+    EXEC sys.sp_set_session_context @key = N'_InstanceID', @value = @InstanceID;
 
     DECLARE @proc_sw datetime2 = SYSUTCDATETIME(), @sw2 datetime2, @TableName nvarchar(300);
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
@@ -27,7 +27,7 @@ BEGIN;
 
             INSERT #Dataset WITH(TABLOCK) (_InstanceID, wait_type, waiting_tasks_count, wait_time_ms, max_wait_time_ms, signal_wait_time_ms)
             SELECT @InstanceID, d.wait_type, d.waiting_tasks_count, d.wait_time_ms, d.max_wait_time_ms, d.signal_wait_time_ms
-            FROM @Dataset d
+            FROM @Dataset d;
             EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
         END;
         ------------------------------------------------------------------------------

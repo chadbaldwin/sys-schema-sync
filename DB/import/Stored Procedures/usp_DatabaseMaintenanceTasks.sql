@@ -1,13 +1,12 @@
-CREATE PROCEDURE import.usp_DatabaseMaintenanceTasks (
+CREATE PROC import.usp_DatabaseMaintenanceTasks (
     @Verbose bit = 0
 )
 AS
 BEGIN;
-    SET NOCOUNT ON;
-    SET XACT_ABORT ON;
-    SET @Verbose = COALESCE(CONVERT(bit, SESSION_CONTEXT(N'Verbose')), @Verbose); EXEC sys.sp_set_session_context N'Verbose', @Verbose;
+    SET NOCOUNT, XACT_ABORT ON;
+    SET @Verbose = COALESCE(CONVERT(bit, SESSION_CONTEXT(N'Verbose')), @Verbose); EXEC sys.sp_set_session_context @key = N'Verbose', @value = @Verbose;
 
-    DECLARE @proc_sw datetime2 = SYSUTCDATETIME(), @ts datetime2, @rc bigint = 0;
+    DECLARE @proc_sw datetime2 = SYSUTCDATETIME(), @ts datetime2;
     DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
     EXEC dbo.usp_Raiserror '[%s] Start', NULL, NULL, @ProcName;
     ------------------------------------------------------------------------------
