@@ -256,6 +256,10 @@
     <Build Include="import\Stored Procedures\usp_RunCommonDUI.sql" />
     <Build Include="import\Stored Procedures\usp_DeleteItemNameProcessByProcessKey.sql" />
     <Build Include="import\Tables\Log.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__SERVERPROPERTY.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__dm_server_services.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__SERVERPROPERTY.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__dm_server_services.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="StaticCodeAnalysis.SuppressMessages.xml" />
