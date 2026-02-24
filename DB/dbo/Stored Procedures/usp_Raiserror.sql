@@ -4,12 +4,13 @@ CREATE PROC dbo.usp_Raiserror (
     @rc bigint = NULL,
     @s1 nvarchar(2047) = NULL,
     @s2 nvarchar(2047) = NULL,
-    @s3 nvarchar(2047) = NULL
+    @s3 nvarchar(2047) = NULL,
+    @IsError bit = 0
 )
 AS
 BEGIN;
-    INSERT import.[Log] (_InstanceID, _DatabaseID, [Message], TimeStart, [RowCount], String1, String2, String3)
-    VALUES (CONVERT(int, SESSION_CONTEXT(N'_InstanceID')), CONVERT(int, SESSION_CONTEXT(N'_DatabaseID')), @msg, @ts, @rc, @s1, @s2, @s3);
+    INSERT import.[Log] (_InstanceID, _DatabaseID, [Message], TimeStart, [RowCount], String1, String2, String3, IsError)
+    VALUES (CONVERT(int, SESSION_CONTEXT(N'_InstanceID')), CONVERT(int, SESSION_CONTEXT(N'_DatabaseID')), @msg, @ts, @rc, @s1, @s2, @s3, @IsError);
 
     IF (SESSION_CONTEXT(N'Verbose') = 0)
     BEGIN;

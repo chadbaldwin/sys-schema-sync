@@ -194,7 +194,7 @@ BEGIN;
     END TRY
     BEGIN CATCH
         DECLARE @CaughtErrorMessage nvarchar(2047) = FORMATMESSAGE('%s (Line %d)', ERROR_MESSAGE(), ERROR_LINE());
-        EXEC dbo.usp_Raiserror '[%s] Error: Proc - %s', @sw, NULL, @ProcName, @CaughtErrorMessage;
+        EXEC dbo.usp_Raiserror '[%s] Error: Proc - %s', @sw, NULL, @ProcName, @CaughtErrorMessage, @IsError = 1;
 
         THROW; -- re-throw original error so that an exception is returned to the caller
     END CATCH;

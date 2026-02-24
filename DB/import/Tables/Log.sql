@@ -6,9 +6,10 @@ CREATE TABLE import.[Log] (
     [Message]   nvarchar(2047)  NOT NULL,
     TimeStart   datetime2           NULL,
     [RowCount]  bigint              NULL,
-    String1     nvarchar(1000)      NULL,
-    String2     nvarchar(1000)      NULL,
-    String3     nvarchar(1000)      NULL,
+    String1     nvarchar(2047)      NULL,
+    String2     nvarchar(2047)      NULL,
+    String3     nvarchar(2047)      NULL,
+    IsError     bit             NOT NULL CONSTRAINT DF_Log_IsError DEFAULT 0,
 );
 GO
 -- Cluster by InsertDate first since that will be the most common query
