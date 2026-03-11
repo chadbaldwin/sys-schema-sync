@@ -14,7 +14,7 @@ $params = @{
     CommandType = 'StoredProcedure'
     Query = 'import.usp_DatabaseMaintenanceTasks'
     SqlParameter = @{ Verbose = $true }
-    QueryTimeout = 10
+    QueryTimeout = 300
     EnableException = $true
 }
 Invoke-DbaQuery @params -Verbose
