@@ -1,4 +1,5 @@
 CREATE PROC import.usp_DatabaseMaintenanceTasks (
+    @UpdateStats bit = 1,
     @Verbose bit = 0
 )
 AS
@@ -6,31 +7,33 @@ BEGIN;
     SET NOCOUNT, XACT_ABORT ON;
     SET @Verbose = COALESCE(CONVERT(bit, SESSION_CONTEXT(N'Verbose')), @Verbose); EXEC sys.sp_set_session_context @key = N'Verbose', @value = @Verbose;
 
-    DECLARE @proc_sw datetime2 = SYSUTCDATETIME(), @ts datetime2;
-    DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
-    EXEC dbo.usp_Raiserror '[%s] Start', NULL, NULL, @ProcName;
+    DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID)), @proc_sw datetime2;
+    EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Proc', @Scope1 = @ProcName, @ts = @proc_sw OUTPUT;
+
+    DECLARE @TableName nvarchar(300), @ts datetime2;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
     -- Cleanup orphaned records from ItemNameProcess table
     ------------------------------------------------------------------------------
-    EXEC dbo.usp_Raiserror '[%s] Start: Cleanup orphaned records from ItemNameProcess table', NULL, NULL, @ProcName; SET @ts = SYSUTCDATETIME();
-    DECLARE @ts2 datetime2 = SYSUTCDATETIME(), @rc2 bigint;
-    WHILE (1=1)
+    SET @TableName = 'import.ItemNameProcess';
+    EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Delete loop', @Scope1 = @ProcName, @Scope2 = @TableName, @DetailMessage = 'Cleanup orphaned records from ItemNameProcess table', @ts = @ts OUTPUT;
+    DECLARE @ts2 datetime2, @rc2 bigint;
+    WHILE (@rc2 > 0 OR @rc2 IS NULL)
     BEGIN;
+        EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Delete batch', @Scope1 = @ProcName, @Scope2 = @TableName, @ts = @ts2 OUTPUT;
         DELETE TOP(3000) import.ItemNameProcess WHERE InsertDateUTC < DATEADD(MINUTE, -15, SYSUTCDATETIME());
         SET @rc2 = @@ROWCOUNT;
-        IF (@rc2 = 0) BEGIN; BREAK; END;
-        EXEC dbo.usp_Raiserror '[%s] Deleted batch', @ts2, @rc2, @ProcName; SET @ts2 = SYSUTCDATETIME();
-        WAITFOR DELAY '00:00:01';
+        EXEC dbo.usp_Raiserror @EventType = 'Done', @ActionName = 'Delete batch', @Scope1 = @ProcName, @Scope2 = @TableName, @ts = @ts2, @rc = @rc2;
     END;
-    EXEC dbo.usp_Raiserror '[%s] Done:  Cleanup orphaned records from ItemNameProcess table', @ts, NULL, @ProcName;
+    EXEC dbo.usp_Raiserror @EventType = 'Done', @ActionName = 'Delete loop', @Scope1 = @ProcName, @Scope2 = @TableName, @DetailMessage = 'Cleanup orphaned records from ItemNameProcess table', @ts = @ts;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
     -- Force reset old sync object statuses to trigger a full re-sync
     ------------------------------------------------------------------------------
-    EXEC dbo.usp_Raiserror '[%s] Start: Force reset old sync object statuses to trigger a full re-sync', NULL, NULL, @ProcName; SET @ts = SYSUTCDATETIME();
+    SET @TableName = 'import.DatabaseSyncObjectStatus';
+    EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Update LastSyncChecksum', @Scope1 = @ProcName, @Scope2 = @TableName, @DetailMessage = 'Force reset old sync object statuses to trigger a full re-sync', @ts = @ts OUTPUT;
     /* Clear out old checksums to force a full re-sync on any syncs that haven't run in a while.
        Cannot set to NULL because that would be seen as an error for any syncs which have a
        CHecksumQueryText configured. Setting to -1 instead, whcih is a valid checksum value
@@ -39,13 +42,14 @@ BEGIN;
         SET LastSyncChecksum = -1
     WHERE LastSyncTime < DATEADD(DAY, -7, SYSUTCDATETIME())
         AND LastSyncChecksum <> -1; -- Implicitly excluding NULLs
-    EXEC dbo.usp_Raiserror '[%s] Done:  Force reset old sync object statuses to trigger a full re-sync', @ts, @@ROWCOUNT, @ProcName;
+    EXEC dbo.usp_Raiserror @EventType = 'Done', @ActionName = 'Update LastSyncChecksum', @Scope1 = @ProcName, @Scope2 = @TableName, @DetailMessage = 'Force reset old sync object statuses to trigger a full re-sync', @ts = @ts, @rc = @@ROWCOUNT;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
     -- Cleanup orphaned ObjectDefinition records
     ------------------------------------------------------------------------------
-    EXEC dbo.usp_Raiserror '[%s] Start: Cleanup orphaned ObjectDefinition records', NULL, NULL, @ProcName; SET @ts = SYSUTCDATETIME();
+    SET @TableName = 'dbo.ObjectDefinition';
+    EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Delete', @Scope1 = @ProcName, @Scope2 = @TableName, @DetailMessage = 'Cleanup orphaned ObjectDefinition records', @ts = @ts OUTPUT;
     DELETE od
     FROM dbo.ObjectDefinition od
     WHERE NOT EXISTS (
@@ -53,17 +57,29 @@ BEGIN;
             FROM dbo._sql_modules FOR SYSTEM_TIME ALL sm
             WHERE sm._ObjectDefinitionID = od._ObjectDefinitionID
         );
-    EXEC dbo.usp_Raiserror '[%s] Done:  Cleanup orphaned ObjectDefinition records', @ts, @@ROWCOUNT, @ProcName;
+    EXEC dbo.usp_Raiserror @EventType = 'Done', @ActionName = 'Delete', @Scope1 = @ProcName, @Scope2 = @TableName, @DetailMessage = 'Cleanup orphaned ObjectDefinition records', @ts = @ts, @rc = @@ROWCOUNT;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
     -- Cleanup old logs
     ------------------------------------------------------------------------------
-    EXEC dbo.usp_Raiserror '[%s] Start: Cleanup old database logs', NULL, NULL, @ProcName; SET @ts = SYSUTCDATETIME();
+    SET @TableName = 'import.Log';
+    EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Delete', @Scope1 = @ProcName, @Scope2 = @TableName, @DetailMessage = 'Cleanup old database logs', @ts = @ts OUTPUT;
     DELETE x
     FROM import.[Log] X
     WHERE InsertDate < DATEADD(DAY, -30, SYSUTCDATETIME());
-    EXEC dbo.usp_Raiserror '[%s] Done:  Cleanup old database logs', @ts, @@ROWCOUNT, @ProcName;
+    EXEC dbo.usp_Raiserror @EventType = 'Done', @ActionName = 'Delete', @Scope1 = @ProcName, @Scope2 = @TableName, @DetailMessage = 'Cleanup old database logs', @ts = @ts, @rc = @@ROWCOUNT;
+    ------------------------------------------------------------------------------
+
+    ------------------------------------------------------------------------------
+    -- Update stats for entire database
+    ------------------------------------------------------------------------------
+    IF (@UpdateStats = 1)
+    BEGIN;
+        EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Proc', @Scope1 = @ProcName, @Scope2 = 'sys.sp_updatestats', @DetailMessage = 'Update stats for entire database', @ts = @ts OUTPUT;
+        EXECUTE sys.sp_updatestats;
+        EXEC dbo.usp_Raiserror @EventType = 'Done', @ActionName = 'Proc', @Scope1 = @ProcName, @Scope2 = 'sys.sp_updatestats', @DetailMessage = 'Update stats for entire database', @ts = @ts;
+    END;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
@@ -76,6 +92,6 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    EXEC dbo.usp_Raiserror '[%s] Done', @proc_sw, NULL, @ProcName;
+    EXEC dbo.usp_Raiserror @EventType = 'Done', @ActionName = 'Proc', @Scope1 = @ProcName, @ts = @proc_sw;
 END;
 GO

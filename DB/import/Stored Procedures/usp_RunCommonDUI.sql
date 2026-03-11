@@ -1,7 +1,6 @@
 ﻿CREATE PROC import.usp_RunCommonDUI (
     @InstanceID      int = NULL,
     @DatabaseID      int = NULL,
-    @CallingProcName nvarchar(500),
     @TargetTable     nvarchar(300),
     @DeletesEnabled  bit = 1,
     @UpdatesEnabled  bit = 1,
@@ -12,12 +11,13 @@ AS
 BEGIN;
     SET NOCOUNT, XACT_ABORT ON;
 
-    DECLARE @proc_sw datetime2 = SYSUTCDATETIME();
-    DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
+    EXEC sys.sp_set_session_context @key = N'_InstanceID', @value = @InstanceID;
+    EXEC sys.sp_set_session_context @key = N'_DatabaseID', @value = @DatabaseID;
+
+    DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID)), @proc_sw datetime2;
+    EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Proc', @Scope1 = @ProcName, @ts = @proc_sw OUTPUT;
 
     BEGIN TRY
-        EXEC dbo.usp_Raiserror '[%s] Start: Import Proc', NULL, NULL, @ProcName;
-
         IF (COALESCE(@InstanceID, @DatabaseID) IS NULL AND @DeletesEnabled = 1)
         BEGIN;
             THROW 51000, 'Either @InstanceID or @DatabaseID must be provided when deletes are enabled', 1;
@@ -168,39 +168,39 @@ BEGIN;
         END;
         ELSE
         BEGIN;
-            DECLARE @sw datetime2 = SYSUTCDATETIME();
+            DECLARE @sw datetime2;
 
             BEGIN TRAN;
                 IF (@DeletesEnabled = 1)
                 BEGIN;
-                    EXEC dbo.usp_Raiserror '[%s] [%s] Start: Delete', NULL, NULL, @CallingProcName, @TargetTable;
+                    EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Delete', @Scope1 = @ProcName, @Scope2 = @TargetTable, @ts = @sw OUTPUT;
                     EXEC sys.sp_executesql @template_delete, N'@InstanceID int, @DatabaseID int', @InstanceID = @InstanceID, @DatabaseID = @DatabaseID;
-                    EXEC dbo.usp_Raiserror '[%s] [%s] Done: Delete', @sw, @@ROWCOUNT, @CallingProcName, @TargetTable;
+                    EXEC dbo.usp_Raiserror @EventType = 'Done', @ActionName = 'Delete', @Scope1 = @ProcName, @Scope2 = @TargetTable, @ts = @sw, @rc = @@ROWCOUNT;
                 END;
 
                 IF (@UpdatesEnabled = 1)
                 BEGIN;
-                    EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update', NULL, NULL, @CallingProcName, @TargetTable;
+                    EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Update', @Scope1 = @ProcName, @Scope2 = @TargetTable, @ts = @sw OUTPUT;
                     EXEC sys.sp_executesql @template_update, N'@InstanceID int, @DatabaseID int', @InstanceID = @InstanceID, @DatabaseID = @DatabaseID;
-                    EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update', @sw, @@ROWCOUNT, @CallingProcName, @TargetTable;
+                    EXEC dbo.usp_Raiserror @EventType = 'Done', @ActionName = 'Update', @Scope1 = @ProcName, @Scope2 = @TargetTable, @ts = @sw, @rc = @@ROWCOUNT;
                 END;
 
                 IF (@InsertsEnabled = 1)
                 BEGIN;
-                    EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @CallingProcName, @TargetTable;
+                    EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Insert', @Scope1 = @ProcName, @Scope2 = @TargetTable, @ts = @sw OUTPUT;
                     EXEC sys.sp_executesql @template_insert, N'@InstanceID int, @DatabaseID int', @InstanceID = @InstanceID, @DatabaseID = @DatabaseID;
-                    EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw, @@ROWCOUNT, @CallingProcName, @TargetTable;
+                    EXEC dbo.usp_Raiserror @EventType = 'Done', @ActionName = 'Insert', @Scope1 = @ProcName, @Scope2 = @TargetTable, @ts = @sw, @rc = @@ROWCOUNT;
                 END;
             COMMIT;
         END;
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------
-        EXEC dbo.usp_Raiserror '[%s] Done: Import Proc', @proc_sw, NULL, @ProcName;
+        EXEC dbo.usp_Raiserror @EventType = 'Done', @ActionName = 'Proc', @Scope1 = @ProcName, @ts = @proc_sw;
     END TRY
     BEGIN CATCH
-        DECLARE @ErrorMessage nvarchar(2047) = FORMATMESSAGE('%s (Line %d)', ERROR_MESSAGE(), ERROR_LINE());
-        EXEC dbo.usp_Raiserror '[%s] Error: Import Proc - %s', @proc_sw, NULL, @ProcName, @ErrorMessage, @IsError = 1;
+        DECLARE @ErrorMessage nvarchar(2047) = FORMATMESSAGE('%s (Error %d, State %d, Line %d)', ERROR_MESSAGE(), ERROR_NUMBER(), ERROR_STATE(), ERROR_LINE());
+        EXEC dbo.usp_Raiserror @EventType = 'Error', @ActionName = 'Proc', @Scope1 = @ProcName, @DetailMessage = @ErrorMessage, @ts = @proc_sw;
 
         THROW; -- re-throw original error so that an exception is returned to the caller
     END CATCH;

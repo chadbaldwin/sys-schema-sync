@@ -9,16 +9,15 @@ CREATE PROC import.usp_SetSyncStatus (
 AS
 BEGIN;
     SET NOCOUNT, XACT_ABORT ON;
+
     EXEC sys.sp_set_session_context @key = N'Verbose', @value = @Verbose;
     EXEC sys.sp_set_session_context @key = N'_InstanceID', @value = @InstanceID;
     EXEC sys.sp_set_session_context @key = N'_DatabaseID', @value = @DatabaseID;
 
-    DECLARE @sw datetime2 = SYSUTCDATETIME();
-    DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
+    DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID)), @proc_sw datetime2;
+    EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Proc', @Scope1 = @ProcName, @ts = @proc_sw OUTPUT;
 
     BEGIN TRY
-        EXEC dbo.usp_Raiserror '[%s] Start: Proc', NULL, NULL, @ProcName;
-
         DECLARE @CurrentTime datetime2 = SYSUTCDATETIME(), @rc bigint = 0;
 
         -- Including the entire exception message in the output is excessive, so reducing it down to just yes/no on IsError
@@ -46,10 +45,10 @@ BEGIN;
         ------------------------------------------------------------------------------
         IF (@SyncObjectID IS NOT NULL)
         BEGIN;
-            EXEC dbo.usp_Raiserror '[%s] Attempting to update status record', NULL, NULL, @ProcName;
+            EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Update status record', @Scope1 = @ProcName;
             IF (@ErrorMessage IS NULL)
             BEGIN;
-                EXEC dbo.usp_Raiserror '[%s] Attempting to update status record as a successful sync', NULL, NULL, @ProcName;
+                EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Update status record as successful sync', @Scope1 = @ProcName;
                 UPDATE x
                 SET x.LastSyncChecksum  = @Checksum,
                     /*  '=' logic handles NULL's, be careful changing
@@ -71,7 +70,7 @@ BEGIN;
             END;
             ELSE
             BEGIN
-                EXEC dbo.usp_Raiserror '[%s] Attempting to update status record as a failed sync with error message', NULL, NULL, @ProcName;
+                EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Update status record as failed sync', @Scope1 = @ProcName;
                 UPDATE x
                 SET x.LastSyncCheck         = @CurrentTime,
                     x.LastSyncError         = @CurrentTime,
@@ -90,16 +89,16 @@ BEGIN;
             ------------------------------------------------------------------------------
             IF (@rc = 0)
             BEGIN;
-                EXEC dbo.usp_Raiserror '[%s] Status record doesn''t exist, creating a new one', NULL, NULL, @ProcName;
+                EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Create status record', @Scope1 = @ProcName;
                 IF (@ErrorMessage IS NULL)
                 BEGIN;
-                    EXEC dbo.usp_Raiserror '[%s] Creating new status record as a successful sync', NULL, NULL, @ProcName;
+                    EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Create status record as successful sync', @Scope1 = @ProcName;
                     INSERT import.DatabaseSyncObjectStatus (_InstanceID, _DatabaseID, SyncObjectID, LastSyncChecksum)
                     VALUES (@InstanceID, @DatabaseID, @SyncObjectID, @Checksum);
                 END;
                 ELSE
                 BEGIN;
-                    EXEC dbo.usp_Raiserror '[%s] Creating new status record with error', NULL, NULL, @ProcName;
+                    EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Create status record with error', @Scope1 = @ProcName;
                     -- Note: Leaving LastSyncChecksum NULL so that it is forced to sync the next time it runs
                     INSERT import.DatabaseSyncObjectStatus (_InstanceID, _DatabaseID, SyncObjectID, LastSyncChecksum, LastSyncTime, LastSyncError, LastSyncErrorMessage, LastSyncWasError)
                     VALUES (@InstanceID, @DatabaseID, @SyncObjectID, NULL, NULL, @CurrentTime, @ErrorMessage, 1);
@@ -110,7 +109,7 @@ BEGIN;
         BEGIN;
             IF (@ErrorMessage IS NOT NULL)
             BEGIN;
-                EXEC dbo.usp_Raiserror '[%s] A database wide error has occured, pushing back all syncs for database', NULL, NULL, @ProcName;
+                EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Push back all syncs for database', @Scope1 = @ProcName, @DetailMessage = @ErrorMessage;
                 /*  In this case, a database wide error is being logged which means we want to push all sync object tasks
                     to prevent them from running until their next interval.
                 
@@ -161,13 +160,12 @@ BEGIN;
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------
-        EXEC dbo.usp_Raiserror '[%s] Done: Proc', @sw, NULL, @ProcName;
+        EXEC dbo.usp_Raiserror @EventType = 'Done', @ActionName = 'Proc', @Scope1 = @ProcName, @ts = @proc_sw;
     END TRY
     BEGIN CATCH
-        DECLARE @CaughtErrorMessage nvarchar(2047) = FORMATMESSAGE('%s (Line %d)', ERROR_MESSAGE(), ERROR_LINE());
-        EXEC dbo.usp_Raiserror '[%s] Error: Proc - %s', @sw, NULL, @ProcName, @CaughtErrorMessage, @IsError = 1;
+        DECLARE @ProcErrorMessage nvarchar(2047) = FORMATMESSAGE('%s (Error %d, State %d, Line %d)', ERROR_MESSAGE(), ERROR_NUMBER(), ERROR_STATE(), ERROR_LINE());
+        EXEC dbo.usp_Raiserror @EventType = 'Error', @ActionName = 'Proc', @Scope1 = @ProcName, @DetailMessage = @ProcErrorMessage, @ts = @proc_sw;
 
         THROW; -- re-throw original error so that an exception is returned to the caller
     END CATCH;
 END;
-GO

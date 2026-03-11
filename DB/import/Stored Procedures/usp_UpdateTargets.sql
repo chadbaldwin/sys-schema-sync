@@ -7,9 +7,10 @@ BEGIN;
     SET NOCOUNT, XACT_ABORT ON;
     EXEC sys.sp_set_session_context @key = N'Verbose', @value = @Verbose;
 
-    DECLARE @sw datetime2 = SYSUTCDATETIME(), @sw2 datetime2;
-    DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
-    EXEC dbo.usp_Raiserror '[%s] Start', NULL, NULL, @ProcName;
+    DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID)), @proc_sw datetime2;
+    EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Proc', @Scope1 = @ProcName, @ts = @proc_sw OUTPUT;
+    
+    DECLARE @sw2 datetime2;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
@@ -36,7 +37,7 @@ BEGIN;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    EXEC dbo.usp_Raiserror '[%s] Start: Merge Instance', NULL, NULL, @ProcName; SET @sw2 = SYSUTCDATETIME();
+    EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Merge Instance', @Scope1 = @ProcName, @ts = @sw2 OUTPUT;
     MERGE INTO dbo.Instance o
     USING (SELECT DISTINCT InstanceName FROM #tmp_db) AS n ON n.InstanceName = o.InstanceName
     WHEN MATCHED AND o.IsEnabled = 0               THEN UPDATE SET o.IsEnabled = 1, o.DisableDate = NULL -- Re-enable
@@ -47,11 +48,11 @@ BEGIN;
         , COALESCE(DELETED.InstanceName, INSERTED.InstanceName) AS InstanceName
         , DELETED.InsertDate  AS d_InsertDate, DELETED.IsEnabled  AS d_IsEnabled
         , INSERTED.InsertDate AS i_InsertDate, INSERTED.IsEnabled AS i_IsEnabled;
-    EXEC dbo.usp_Raiserror '[%s] Done: Merge Instance', @sw2, NULL, @ProcName;
+    EXEC dbo.usp_Raiserror @EventType = 'Done', @ActionName = 'Merge Instance', @Scope1 = @ProcName, @ts = @sw2;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    EXEC dbo.usp_Raiserror '[%s] Start: Merge Database', NULL, NULL, @ProcName; SET @sw2 = SYSUTCDATETIME();
+    EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Merge Database', @Scope1 = @ProcName, @ts = @sw2 OUTPUT;
     MERGE INTO dbo.[Database] o
     USING (
         SELECT DISTINCT i._InstanceID, t.DatabaseName
@@ -68,10 +69,10 @@ BEGIN;
         , COALESCE(DELETED.DatabaseName, INSERTED.DatabaseName) AS DatabaseName
         , DELETED.InsertDate  AS d_InsertDate, DELETED.IsEnabled  AS d_IsEnabled
         , INSERTED.InsertDate AS i_InsertDate, INSERTED.IsEnabled AS i_IsEnabled;
-    EXEC dbo.usp_Raiserror '[%s] Done: Merge Database', @sw2, NULL, @ProcName;
+    EXEC dbo.usp_Raiserror @EventType = 'Done', @ActionName = 'Merge Database', @Scope1 = @ProcName, @ts = @sw2;
     ------------------------------------------------------------------------------
 
     ------------------------------------------------------------------------------
-    EXEC dbo.usp_Raiserror '[%s] Done', @sw, NULL, @ProcName;
+    EXEC dbo.usp_Raiserror @EventType = 'Done', @ActionName = 'Proc', @Scope1 = @ProcName, @ts = @proc_sw;
 END;
 GO

@@ -5,11 +5,12 @@ AS
 BEGIN;
     SET NOCOUNT, XACT_ABORT ON;
 
-    DECLARE @sw datetime2 = SYSUTCDATETIME(), @sw2 datetime2, @TableName nvarchar(300);
-    DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
+    DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID)), @proc_sw datetime2;
+    EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Proc', @Scope1 = @ProcName, @ts = @proc_sw OUTPUT;
+
+    DECLARE @sw2 datetime2, @TableName nvarchar(300);
 
     BEGIN TRY
-        EXEC dbo.usp_Raiserror '[%s] Start: Delta Proc', NULL, NULL, @ProcName;
         IF (@DatabaseID IS NULL) BEGIN; THROW 51000, 'Required parameter @DatabaseID is NULL', 1; END;
 
         -- This is just for SSDT to stop complaining about the missing temp table
@@ -20,13 +21,13 @@ BEGIN;
         BEGIN TRAN;
             SET @TableName = N'dw._dm_db_index_usage_stats_delta';
 
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Delete', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
+            EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Delete', @Scope1 = @ProcName, @Scope2 = @TableName, @ts = @sw2 OUTPUT;
             DELETE s FROM dw._dm_db_index_usage_stats_delta s
             WHERE s._DatabaseID = @DatabaseID
                 AND NOT EXISTS (SELECT * FROM #Dataset d WHERE d._DatabaseID = s._DatabaseID AND d._IndexID = s._IndexID);
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Delete', @sw2, @@ROWCOUNT, @ProcName, @TableName;
+            EXEC dbo.usp_Raiserror @EventType = 'Done', @ActionName = 'Delete', @Scope1 = @ProcName, @Scope2 = @TableName, @ts = @sw2, @rc = @@ROWCOUNT;
 
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
+            EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Update', @Scope1 = @ProcName, @Scope2 = @TableName, @ts = @sw2 OUTPUT;
             -- Calcualted fields are being handled here because the destination table is a clustered columnstore index, which currently do not support computed columns
             UPDATE t
             SET t.EstimatedStatsBeginTime = IIF(x.WereStatsReset = 1, n.EstimatedStatsBeginTime, p.StatsEndTime) /* If it appears that the stats were not reset, then we want to use the StatsEndTime value from the previous snapshot */
@@ -85,23 +86,23 @@ BEGIN;
                                             END)
                 ) x
             WHERE n.StatsEndTime > p.StatsEndTime;
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update', @sw2, @@ROWCOUNT, @ProcName, @TableName;
+            EXEC dbo.usp_Raiserror @EventType = 'Done', @ActionName = 'Update', @Scope1 = @ProcName, @Scope2 = @TableName, @ts = @sw2, @rc = @@ROWCOUNT;
 
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
+            EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Insert', @Scope1 = @ProcName, @Scope2 = @TableName, @ts = @sw2 OUTPUT;
             INSERT dw._dm_db_index_usage_stats_delta (_DatabaseID, _IndexID, EstimatedStatsBeginTime, StatsEndTime, WereStatsReset, user_seeks, user_scans, user_lookups, user_updates, last_user_seek_utc, last_user_scan_utc, last_user_lookup_utc, last_user_update_utc, system_seeks, system_scans, system_lookups, system_updates, last_system_seek_utc, last_system_scan_utc, last_system_lookup_utc, last_system_update_utc)
             SELECT s._DatabaseID, s._IndexID, s.EstimatedStatsBeginTime, s.StatsEndTime, 0, s.user_seeks, s.user_scans, s.user_lookups, s.user_updates, s.last_user_seek_utc, s.last_user_scan_utc, s.last_user_lookup_utc, s.last_user_update_utc, s.system_seeks, s.system_scans, s.system_lookups, s.system_updates, s.last_system_seek_utc, s.last_system_scan_utc, s.last_system_lookup_utc, s.last_system_update_utc
             FROM #Dataset s
             WHERE NOT EXISTS (SELECT * FROM dw._dm_db_index_usage_stats_delta t WHERE t._DatabaseID = s._DatabaseID AND t._IndexID = s._IndexID);
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
+            EXEC dbo.usp_Raiserror @EventType = 'Done', @ActionName = 'Insert', @Scope1 = @ProcName, @Scope2 = @TableName, @ts = @sw2, @rc = @@ROWCOUNT;
         COMMIT;
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------
-        EXEC dbo.usp_Raiserror '[%s] Done: Delta Proc', @sw, NULL, @ProcName;
+        EXEC dbo.usp_Raiserror @EventType = 'Done', @ActionName = 'Proc', @Scope1 = @ProcName, @ts = @proc_sw;
     END TRY
     BEGIN CATCH
         DECLARE @ErrorMessage nvarchar(2047) = FORMATMESSAGE('%s (Line %d)', ERROR_MESSAGE(), ERROR_LINE());
-        EXEC dbo.usp_Raiserror '[%s] Error: Delta Proc - %s', @sw, NULL, @ProcName, @ErrorMessage, @IsError = 1;
+        EXEC dbo.usp_Raiserror @EventType = 'Error', @ActionName = 'Proc', @Scope1 = @ProcName, @DetailMessage = @ErrorMessage, @ts = @proc_sw;
 
         THROW; -- re-throw original error so that an exception is returned to the caller
     END CATCH;

@@ -5,11 +5,12 @@ AS
 BEGIN;
     SET NOCOUNT, XACT_ABORT ON;
 
-    DECLARE @sw datetime2 = SYSUTCDATETIME(), @sw2 datetime2, @TableName nvarchar(300);
-    DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
+    DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID)), @proc_sw datetime2;
+    EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Proc', @Scope1 = @ProcName, @ts = @proc_sw OUTPUT;
+
+    DECLARE @sw2 datetime2, @TableName nvarchar(300);
 
     BEGIN TRY
-        EXEC dbo.usp_Raiserror '[%s] Start: Delta Proc', NULL, NULL, @ProcName;
         IF (@DatabaseID IS NULL) BEGIN; THROW 51000, 'Required parameter @DatabaseID is NULL', 1; END;
 
         -- This is just for SSDT to stop complaining about the missing temp table
@@ -20,13 +21,13 @@ BEGIN;
         BEGIN TRAN;
             SET @TableName = N'dw._dm_db_index_operational_stats_delta';
 
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Delete', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
+            EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Delete', @Scope1 = @ProcName, @Scope2 = @TableName, @ts = @sw2 OUTPUT;
             DELETE s FROM dw._dm_db_index_operational_stats_delta s
             WHERE s._DatabaseID = @DatabaseID
                 AND NOT EXISTS (SELECT * FROM #Dataset d WHERE d._DatabaseID = s._DatabaseID AND d._IndexID = s._IndexID AND d._BoundaryValue = s._BoundaryValue);
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Delete', @sw2, @@ROWCOUNT, @ProcName, @TableName;
+            EXEC dbo.usp_Raiserror @EventType = 'Done', @ActionName = 'Delete', @Scope1 = @ProcName, @Scope2 = @TableName, @ts = @sw2, @rc = @@ROWCOUNT;
 
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Update', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
+            EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Update', @Scope1 = @ProcName, @Scope2 = @TableName, @ts = @sw2 OUTPUT;
             -- Calcualted fields are being handled here because the destination table is a clustered columnstore index, which currently do not support computed columns
             UPDATE t
             SET t.partition_number                   = n.partition_number
@@ -112,23 +113,23 @@ BEGIN;
                                             END)
                 ) x
             WHERE n.StatsEndTime > p.StatsEndTime;
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Update', @sw2, @@ROWCOUNT, @ProcName, @TableName;
+            EXEC dbo.usp_Raiserror @EventType = 'Done', @ActionName = 'Update', @Scope1 = @ProcName, @Scope2 = @TableName, @ts = @sw2, @rc = @@ROWCOUNT;
 
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Insert', NULL, NULL, @ProcName, @TableName; SET @sw2 = SYSUTCDATETIME();
+            EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Insert', @Scope1 = @ProcName, @Scope2 = @TableName, @ts = @sw2 OUTPUT;
             INSERT dw._dm_db_index_operational_stats_delta (_DatabaseID, _IndexID, _BoundaryValue, partition_number, EstimatedStatsBeginTime, StatsEndTime, WereStatsReset, singleton_lookup_count, range_scan_count, forwarded_fetch_count, leaf_insert_count, leaf_delete_count, leaf_update_count, leaf_allocation_count, leaf_page_merge_count, leaf_ghost_count, nonleaf_insert_count, nonleaf_delete_count, nonleaf_update_count, nonleaf_allocation_count, nonleaf_page_merge_count, lob_fetch_in_bytes, lob_fetch_in_pages, lob_orphan_create_count, lob_orphan_insert_count, row_overflow_fetch_in_bytes, row_overflow_fetch_in_pages, ghost_version_inrow, ghost_version_offrow, version_generated_inrow, version_generated_offrow, insert_over_ghost_version_inrow, insert_over_ghost_version_offrow, column_value_pull_in_row_count, column_value_push_off_row_count, page_compression_attempt_count, page_compression_success_count, row_lock_count, row_lock_wait_count, row_lock_wait_in_ms, page_lock_count, page_lock_wait_count, page_lock_wait_in_ms, index_lock_promotion_attempt_count, index_lock_promotion_count, page_latch_wait_count, page_latch_wait_in_ms, page_io_latch_wait_count, page_io_latch_wait_in_ms, tree_page_latch_wait_count, tree_page_latch_wait_in_ms, tree_page_io_latch_wait_count, tree_page_io_latch_wait_in_ms)
             SELECT s._DatabaseID, s._IndexID, s._BoundaryValue, s.partition_number, s.EstimatedStatsBeginTime, s.StatsEndTime, 0, s.singleton_lookup_count, s.range_scan_count, s.forwarded_fetch_count, s.leaf_insert_count, s.leaf_delete_count, s.leaf_update_count, s.leaf_allocation_count, s.leaf_page_merge_count, s.leaf_ghost_count, s.nonleaf_insert_count, s.nonleaf_delete_count, s.nonleaf_update_count, s.nonleaf_allocation_count, s.nonleaf_page_merge_count, s.lob_fetch_in_bytes, s.lob_fetch_in_pages, s.lob_orphan_create_count, s.lob_orphan_insert_count, s.row_overflow_fetch_in_bytes, s.row_overflow_fetch_in_pages, s.ghost_version_inrow, s.ghost_version_offrow, s.version_generated_inrow, s.version_generated_offrow, s.insert_over_ghost_version_inrow, s.insert_over_ghost_version_offrow, s.column_value_pull_in_row_count, s.column_value_push_off_row_count, s.page_compression_attempt_count, s.page_compression_success_count, s.row_lock_count, s.row_lock_wait_count, s.row_lock_wait_in_ms, s.page_lock_count, s.page_lock_wait_count, s.page_lock_wait_in_ms, s.index_lock_promotion_attempt_count, s.index_lock_promotion_count, s.page_latch_wait_count, s.page_latch_wait_in_ms, s.page_io_latch_wait_count, s.page_io_latch_wait_in_ms, s.tree_page_latch_wait_count, s.tree_page_latch_wait_in_ms, s.tree_page_io_latch_wait_count, s.tree_page_io_latch_wait_in_ms
             FROM #Dataset s
             WHERE NOT EXISTS (SELECT * FROM dw._dm_db_index_operational_stats_delta t WHERE t._DatabaseID = s._DatabaseID AND t._IndexID = s._IndexID AND t._BoundaryValue = s._BoundaryValue);
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Insert', @sw2, @@ROWCOUNT, @ProcName, @TableName;
+            EXEC dbo.usp_Raiserror @EventType = 'Done', @ActionName = 'Insert', @Scope1 = @ProcName, @Scope2 = @TableName, @ts = @sw2, @rc = @@ROWCOUNT;
         COMMIT;
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------
-        EXEC dbo.usp_Raiserror '[%s] Done: Delta Proc', @sw, NULL, @ProcName;
+        EXEC dbo.usp_Raiserror @EventType = 'Done', @ActionName = 'Proc', @Scope1 = @ProcName, @ts = @proc_sw;
     END TRY
     BEGIN CATCH
         DECLARE @ErrorMessage nvarchar(2047) = FORMATMESSAGE('%s (Line %d)', ERROR_MESSAGE(), ERROR_LINE());
-        EXEC dbo.usp_Raiserror '[%s] Error: Delta Proc - %s', @sw, NULL, @ProcName, @ErrorMessage, @IsError = 1;
+        EXEC dbo.usp_Raiserror @EventType = 'Error', @ActionName = 'Proc', @Scope1 = @ProcName, @DetailMessage = @ErrorMessage, @ts = @proc_sw;
 
         THROW; -- re-throw original error so that an exception is returned to the caller
     END CATCH;

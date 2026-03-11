@@ -8,45 +8,41 @@ AS
 BEGIN;
     SET NOCOUNT, XACT_ABORT ON;
 
-    DECLARE @proc_sw datetime2 = SYSUTCDATETIME();
-    DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
+    DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID)), @proc_sw datetime2;
+    EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Proc', @Scope1 = @ProcName, @ts = @proc_sw OUTPUT;
 
     BEGIN TRY
-        EXEC dbo.usp_Raiserror '[%s] Start: Proc', NULL, NULL, @ProcName;
         IF (COALESCE(@ProcessKey1, @ProcessKey2, @ProcessKey3) IS NULL) BEGIN; THROW 51000, 'At least one process key must be provided', 1; END;
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------
-        DECLARE @TableName nvarchar(300) = 'import.ItemNameProcess';
+        DECLARE @TableName nvarchar(300) = 'import.ItemNameProcess', @deletes_sw datetime2, @delete_batch_sw datetime2, @delete_batch_rc bigint;
         BEGIN TRY
-            EXEC dbo.usp_Raiserror '[%s] [%s] Start: Delete', NULL, NULL, @ProcName, @TableName; DECLARE @deletes_sw datetime2 = SYSUTCDATETIME();
-            DECLARE @delete_batch_sw datetime2 = SYSUTCDATETIME(), @delete_batch_rc bigint;
-            WHILE (1=1)
+            EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Delete loop', @Scope1 = @ProcName, @Scope2 = @TableName, @ts = @deletes_sw OUTPUT;
+            WHILE (@delete_batch_rc > 0 OR @delete_batch_rc IS NULL)
             BEGIN;
+                EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Delete batch', @Scope1 = @ProcName, @Scope2 = @TableName, @ts = @delete_batch_sw OUTPUT;
                 DELETE TOP(@BatchSize) x
                 FROM import.ItemNameProcess x
                 WHERE x.ProcessKey IN (@ProcessKey1, @ProcessKey2, @ProcessKey3);
-
                 SET @delete_batch_rc = @@ROWCOUNT;
-                IF (@delete_batch_rc = 0) BEGIN; BREAK; END;
-
-                EXEC dbo.usp_Raiserror '[%s] Deleted batch', @delete_batch_sw, @delete_batch_rc, @ProcName; SET @delete_batch_sw = SYSUTCDATETIME();
+                EXEC dbo.usp_Raiserror @EventType = 'Done', @ActionName = 'Delete batch', @Scope1 = @ProcName, @Scope2 = @TableName, @ts = @delete_batch_sw, @rc = @delete_batch_rc;
             END;
-            EXEC dbo.usp_Raiserror '[%s] [%s] Done: Delete', @deletes_sw, @@ROWCOUNT, @ProcName, @TableName;
+            EXEC dbo.usp_Raiserror @EventType = 'Done', @ActionName = 'Delete loop', @Scope1 = @ProcName, @Scope2 = @TableName, @ts = @deletes_sw;
         END TRY
         BEGIN CATCH
-            DECLARE @errmsg nvarchar(2047) = FORMATMESSAGE('%s (Line %d)', ERROR_MESSAGE(), ERROR_LINE());
-            EXEC dbo.usp_Raiserror '[%s] [%s] Error: Delete - %s', @deletes_sw, @@ROWCOUNT, @ProcName, @TableName, @errmsg;
-            -- Purposely eating the exception. Failure to delete should not be a terminating event, just allow database maintenance to cleanup later.
+            DECLARE @errmsg nvarchar(2047) = FORMATMESSAGE('%s (Error %d, State %d, Line %d)', ERROR_MESSAGE(), ERROR_NUMBER(), ERROR_STATE(), ERROR_LINE());
+            EXEC dbo.usp_Raiserror @EventType = 'Error', @ActionName = 'Delete loop', @Scope1 = @ProcName, @Scope2 = @TableName, @DetailMessage = @errmsg, @ts = @deletes_sw;
+            -- Purposely eating the exception. Failure to delete should not be a terminating event, just log it and let database maintenance cleanup later.
         END CATCH;
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------
-        EXEC dbo.usp_Raiserror '[%s] Done: Proc', @proc_sw, NULL, @ProcName;
+        EXEC dbo.usp_Raiserror @EventType = 'Done', @ActionName = 'Proc', @Scope1 = @ProcName, @ts = @proc_sw;
     END TRY
     BEGIN CATCH
-        DECLARE @ErrorMessage nvarchar(2047) = FORMATMESSAGE('%s (Line %d)', ERROR_MESSAGE(), ERROR_LINE());
-        EXEC dbo.usp_Raiserror '[%s] Error: Proc - %s', @proc_sw, NULL, @ProcName, @ErrorMessage, @IsError = 1;
+        DECLARE @ErrorMessage nvarchar(2047) = FORMATMESSAGE('%s (Error %d, State %d, Line %d)', ERROR_MESSAGE(), ERROR_NUMBER(), ERROR_STATE(), ERROR_LINE());
+        EXEC dbo.usp_Raiserror @EventType = 'Error', @ActionName = 'Proc', @Scope1 = @ProcName, @DetailMessage = @ErrorMessage, @ts = @proc_sw;
 
         THROW; -- re-throw original error so that an exception is returned to the caller
     END CATCH;

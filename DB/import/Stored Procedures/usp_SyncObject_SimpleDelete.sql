@@ -8,10 +8,13 @@ CREATE PROC import.usp_SyncObject_SimpleDelete (
 AS
 BEGIN;
     SET NOCOUNT, XACT_ABORT ON;
-    EXEC sys.sp_set_session_context @key = N'Verbose', @value = @Verbose;
 
-    DECLARE @proc_sw datetime2 = SYSUTCDATETIME();
-    DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID));
+    EXEC sys.sp_set_session_context @key = N'Verbose', @value = @Verbose;
+    EXEC sys.sp_set_session_context @key = N'_InstanceID', @value = @InstanceID;
+    EXEC sys.sp_set_session_context @key = N'_DatabaseID', @value = @DatabaseID;
+
+    DECLARE @ProcName nvarchar(257) = CONCAT(OBJECT_SCHEMA_NAME(@@PROCID), '.', OBJECT_NAME(@@PROCID)), @proc_sw datetime2;
+    EXEC dbo.usp_Raiserror @EventType = 'Start', @ActionName = 'Proc', @Scope1 = @ProcName, @ts = @proc_sw OUTPUT;
 
     BEGIN TRY
         ------------------------------------------------------------
@@ -82,11 +85,11 @@ BEGIN;
         ------------------------------------------------------------------------------
 
         ------------------------------------------------------------------------------
-        EXEC dbo.usp_Raiserror '[%s] Done: Proc', @proc_sw, NULL, @ProcName;
+        EXEC dbo.usp_Raiserror @EventType = 'Done', @ActionName = 'Proc', @Scope1 = @ProcName, @ts = @proc_sw;
     END TRY
     BEGIN CATCH
-        DECLARE @ErrorMessage nvarchar(2047) = FORMATMESSAGE('%s (Line %d)', ERROR_MESSAGE(), ERROR_LINE());
-        EXEC dbo.usp_Raiserror '[%s] Error: Proc - %s', @proc_sw, NULL, @ProcName, @ErrorMessage, @IsError = 1;
+        DECLARE @ErrorMessage nvarchar(2047) = FORMATMESSAGE('%s (Error %d, State %d, Line %d)', ERROR_MESSAGE(), ERROR_NUMBER(), ERROR_STATE(), ERROR_LINE());
+        EXEC dbo.usp_Raiserror @EventType = 'Error', @ActionName = 'Proc', @Scope1 = @ProcName, @DetailMessage = @ErrorMessage, @ts = @proc_sw;
 
         THROW; -- re-throw original error so that an exception is returned to the caller
     END CATCH;

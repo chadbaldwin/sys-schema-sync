@@ -18,6 +18,7 @@ CREATE TABLE import.ItemNameProcess (
     _ObjectDefinitionID  int                  NULL,
 
     INDEX CIX_ItemNameProcess_ProcessKey_ID CLUSTERED (ProcessKey, ID),
-    -- Indexes for supporting usp_CreateItems
-    INDEX IX_ItemNameProcess_ProcessKey__DatabaseID__ObjectID_ColumnName NONCLUSTERED (ProcessKey, _DatabaseID, _ObjectID, ColumnName), -- Supports inserting and updating dbo.[Column]
 );
+GO
+
+ALTER TABLE import.ItemNameProcess SET (LOCK_ESCALATION = DISABLE);
