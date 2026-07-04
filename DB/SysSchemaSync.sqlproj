@@ -109,6 +109,7 @@
     <Build Include="dbo\Tables\Sync Tables\_database_query_store_options.sql" />
     <Build Include="dbo\Tables\Sync Tables\_database_scoped_configurations.sql" />
     <Build Include="dbo\Tables\Sync Tables\_DATABASEPROPERTYEX.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_database_principals.sql" />
     <Build Include="dbo\Tables\Sync Tables\_databases.sql" />
     <Build Include="dbo\Tables\Sync Tables\_default_constraints.sql" />
     <Build Include="dbo\Tables\Sync Tables\_destination_data_spaces.sql" />
@@ -154,6 +155,7 @@
     <Build Include="dbo\Tables\Sync Tables\_partitions.sql" />
     <Build Include="dbo\Tables\Sync Tables\_restorehistory.sql" />
     <Build Include="dbo\Tables\Sync Tables\_server_event_sessions.sql" />
+    <Build Include="dbo\Tables\Sync Tables\_server_principals.sql" />
     <Build Include="dbo\Tables\Sync Tables\_SERVERPROPERTY.sql" />
     <Build Include="dbo\Tables\Sync Tables\_sql_modules.sql" />
     <Build Include="dbo\Tables\Sync Tables\_stats.sql" />
@@ -260,6 +262,10 @@
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__dm_server_services.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__SERVERPROPERTY.sql" />
     <Build Include="import\User Defined Types\Sync Types\import__dm_server_services.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__server_principals.sql" />
+    <Build Include="import\Stored Procedures\Sync Procs\usp_import__database_principals.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__server_principals.sql" />
+    <Build Include="import\User Defined Types\Sync Types\import__database_principals.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="StaticCodeAnalysis.SuppressMessages.xml" />
