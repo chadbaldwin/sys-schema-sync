@@ -35,6 +35,8 @@
     <DbScopedConfigOptimizerHotfixes>On</DbScopedConfigOptimizerHotfixes>
     <EnableFullTextSearch>False</EnableFullTextSearch>
     <DelayedDurability>FORCED</DelayedDurability>
+    <IsChangeTrackingOn>True</IsChangeTrackingOn>
+    <ChangeTrackingRetentionPeriod>5</ChangeTrackingRetentionPeriod>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <OutputPath>bin\Release\</OutputPath>
@@ -60,7 +62,8 @@
     <WarningLevel>4</WarningLevel>
     <RunSqlCodeAnalysis>True</RunSqlCodeAnalysis>
     <SuppressTSqlWarnings>SQL70558</SuppressTSqlWarnings>
-    <SqlCodeAnalysisRules>-Microsoft.Rules.Data.SR0001;-Microsoft.Rules.Data.SR0006;-Microsoft.Rules.Data.SR0007;-Microsoft.Rules.Data.SR0014</SqlCodeAnalysisRules>
+    <SqlCodeAnalysisRules>
+    </SqlCodeAnalysisRules>
   </PropertyGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">11.0</VisualStudioVersion>
@@ -80,6 +83,9 @@
     <Folder Include="dw" />
     <Folder Include="dw\Stored Procedures" />
     <Folder Include="dw\Tables" />
+    <Folder Include="ext" />
+    <Folder Include="ext\Stored Procedures" />
+    <Folder Include="ext\Tables" />
     <Folder Include="import" />
     <Folder Include="import\Stored Procedures" />
     <Folder Include="import\Stored Procedures\Sync Procs" />
@@ -174,6 +180,9 @@
     <Build Include="dw\Stored Procedures\usp_import__dm_db_index_usage_stats_delta.sql" />
     <Build Include="dw\Tables\_dm_db_index_operational_stats_delta.sql" />
     <Build Include="dw\Tables\_dm_db_index_usage_stats_delta.sql" />
+    <Build Include="ext\Stored Procedures\usp_IndexColumnsSquash.sql" />
+    <Build Include="ext\Tables\IndexColumnsSquash.sql" />
+    <Build Include="ext\Tables\ProcessRunState.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__check_constraints.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__columns.sql" />
     <Build Include="import\Stored Procedures\Sync Procs\usp_import__computed_columns.sql" />
@@ -269,6 +278,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="StaticCodeAnalysis.SuppressMessages.xml" />
+    <None Include="SysSchemaSync.publish.xml" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="Script.PostDeployment.sql" />
